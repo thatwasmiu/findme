@@ -1,0 +1,223 @@
+# 01. Install the tools on Windows
+
+By the end of this chapter `flutter doctor` is green for Android and a virtual phone (emulator) boots on your PC.
+Plan about 1–2 hours, mostly downloads, and **~15 GB of free disk space**.
+
+What you will install:
+
+| Tool | Why |
+|---|---|
+| Flutter SDK (includes Dart) | Builds and runs the app |
+| Android Studio | Brings the Android SDK, the emulator and the Device Manager |
+| VS Code + Flutter extension | Comfortable editor for daily work (you can also code in Android Studio) |
+
+Already on this PC: **git** (2.53) and **Java 17**. Nothing to do for those.
+
+All commands below are for **Windows PowerShell**. Open it from the Start menu ("Windows PowerShell"). When a step
+says "open a **new** PowerShell", close the old window first so it picks up the new PATH.
+
+> **Company laptop note.** Steps 1 and 4 change Windows settings that may need admin rights. If a setting is greyed
+> out or blocked, ask your IT team to turn it on; the rest of the guide works once it is on.
+
+---
+
+## Step 1. Turn on Developer Mode and virtualization
+
+**Developer Mode** lets Flutter create symbolic links, which Flutter plugins need on Windows. Without it, builds fail
+with "Building with plugins requires symlink support".
+
+```powershell
+start ms-settings:developers
+```
+
+Switch **Developer Mode** on and confirm.
+
+**Virtualization** makes the emulator fast. Check it:
+
+```powershell
+systeminfo | Select-String "Virtualization|Hyper-V"
+```
+
+- If you see `Virtualization Enabled In Firmware: Yes` or `A hypervisor has been detected`, you are fine.
+- If it says `No`, virtualization is off in the BIOS. Ask IT to enable it (Intel VT-x / AMD-V).
+
+Then turn on **Windows Hypervisor Platform**: Start → "Turn Windows features on or off" → tick
+**Windows Hypervisor Platform** → OK → restart the PC.
+
+---
+
+## Step 2. Install the Flutter SDK
+
+We put Flutter in `C:\src\flutter` (not in `Program Files`, which needs admin rights and breaks updates). Cloning
+the `stable` branch with git gives you an easy `flutter upgrade` later.
+
+```powershell
+New-Item -ItemType Directory -Force C:\src
+git clone https://github.com/flutter/flutter.git -b stable C:\src\flutter
+```
+
+Add `C:\src\flutter\bin` to your user PATH (only your account, no admin needed):
+
+```powershell
+$p = [Environment]::GetEnvironmentVariable('Path', 'User')
+[Environment]::SetEnvironmentVariable('Path', "$p;C:\src\flutter\bin", 'User')
+```
+
+Open a **new** PowerShell and check:
+
+```powershell
+flutter --version
+```
+
+The first run downloads the Dart SDK and takes a few minutes. You should see `Flutter 3.x.x • channel stable`.
+
+> If you are behind a company proxy and downloads fail, set it for the session first:
+> `$env:HTTPS_PROXY = "http://proxy.company:8080"` (ask IT for the address).
+
+---
+
+## Step 3. Install Android Studio
+
+Install it with winget (built into Windows 10/11):
+
+```powershell
+winget install --id Google.AndroidStudio -e
+```
+
+If winget is not available, download the installer from <https://developer.android.com/studio> and run it with the
+default options.
+
+Start **Android Studio** from the Start menu. The **Setup Wizard** opens:
+
+1. Choose **Standard** install.
+2. Accept the licences and let it download the Android SDK, Platform-Tools and the Emulator (several GB).
+3. Finish. You land on the "Welcome to Android Studio" screen.
+
+Add the missing SDK pieces Flutter needs:
+
+1. On the Welcome screen: **More Actions → SDK Manager**.
+2. Tab **SDK Platforms**: make sure the newest **Android API** (e.g. "Android 15.0, API 35") is ticked.
+3. Tab **SDK Tools**: tick
+   - **Android SDK Command-line Tools (latest)** ← Flutter needs this, it is *not* ticked by default
+   - Android SDK Build-Tools
+   - Android SDK Platform-Tools
+   - Android Emulator
+4. **Apply** → OK, wait for the download.
+
+Optional but handy: **More Actions → Plugins** → search **Flutter** → Install (also installs Dart) → restart
+Android Studio. Lets you run the app from Android Studio too.
+
+---
+
+## Step 4. Accept the Android licences
+
+Open a **new** PowerShell:
+
+```powershell
+flutter doctor --android-licenses
+```
+
+Type `y` and Enter for every question.
+
+---
+
+## Step 5. Create a virtual phone (emulator)
+
+1. Android Studio Welcome screen: **More Actions → Virtual Device Manager**.
+2. **Create Virtual Device** (the `+` button).
+3. Pick **Phone → Pixel 7** → Next.
+4. Pick the newest system image with a **Google Play** or **Google APIs** label (API 35). Click the download arrow next
+   to it if needed → Next.
+5. Name it `Pixel_7_API_35` → Finish.
+6. Press **▶** next to it. A phone window boots (first boot takes 1–3 minutes).
+
+You can also start it from PowerShell later:
+
+```powershell
+flutter emulators
+flutter emulators --launch Pixel_7_API_35
+```
+
+> **Slow or black emulator?** Usually Step 1's virtualization is off. In Virtual Device Manager → ✏️ (edit) →
+> **Show Advanced Settings** → Graphics: **Hardware**. If still black, try **Software**.
+
+---
+
+## Step 6. Install VS Code and the Flutter extension
+
+```powershell
+winget install --id Microsoft.VisualStudioCode -e
+```
+
+Open VS Code → Extensions (Ctrl+Shift+X) → search **Flutter** (publisher *Dart Code*) → Install. It installs the
+**Dart** extension too.
+
+Useful VS Code commands (Ctrl+Shift+P):
+
+- **Flutter: Run Flutter Doctor**
+- **Flutter: Select Device** (pick the emulator; it also shows in the bottom-right status bar)
+- **Flutter: Launch Emulator**
+
+---
+
+## Step 7. Check everything with `flutter doctor`
+
+Open a **new** PowerShell:
+
+```powershell
+flutter doctor -v
+```
+
+What you want to see:
+
+```
+[√] Flutter (Channel stable, 3.x.x, ...)
+[√] Windows Version (...)
+[√] Android toolchain - develop for Android devices (Android SDK version 35.x.x)
+[√] Android Studio (version 202x.x)
+[√] VS Code (version 1.x)
+[√] Connected device (... available)
+[√] Network resources
+```
+
+These lines are **fine to ignore**:
+
+| Line | Why it's OK |
+|---|---|
+| `[X] Visual Studio - develop Windows apps` | Only for Windows desktop apps; we build for phones |
+| `[!] Chrome` | Only for Flutter web; not needed |
+| No `Xcode` line | Xcode exists only on a Mac. iOS is built in CI (chapter 12) |
+
+### Fixing common doctor errors
+
+| Message | Fix |
+|---|---|
+| `cmdline-tools component is missing` | Step 3: SDK Manager → SDK Tools → **Android SDK Command-line Tools (latest)** |
+| `Android license status unknown` | Step 4: `flutter doctor --android-licenses` |
+| `Unable to locate Android SDK` | `flutter config --android-sdk "$env:LOCALAPPDATA\Android\Sdk"` |
+| `Unable to find bundled Java version` / Java errors during build | Point Flutter to Android Studio's JDK: `flutter config --jdk-dir "C:\Program Files\Android\Android Studio\jbr"` |
+| `flutter` is not recognized | PATH not picked up: open a **new** PowerShell, or recheck Step 2 |
+| `Building with plugins requires symlink support` | Step 1: Developer Mode |
+
+---
+
+## Step 8 (optional). Use your own Android phone
+
+1. On the phone: **Settings → About phone** → tap **Build number** 7 times ("You are now a developer").
+2. **Settings → System → Developer options** → turn on **USB debugging**.
+3. Plug it in with a USB cable and accept the "Allow USB debugging?" prompt on the phone.
+4. `flutter devices` should list it.
+
+---
+
+## Done? Tell Claude
+
+When `flutter doctor` shows `[√]` for **Flutter**, **Android toolchain** and **Android Studio**, and the emulator
+boots, paste the output of:
+
+```powershell
+flutter doctor -v
+```
+
+into the chat. Claude then creates the project (rest of Task 0) and you will see the first app on the emulator in
+[02. Running the app](README.md) (chapter arrives with the next task).
