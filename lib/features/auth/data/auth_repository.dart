@@ -30,8 +30,9 @@ class AuthRepository {
     });
     // A challenge (e.g. NEW_PASSWORD_REQUIRED) is not handled here: the admin sets permanent passwords.
     final result = r['AuthenticationResult'] as Map<String, dynamic>?;
-    if (result == null)
+    if (result == null) {
       throw AuthError((r['ChallengeName'] as String?) ?? 'Challenge');
+    }
     await _store.save(_fromResult(result, ''));
   }
 
@@ -40,9 +41,10 @@ class AuthRepository {
   Future<String?> getAccessToken() async {
     final s = await _store.load();
     if (s == null) return null;
-    if (s.expiresAt - DateTime.now().millisecondsSinceEpoch > 60000)
+    if (s.expiresAt - DateTime.now().millisecondsSinceEpoch > 60000) {
       return s.access;
-    return _renewing ??= _renew(s).whenComplete(() => _renewing = null);
+    }
+    return await (_renewing ??= _renew(s).whenComplete(() => _renewing = null));
   }
 
   Future<String?> _renew(Session s) async {

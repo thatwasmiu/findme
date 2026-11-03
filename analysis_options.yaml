@@ -14,3 +14,7 @@ linter:
     lines_longer_than_80_chars: false
     # Dart 3.13 suggests `const new(...)` constructors; the classic form is easier to read for newcomers.
     unnecessary_type_name_in_constructor: false
+    # Subjective style rules that add noise for newcomers.
+    cascade_invocations: false
+    # main() catches the config StateError on purpose; refresh() unpacks ParallelWaitError.
+    avoid_catching_errors: false

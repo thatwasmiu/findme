@@ -15,8 +15,9 @@ class FriendsRepository {
     try {
       return await _api.send(method, path, body: body);
     } on ApiStatus catch (e) {
-      if (e.status == 400 || e.status == 404 || e.status == 409)
+      if (e.status == 400 || e.status == 404 || e.status == 409) {
         throw FriendError(e.reason ?? 'not found');
+      }
       throw HttpError(e.status);
     }
   }

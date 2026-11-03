@@ -71,10 +71,12 @@ class TrailController extends Notifier<TrailState> {
     _shown = null;
     final initial = TrailState(range: presetRange(Preset.today, _now));
     if (signedIn) {
-      Future.microtask(() {
-        unawaited(load());
-        _restartPolling();
-      });
+      unawaited(
+        Future.microtask(() {
+          unawaited(load());
+          _restartPolling();
+        }),
+      );
     }
     return initial;
   }

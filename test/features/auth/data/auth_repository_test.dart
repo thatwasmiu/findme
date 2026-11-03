@@ -34,7 +34,7 @@ Map<String, Object?> tokens(
   'AuthenticationResult': {
     'AccessToken': access,
     'ExpiresIn': expiresIn,
-    if (refresh != null) 'RefreshToken': refresh,
+    'RefreshToken': ?refresh,
   },
 };
 

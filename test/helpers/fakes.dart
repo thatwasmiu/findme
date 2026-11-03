@@ -4,17 +4,18 @@ import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/shares/data/shares_repository.dart';
 import 'package:findme/features/trail/data/track_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockAuth extends Mock implements AuthRepository {}
+class MockAuth extends Mock implements AuthRepository;
 
-class MockTrack extends Mock implements TrackRepository {}
+class MockTrack extends Mock implements TrackRepository;
 
-class MockShares extends Mock implements SharesRepository {}
+class MockShares extends Mock implements SharesRepository;
 
-class MockFriends extends Mock implements FriendsRepository {}
+class MockFriends extends Mock implements FriendsRepository;
 
 /// Prefs kept in memory.
 class MemoryPrefs implements Prefs {
@@ -61,3 +62,11 @@ List<Override> baseOverrides({
   if (shares != null) sharesRepositoryProvider.overrideWithValue(shares),
   if (friends != null) friendsRepositoryProvider.overrideWithValue(friends),
 ];
+
+/// A tall test screen, so long lazy lists build every row.
+void tallView(WidgetTester t) {
+  t.view
+    ..physicalSize = const Size(1080, 6000)
+    ..devicePixelRatio = 1;
+  addTearDown(t.view.reset);
+}

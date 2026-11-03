@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,11 +10,14 @@ enum AuthPhase { loading, signedOut, signedIn, noAccount }
 class AuthController extends Notifier<AuthPhase> {
   @override
   AuthPhase build() {
-    Future.microtask(() async {
-      final t = await ref.read(authRepositoryProvider).getAccessToken();
-      if (state == AuthPhase.loading)
-        state = t == null ? AuthPhase.signedOut : AuthPhase.signedIn;
-    });
+    unawaited(
+      Future.microtask(() async {
+        final t = await ref.read(authRepositoryProvider).getAccessToken();
+        if (state == AuthPhase.loading) {
+          state = t == null ? AuthPhase.signedOut : AuthPhase.signedIn;
+        }
+      }),
+    );
     return AuthPhase.loading;
   }
 

@@ -40,7 +40,7 @@ class AppConfig {
 
   final String apiUrl;
 
-  /// Cognito issuer: https://cognito-idp.<region>.amazonaws.com/<pool id>.
+  /// Cognito issuer: `https://cognito-idp.<region>.amazonaws.com/<pool id>`.
   final String authority;
   final String clientId;
 

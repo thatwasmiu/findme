@@ -50,5 +50,7 @@ Dio fakeDio(FakeAdapter adapter) => Dio()..httpClientAdapter = adapter;
 Object? sentBody(RequestOptions r) =>
     r.data is String ? jsonDecode(r.data as String) : r.data;
 
-DioException offline(RequestOptions r) =>
-    DioException.connectionError(requestOptions: r, reason: 'offline');
+DioException offline(Object? r) => DioException.connectionError(
+  requestOptions: r! as RequestOptions,
+  reason: 'offline',
+);

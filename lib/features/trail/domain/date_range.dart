@@ -26,7 +26,7 @@ enum Preset {
   d7('7 ngày'),
   d30('30 ngày');
 
-  const Preset(this.label);
+  Preset(this.label);
   final String label;
 }
 
@@ -84,8 +84,8 @@ DateRange customRange(String fromYmd, String toYmd) {
 
 /// True when the range is within one local calendar day.
 bool isOneDay(DateRange r) {
-  final a = DateTime.parse(r.from).toLocal(),
-      b = DateTime.parse(r.to).toLocal();
+  final a = DateTime.parse(r.from).toLocal();
+  final b = DateTime.parse(r.to).toLocal();
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 

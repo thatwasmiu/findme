@@ -13,10 +13,7 @@ const noAccountText =
 
 /// The welcome card: starting up, sign-in form, or "this login has no map" (the web's App.tsx welcome).
 class WelcomeScreen extends ConsumerWidget {
-  const WelcomeScreen({super.key, this.error});
-
-  /// A startup problem to show (e.g. missing config).
-  final String? error;
+  const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,13 +40,8 @@ class WelcomeScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Palette.muted),
                   ),
-                  if (error != null) ...[
-                    const SizedBox(height: 8),
-                    Notice(error!, error: true),
-                  ],
                   const SizedBox(height: 16),
-                  if (phase == AuthPhase.signedOut && error == null)
-                    const SignInForm(),
+                  if (phase == AuthPhase.signedOut) const SignInForm(),
                   if (phase == AuthPhase.noAccount) ...[
                     const Notice(noAccountText, error: true),
                     const SizedBox(height: 12),

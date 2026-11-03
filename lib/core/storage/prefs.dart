@@ -36,16 +36,18 @@ class SharedPrefs implements Prefs {
   }
 
   @override
-  Future<void> rememberStart(double lon, double lat) async =>
-      (await _p).setString(_start, jsonEncode([round4(lon), round4(lat)]));
+  Future<void> rememberStart(double lon, double lat) async {
+    await (await _p).setString(_start, jsonEncode([round4(lon), round4(lat)]));
+  }
 
   @override
   Future<List<String>> shownFriends() async =>
       (await _p).getStringList(_shown) ?? const [];
 
   @override
-  Future<void> saveShownFriends(List<String> ids) async =>
-      (await _p).setStringList(_shown, ids);
+  Future<void> saveShownFriends(List<String> ids) async {
+    await (await _p).setStringList(_shown, ids);
+  }
 }
 
 /// 4 decimals (~10 m), as the web stores it.

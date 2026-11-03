@@ -33,7 +33,8 @@ import 'package:findme/features/trail/domain/models.dart';
   final f = pos.clamp(0, pts.length - 1).toDouble();
   final i = f.floor();
   final k = f - i;
-  final a = pts[i], b = pts[i + 1 < pts.length ? i + 1 : pts.length - 1];
+  final a = pts[i];
+  final b = pts[i + 1 < pts.length ? i + 1 : pts.length - 1];
   return (
     a.lon + (b.lon - a.lon) * k,
     a.lat + (b.lat - a.lat) * k,
@@ -120,7 +121,7 @@ List<Stop> topStops(List<Stop> stops, {int n = 10}) {
       .toList();
 }
 
-const _marginS = 15 * 60; // the server smooths and thins inside the window: redo a little before the end
+const int _marginS = 15 * 60; // the server smooths and thins inside the window: redo a little before the end
 
 /// Where a background refresh should start: from the start of the last stop while you are still there, else 15 min
 /// before your last print. Never before [rangeFrom]; nothing loaded yet → the whole range.

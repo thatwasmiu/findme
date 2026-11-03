@@ -18,7 +18,8 @@ String ago(String iso, {DateTime? now}) {
 String duration(int seconds) {
   final min = (seconds / 60).round().clamp(1, 1 << 31);
   if (min < 60) return '$min phút';
-  final h = min ~/ 60, m = min % 60;
+  final h = min ~/ 60;
+  final m = min % 60;
   return m > 0 ? '$h giờ $m phút' : '$h giờ';
 }
 

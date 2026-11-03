@@ -41,7 +41,11 @@ void main() {
                 'last': {'lat': 1, 'lon': 2, 'ts': 'T'},
               }
             : p.endsWith('/friends')
-            ? {'friends': [], 'incoming': [], 'outgoing': []}
+            ? {
+                'friends': <Object>[],
+                'incoming': <Object>[],
+                'outgoing': <Object>[],
+              }
             : p.endsWith('/requests')
             ? {
                 'outgoing': {'id': 'b', 'name': 'B', 'at': 'A'},
