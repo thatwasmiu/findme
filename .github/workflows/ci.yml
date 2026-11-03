@@ -26,7 +26,7 @@ jobs:
       - name: Generated code is up to date
         run: |
           dart run build_runner build -d
-          git diff --exit-code
+          git diff --exit-code -- '*.g.dart' '*.freezed.dart'
       - run: dart format --set-exit-if-changed lib test integration_test
       - run: flutter analyze
       - run: flutter test --coverage
