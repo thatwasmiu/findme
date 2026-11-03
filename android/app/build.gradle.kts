@@ -15,8 +15,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "app.findme.findme"
+        applicationId = "app.findme.mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -27,6 +26,21 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    // Two side-by-side installs: "Find Me Dev" (app.findme.mobile.dev) and "Find Me". Each takes its config from
+    // --dart-define-from-file=config/<flavor>.json (see docs/guide/02-running-the-app.md).
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "Find Me Dev")
+        }
+        create("prod") {
+            dimension = "env"
+            resValue("string", "app_name", "Find Me")
+        }
     }
 
     buildTypes {
