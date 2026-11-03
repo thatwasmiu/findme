@@ -49,3 +49,5 @@ The app currently uses the phone's system font. To match the web: download Nunit
 
 When real people use the app: Sentry (`sentry_flutter`) or Firebase Crashlytics show crashes from their phones.
 Remember the logging rule: no tokens, coordinates, codes, emails or passwords in reports.
+
+Accounts, bundle/application IDs, signing keys and store setup step by step: [14. Store accounts and app IDs](14-store-accounts-and-app-ids.md).

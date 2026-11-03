@@ -36,3 +36,7 @@ ios/Flutter/ephemeral/
 ios/Flutter/flutter_export_environment.sh
 ios/Runner/GeneratedPluginRegistrant.*
 **/xcuserdata/
+
+# Store signing secrets (chapter 14)
+*.p8
+*.p12

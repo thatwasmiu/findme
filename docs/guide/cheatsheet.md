@@ -83,3 +83,15 @@ Both `findme:start` and `findme.shownFriends` are cleared when you sign out or t
 | `git remote add origin https://github.com/YOUR-USER/findme.git` | Connects to GitHub (chapter 12) |
 | `git push -u origin main` | First push; CI starts |
 | GitHub → Actions → CI → Run workflow | Starts the iOS build by hand |
+
+## Store release (chapter 14)
+
+| Command / item | Does |
+|---|---|
+| `keytool -genkey -v -keystore $env:USERPROFILE\findme-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload` | Creates the Android upload key (once; back it up) |
+| `flutter build apk --flavor prod --release --dart-define-from-file=config/prod.json` | APK to install directly |
+| `flutter build appbundle --flavor prod --release --dart-define-from-file=config/prod.json` | `.aab` for Google Play |
+| `flutter build ipa --release --dart-define-from-file=config/prod.json` | iOS archive (Mac only) |
+| `version: 1.0.0+N` in `pubspec.yaml` | Raise `N` before every store upload |
+| Apple Developer Program | 99 USD/year; free Apple ID = own iPhone only, 7-day installs |
+| Google Play Console | 25 USD once; new personal accounts: 12 testers × 14 days before production |
