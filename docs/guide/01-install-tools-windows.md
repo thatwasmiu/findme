@@ -220,4 +220,4 @@ flutter doctor -v
 ```
 
 into the chat. Claude then creates the project (rest of Task 0) and you will see the first app on the emulator in
-[02. Running the app](README.md) (chapter arrives with the next task).
+[02. Running the app](02-running-the-app.md).
