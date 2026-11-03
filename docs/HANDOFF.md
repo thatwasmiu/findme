@@ -9,7 +9,9 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
   No admin screen (by design).
 - Follows the web up to `travel-heatmap` e66386f (2026-11-03): one `/track` request a minute carries your trail
   (`have` → `unchanged`) and your shown friends (`friends=`); `/friends/live` and `/friends/{id}/today` are no longer
-  called; "Hôm nay" is kept on the phone (`findme.today`) so reopening asks only for what is new.
+  called; "Hôm nay" is kept on the phone (`findme.today`) so reopening asks only for what is new. Also the web's
+  build stamp (8c1254e): "Phiên bản <commit> <time UTC>" at the bottom of the 👥 sheet and printed at start-up, from
+  `--dart-define=APP_VERSION=…` (CI sets it; chapter 02 has the command), "dev" without it.
 - 142 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Never run on a device.** Android Studio install failed on 2026-11-03 (account has no admin rights, exit 1812; only

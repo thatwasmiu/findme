@@ -51,6 +51,10 @@ void main() {
     await pump(t, Relations.empty);
     expect(find.text('K7QM-3XPA'), findsOneWidget);
     expect(
+      find.text('Phiên bản dev'),
+      findsOneWidget,
+    ); // no APP_VERSION in tests
+    expect(
       find.text('Chưa có bạn nào. Gửi mã của bạn cho người thân nhé.'),
       findsOneWidget,
     );

@@ -91,6 +91,14 @@ flutter build apk --flavor dev --debug --dart-define-from-file=config/dev.json
 The file is `build\app\outputs\flutter-apk\app-dev-debug.apk`. Copy it to an Android phone and open it (allow
 "install unknown apps" when asked). A release build for the Play Store is [chapter 13](13-later-ios-and-store-release.md).
 
+**Build stamp.** The bottom of the 👥 sheet says which build a phone runs ("Phiên bản 3f2a1bc 2026-11-03 10:14",
+`lib/core/config/version.dart`, like the web's `version.ts`); it is also printed at start-up (`flutter logs`). It
+comes from one more define; without it the sheet says "Phiên bản dev". CI adds it to its builds. By hand:
+
+```powershell
+flutter build apk --flavor dev --debug --dart-define-from-file=config/dev.json --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm'))"
+```
+
 ## Trouble?
 
 | Symptom | Fix |

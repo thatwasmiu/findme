@@ -23,6 +23,7 @@ All commands run in PowerShell in the project folder. Flutter lives in `C:\src\f
 | `flutter build apk --flavor dev --debug --dart-define-from-file=config/dev.json` | APK in `build\app\outputs\flutter-apk\` |
 | `flutter build appbundle --flavor prod --dart-define-from-file=config/prod.json` | Play Store bundle (chapter 13) |
 | `flutter clean` | Deletes build output (when a build is stuck) |
+| `… --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm'))"` | Add to any build: commit + time shown as "Phiên bản …" in the 👥 sheet (else "dev") |
 
 ## Quality
 

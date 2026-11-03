@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:findme/core/config/version.dart';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
@@ -278,6 +279,8 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
                 ],
               ),
           ],
+          const SizedBox(height: 12),
+          const Notice('Phiên bản $appVersion'),
         ],
       ),
     );

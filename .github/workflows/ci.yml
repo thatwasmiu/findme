@@ -34,7 +34,7 @@ jobs:
         with:
           name: coverage
           path: coverage/lcov.info
-      - run: flutter build apk --flavor dev --debug --dart-define-from-file=config/example.json
+      - run: flutter build apk --flavor dev --debug --dart-define-from-file=config/example.json --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
       - uses: actions/upload-artifact@v4
         with:
           name: app-dev-debug-apk
@@ -53,4 +53,4 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --no-codesign --dart-define-from-file=config/example.json
+      - run: flutter build ios --no-codesign --dart-define-from-file=config/example.json --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
