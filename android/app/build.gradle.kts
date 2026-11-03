@@ -30,6 +30,9 @@ android {
 
     // Two side-by-side installs: "Find Me Dev" (app.findme.mobile.dev) and "Find Me". Each takes its config from
     // --dart-define-from-file=config/<flavor>.json (see docs/guide/02-running-the-app.md).
+    buildFeatures {
+        resValues = true // off by default since Android Gradle Plugin 9; the flavors set app_name with it
+    }
     flavorDimensions += "env"
     productFlavors {
         create("dev") {
