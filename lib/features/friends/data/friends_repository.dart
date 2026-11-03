@@ -2,7 +2,6 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/network/api_client.dart';
 import 'package:findme/core/network/api_client_provider.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
-import 'package:findme/features/trail/domain/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The friends API (port of the web's `friendsApi.ts`).
@@ -54,28 +53,7 @@ class FriendsRepository {
   /// Ends a friendship, or cancels your own request. Silent for the other person.
   Future<void> remove(String id) => _send('DELETE', '/friends/${_one(id)}');
 
-  /// Where each friend is now (only friends seen today).
-  Future<List<LivePoint>> live() async {
-    final b = await _send('GET', '/friends/live') as Map<String, dynamic>;
-    return [
-      for (final p in b['friends'] as List<dynamic>)
-        LivePoint.fromJson(p as Map<String, dynamic>),
-    ];
-  }
-
-  /// One friend's paw prints since local midnight, and their newest point today.
-  Future<({List<TrackPoint> points, LastPoint? last})> today(String id) async {
-    final b = await _send(
-      'GET',
-      '/friends/${_one(id)}/today',
-    ) as Map<String, dynamic>;
-    return (
-      points: trackPointsFromJson(b['points']),
-      last: b['last'] == null
-          ? null
-          : LastPoint.fromJson(b['last'] as Map<String, dynamic>),
-    );
-  }
+  // Shown friends' positions and today's prints come with your own trail: TrackRepository.fetch(…, friends:).
 }
 
 final friendsRepositoryProvider = Provider<FriendsRepository>(

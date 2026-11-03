@@ -1,46 +1,34 @@
 import 'dart:async';
 
-import 'package:clock/clock.dart';
-
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/trail/domain/colors.dart';
+import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/domain/models.dart';
+import 'package:findme/features/trail/domain/trail_math.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The list and where shown friends are now: small, so often.
-const friendsPollMs = 7000;
-
-/// A shown friend's prints for today: bigger, so less often.
-const routeMs = 60000;
-
-class FriendDay {
-  const FriendDay({required this.points, required this.last, required this.at});
-  final List<TrackPoint> points;
-  final LastPoint? last;
-
-  /// When it was fetched (epoch ms).
-  final int at;
-}
+/// The list of friends and requests (it drives the request count on the 👥 button).
+const friendsPollMs = 60000;
 
 class FriendsState {
   const FriendsState({
     this.me,
     this.relations = Relations.empty,
     this.shownIds = const [],
-    this.live = const {},
     this.today = const {},
   });
 
   final Me? me;
   final Relations relations;
   final List<String> shownIds;
-  final Map<String, LastPoint> live;
-  final Map<String, FriendDay> today;
+
+  /// Shown friends' prints and newest point today, filled in by the trail's /track request.
+  final Map<String, FriendTrail> today;
 
   /// Only current friends can be on the map: a removed friend drops out by itself.
   List<String> get shown =>
@@ -50,21 +38,20 @@ class FriendsState {
     Me? me,
     Relations? relations,
     List<String>? shownIds,
-    Map<String, LastPoint>? live,
-    Map<String, FriendDay>? today,
+    Map<String, FriendTrail>? today,
   }) => FriendsState(
     me: me ?? this.me,
     relations: relations ?? this.relations,
     shownIds: shownIds ?? this.shownIds,
-    live: live ?? this.live,
     today: today ?? this.today,
   );
 }
 
-/// Your friends, requests and which friends are on your map (port of the web's useFriends.ts).
+/// Your friends, requests and which friends are on your map (port of the web's useFriends.ts). The list is refreshed
+/// every minute while the app is visible and as soon as it comes back. Shown friends' prints and positions come with
+/// your own trail in one /track request (TrailController): [ask] says what to ask for, [apply] takes the answer.
 class FriendsController extends Notifier<FriendsState> {
   Timer? _list;
-  Timer? _routes;
   bool _paused = false;
 
   FriendsRepository get _repo => ref.read(friendsRepositoryProvider);
@@ -74,18 +61,12 @@ class FriendsController extends Notifier<FriendsState> {
     final signedIn = ref.watch(
       signedInProvider,
     ); // signing out forgets everything of that account
-    ref.onDispose(() {
-      _list?.cancel();
-      _routes?.cancel();
-    });
+    ref.onDispose(() => _list?.cancel());
     if (signedIn) {
-      // Timers are made here, synchronously, so onDispose always cancels them (Riverpod makes a new notifier on
+      // The timer is made here, synchronously, so onDispose always cancels it (Riverpod makes a new notifier on
       // every rebuild, e.g. at sign-out, even while the first load below is still waiting).
       _list = Timer.periodic(const Duration(milliseconds: friendsPollMs), (_) {
         if (!_paused) unawaited(refresh());
-      });
-      _routes = Timer.periodic(const Duration(milliseconds: routeMs), (_) {
-        if (!_paused) unawaited(_loadToday(force: true));
       });
       unawaited(
         Future.microtask(() async {
@@ -93,7 +74,6 @@ class FriendsController extends Notifier<FriendsState> {
           if (!ref.mounted) return;
           state = state.copyWith(shownIds: ids);
           await refresh();
-          await _loadToday();
         }),
       );
     }
@@ -112,69 +92,52 @@ class FriendsController extends Notifier<FriendsState> {
   Future<void> refresh() async {
     if (!ref.mounted) return;
     try {
-      final shown = state.shown.isNotEmpty || state.shownIds.isNotEmpty;
-      final (me, rel, live) = await (
+      final (me, rel) = await (
         state.me != null ? Future.value(state.me!) : _repo.me(),
         _repo.relations(),
-        shown ? _repo.live() : Future.value(const <LivePoint>[]),
       ).wait;
       if (!ref.mounted) return;
-      state = state.copyWith(
-        me: me,
-        relations: rel,
-        live: {
-          for (final p in live)
-            p.id: LastPoint(lon: p.lon, lat: p.lat, ts: p.ts),
-        },
-      );
+      state = state.copyWith(me: me, relations: rel);
     } on ParallelWaitError<dynamic, dynamic> catch (e) {
-      final errs =
-          e.errors
-              as (
-                AsyncError<Object?>?,
-                AsyncError<Object?>?,
-                AsyncError<Object?>?,
-              );
-      _failed((errs.$1 ?? errs.$2 ?? errs.$3)!.error);
+      final errs = e.errors as (AsyncError<Object?>?, AsyncError<Object?>?);
+      _failed((errs.$1 ?? errs.$2)!.error);
     } on Object catch (e) {
       _failed(e);
     }
   }
 
-  /// Today's prints of each shown friend that is due (or all of them when [force]).
-  Future<void> _loadToday({bool force = false, List<String>? only}) async {
-    if (!ref.mounted) return;
-    final now = clock.now().millisecondsSinceEpoch;
-    final due = (only ?? state.shown)
-        .where(
-          (id) =>
-              force ||
-              only != null ||
-              state.today[id] == null ||
-              now - state.today[id]!.at >= routeMs,
-        )
-        .toList();
-    if (due.isEmpty) return;
-    try {
-      final got = await Future.wait(
-        due.map((id) async => MapEntry(id, await _repo.today(id))),
-      );
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        today: {
-          ...state.today,
-          for (final e in got)
-            e.key: FriendDay(
-              points: e.value.points,
-              last: e.value.last,
-              at: now,
-            ),
-        },
-      );
-    } on Object catch (e) {
-      _failed(e);
-    }
+  /// The `friends` parameter for /track: one `<id>~<since>~<have>` per shown friend.
+  String ask(DateTime now) {
+    final day = isoMs(midnightOf(now));
+    return state.shown
+        .map((id) => friendAsk(id, state.today[id], day))
+        .join(',');
   }
+
+  /// Fold /track's `friends` answer in. Only the friends that request asked for ([asked]: what [ask] returned)
+  /// change: a friend asked for but left out of the answer is no longer allowed to be seen; the others are kept as
+  /// they are (the first request on opening goes out before the friend list is in, and must not drop friends
+  /// restored from the phone).
+  Map<String, FriendTrail> apply(
+    List<FriendPart> parts,
+    String asked,
+    DateTime now,
+  ) {
+    final start = midnightOf(now).millisecondsSinceEpoch;
+    final next = {...state.today};
+    for (final a in asked.split(',').where((a) => a.isNotEmpty)) {
+      next.remove(a.split('~').first);
+    }
+    for (final p in parts) {
+      next[p.id] = friendMerge(state.today[p.id], p, start);
+    }
+    state = state.copyWith(today: next);
+    return next;
+  }
+
+  /// Today's prints kept on the phone: drawn at once, then only the newest part is asked for.
+  void restore(Map<String, FriendTrail> saved) =>
+      state = state.copyWith(today: saved);
 
   Future<void> toggle(String id) async {
     final on = !state.shownIds.contains(id);
@@ -183,12 +146,7 @@ class FriendsController extends Notifier<FriendsState> {
         : state.shownIds.where((x) => x != id).toList();
     state = state.copyWith(shownIds: next);
     await ref.read(prefsProvider).saveShownFriends(next);
-    if (on) {
-      await Future.wait([
-        refresh(),
-        _loadToday(only: [id]),
-      ]);
-    }
+    // The trail controller sees `shown` change and asks /track for them right away.
   }
 
   /// Sends a request by code; returns the note to show.
@@ -216,7 +174,6 @@ class FriendsController extends Notifier<FriendsState> {
   void resumed() {
     _paused = false;
     unawaited(refresh());
-    unawaited(_loadToday()); // only the routes older than routeMs
   }
 }
 
@@ -234,7 +191,7 @@ final friendsOnMapProvider = Provider<List<MapFriend>>((ref) {
           name: f.name,
           color: friendColor(id),
           points: s.today[id]?.points ?? const [],
-          last: s.live[id] ?? s.today[id]?.last,
+          last: s.today[id]?.last,
         ),
   ];
 });

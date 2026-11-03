@@ -46,7 +46,10 @@ void main() {
         },
       ),
     );
-    final t = await repo().fetch(range);
+    final a = await repo().fetch(range);
+    final t = a.track;
+    expect(a.unchanged, isFalse);
+    expect(a.friends, isEmpty);
     expect(t.points, const [TrackPoint(105.78, 21.03, 1793000000, 8)]);
     expect(t.stops.single.name, 'X');
     expect(t.last, const LastPoint(lon: 1, lat: 2, ts: 'T'));
@@ -59,8 +62,47 @@ void main() {
 
   test('fills missing fields', () async {
     adapter = FakeAdapter((_) => (status: 200, body: <String, Object?>{}));
-    expect(await repo().fetch(range), Track.empty);
+    expect((await repo().fetch(range)).track, Track.empty);
   });
+
+  test(
+    'have + friends go along; unchanged and friend parts come back',
+    () async {
+      adapter = FakeAdapter(
+        (_) => (
+          status: 200,
+          body: {
+            'unchanged': true,
+            'last': {'lon': 1, 'lat': 2, 'ts': 'T'},
+            'friends': [
+              {'id': 'f', 'unchanged': true},
+              {
+                'id': 'g',
+                'from': 'F',
+                'points': [
+                  [1, 2, 3, null],
+                ],
+                'last': {'lon': 1, 'lat': 2, 'ts': 'G'},
+              },
+            ],
+          },
+        ),
+      );
+      final a = await repo().fetch(range, have: 'T', friends: 'f~a~b,g~~');
+      expect(adapter.requests.single.uri.queryParameters, {
+        'from': range.from,
+        'to': range.to,
+        'have': 'T',
+        'friends': 'f~a~b,g~~',
+      });
+      expect(a.unchanged, isTrue);
+      expect(a.track.last?.ts, 'T');
+      expect(a.friends.first.unchanged, isTrue);
+      expect(a.friends.last.from, 'F');
+      expect(a.friends.last.points, const [TrackPoint(1, 2, 3)]);
+      expect(a.friends.last.last?.ts, 'G');
+    },
+  );
 
   test(
     '403 -> AccountMissing; 401 -> AuthExpired; 400 -> HttpError(400)',

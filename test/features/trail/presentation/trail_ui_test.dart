@@ -127,7 +127,8 @@ void main() {
       Future<Track> Function()? answer,
     }) async {
       track = MockTrack();
-      when(() => track.fetch(any())).thenAnswer(
+      stubFetch(
+        track,
         (_) =>
             answer?.call() ??
             Future.value(
@@ -197,7 +198,7 @@ void main() {
 
   testWidgets('replay bar: clock, range, speed label, close', (t) async {
     final track = MockTrack();
-    when(() => track.fetch(any())).thenAnswer((_) async => Track.empty);
+    stubFetch(track, (_) async => Track.empty);
     await t.pumpWidget(
       ProviderScope(
         overrides: baseOverrides(auth: fakeAuth(), track: track),

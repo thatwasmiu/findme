@@ -151,3 +151,33 @@ Track mergeTail(Track prev, Track tail, String from) {
     last: tail.last ?? prev.last,
   );
 }
+
+/// What to ask /track for one shown friend: `<id>~<since>~<have>`. Nothing yet, or only yesterday's: the whole day
+/// (empty since). Else only the newest part (like your own trail) and the newest time we hold, so an unchanged friend
+/// costs the server one tiny read.
+String friendAsk(String id, FriendTrail? d, String todayIso) {
+  if (d == null ||
+      d.points.isEmpty ||
+      d.points.first.t * 1000 <
+          DateTime.parse(todayIso).millisecondsSinceEpoch) {
+    return '$id~~';
+  }
+  return '$id~${tailFrom(Track(points: d.points), todayIso)}~${d.last?.ts ?? ''}';
+}
+
+/// Fold a friend's answer into what we hold. Prints from before today ([todayStart], epoch ms) are dropped: friends
+/// only share today.
+FriendTrail friendMerge(FriendTrail? prev, FriendPart got, int todayStart) {
+  if (got.unchanged && prev != null) return prev;
+  final base = Track(
+    points: [...?prev?.points.where((p) => p.t * 1000 >= todayStart)],
+    last: prev?.last,
+  );
+  final m = mergeTail(
+    base,
+    Track(points: got.points, last: got.last),
+    got.from ??
+        isoMs(DateTime.fromMillisecondsSinceEpoch(todayStart, isUtc: true)),
+  );
+  return (points: m.points, last: m.last);
+}

@@ -29,6 +29,17 @@ class Session {
   };
 }
 
+/// The account id (Cognito `sub`) inside an access token; null if it cannot be read.
+String? subOf(String token) {
+  try {
+    final body = base64Url.normalize(token.split('.')[1]);
+    final sub = (jsonDecode(utf8.decode(base64Url.decode(body))) as Map)['sub'];
+    return sub is String ? sub : null;
+  } on Object {
+    return null;
+  }
+}
+
 /// Where the session is kept. An interface so tests can use an in-memory store.
 abstract interface class SessionStore {
   Future<Session?> load();

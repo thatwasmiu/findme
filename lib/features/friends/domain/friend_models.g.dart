@@ -64,18 +64,3 @@ Map<String, dynamic> _$RelationsToJson(_Relations instance) =>
       'incoming': instance.incoming,
       'outgoing': instance.outgoing,
     };
-
-_LivePoint _$LivePointFromJson(Map<String, dynamic> json) => _LivePoint(
-  id: json['id'] as String,
-  lat: (json['lat'] as num).toDouble(),
-  lon: (json['lon'] as num).toDouble(),
-  ts: json['ts'] as String,
-);
-
-Map<String, dynamic> _$LivePointToJson(_LivePoint instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'lat': instance.lat,
-      'lon': instance.lon,
-      'ts': instance.ts,
-    };

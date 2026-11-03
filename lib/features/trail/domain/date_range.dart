@@ -51,6 +51,9 @@ DateTime _localMidnight(DateTime now, int back) {
   return DateTime(l.year, l.month, l.day - back);
 }
 
+/// The local midnight that starts the day containing [now] (the same "today" as the date filter).
+DateTime midnightOf(DateTime now) => _localMidnight(now, 0);
+
 DateRange presetRange(Preset p, DateTime now) {
   final to = isoMs(now);
   switch (p) {

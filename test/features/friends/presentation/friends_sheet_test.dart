@@ -4,7 +4,6 @@ import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/friends/presentation/friends_sheet.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
-import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,9 +24,6 @@ void main() {
       repo.me,
     ).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K7QM-3XPA'));
     when(repo.relations).thenAnswer((_) async => rel);
-    when(repo.live).thenAnswer((_) async => const []);
-    when(() => repo.today(any()))
-        .thenAnswer((_) async => (points: const <TrackPoint>[], last: null));
     await t.pumpWidget(
       ProviderScope(
         overrides: [

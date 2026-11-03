@@ -2,8 +2,11 @@ import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
+import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/shares/data/shares_repository.dart';
 import 'package:findme/features/trail/data/track_repository.dart';
+import 'package:findme/features/trail/domain/date_range.dart';
+import 'package:findme/features/trail/domain/models.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,11 +34,48 @@ class MemoryPrefs implements Prefs {
   Future<List<String>> shownFriends() async => shown;
   @override
   Future<void> saveShownFriends(List<String> ids) async => shown = [...ids];
+  ({String who, String day, TodayCache cache})? today;
+  @override
+  Future<TodayCache?> readToday(String who, String day) async =>
+      today?.who == who && today?.day == day ? today!.cache : null;
+  @override
+  Future<void> writeToday(
+    String who,
+    String day,
+    Track mine,
+    Map<String, FriendTrail> friends,
+  ) async =>
+      today = (who: who, day: day, cache: (mine: mine, friends: friends));
+  @override
+  Future<void> clearToday() async => today = null;
+
   @override
   Future<void> clear() async {
     start = null;
     shown = [];
+    today = null;
   }
+}
+
+/// `fetch` answers [answer]'s trail for any range and options (no friends' parts).
+void stubFetch(MockTrack t, Future<Track> Function(DateRange r) answer) =>
+    when(
+      () => t.fetch(
+        any(),
+        have: any(named: 'have'),
+        friends: any(named: 'friends'),
+      ),
+    ).thenAnswer(
+      (i) async =>
+          TrackAnswer(await answer(i.positionalArguments.single as DateRange)),
+    );
+
+/// A friends API with no friends and no requests.
+MockFriends quietFriends() {
+  final f = MockFriends();
+  when(f.me).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
+  when(f.relations).thenAnswer((_) async => Relations.empty);
+  return f;
 }
 
 const testConfig = AppConfig(
@@ -65,7 +105,7 @@ List<Override> baseOverrides({
   prefsProvider.overrideWithValue(prefs ?? MemoryPrefs()),
   if (track != null) trackRepositoryProvider.overrideWithValue(track),
   if (shares != null) sharesRepositoryProvider.overrideWithValue(shares),
-  if (friends != null) friendsRepositoryProvider.overrideWithValue(friends),
+  friendsRepositoryProvider.overrideWithValue(friends ?? quietFriends()),
 ];
 
 /// A tall test screen, so long lazy lists build every row.

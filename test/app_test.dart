@@ -24,7 +24,8 @@ void main() {
     });
     final track = MockTrack();
     final s = now.millisecondsSinceEpoch ~/ 1000;
-    when(() => track.fetch(any())).thenAnswer(
+    stubFetch(
+      track,
       (_) async => Track(
         points: [
           TrackPoint(105.78, 21.03, s - 600),
@@ -84,7 +85,7 @@ void main() {
 
   testWidgets('an open sheet closes when the session expires', (t) async {
     final track = MockTrack();
-    when(() => track.fetch(any())).thenAnswer((_) async => Track.empty);
+    stubFetch(track, (_) async => Track.empty);
     final shares = MockShares();
     when(shares.list).thenAnswer(
       (_) async => [

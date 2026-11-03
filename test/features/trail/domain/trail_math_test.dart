@@ -170,4 +170,62 @@ void main() {
       expect(tailFrom(const Track(points: pts), js(19500)), js(19500));
     });
   });
+
+  group('friends in the combined request', () {
+    final t0 = DateTime.parse(
+      '2026-10-28T17:00:00.000Z',
+    ); // today's midnight (Vietnam)
+    final today = isoMs(t0);
+    final s0 = t0.millisecondsSinceEpoch ~/ 1000;
+    TrackPoint p(int min) => TrackPoint(105.78, 21.03, s0 + min * 60);
+    LastPoint last(int min) => LastPoint(
+      lon: 105.78,
+      lat: 21.03,
+      ts: isoMs(t0.add(Duration(minutes: min))),
+    );
+
+    test('friendAsk: nothing yet (or only yesterday) → the whole day; '
+        'else since the tail start, with the newest time held', () {
+      expect(friendAsk('f', null, today), 'f~~');
+      expect(
+        friendAsk('f', (
+          points: [TrackPoint(1, 1, s0 - 60)],
+          last: null,
+        ), today),
+        'f~~',
+      );
+      expect(
+        friendAsk('f', (points: [p(0), p(600)], last: last(600)), today),
+        'f~${isoMs(t0.add(const Duration(minutes: 585)))}~${last(600).ts}',
+      );
+    });
+
+    test('friendMerge: unchanged keeps what we have; new prints go after '
+        '`from`; yesterday is dropped', () {
+      final FriendTrail had = (
+        points: [TrackPoint(1, 1, s0 - 60), p(10), p(20)],
+        last: last(20),
+      );
+      final ms = t0.millisecondsSinceEpoch;
+      expect(
+        identical(
+          friendMerge(had, const FriendPart(id: 'f', unchanged: true), ms),
+          had,
+        ),
+        isTrue,
+      );
+      final m = friendMerge(
+        had,
+        FriendPart(
+          id: 'f',
+          from: isoMs(t0.add(const Duration(minutes: 15))),
+          points: [p(25)],
+          last: last(25),
+        ),
+        ms,
+      );
+      expect(m.points, [p(10), p(25)]);
+      expect(m.last, last(25));
+    });
+  });
 }

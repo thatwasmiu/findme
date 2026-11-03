@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
@@ -19,25 +21,53 @@ Track trackWithLast(String ts, [List<TrackPoint> points = const []]) => Track(
   last: LastPoint(lon: 1, lat: 2, ts: ts),
 );
 
+/// An access token whose payload carries [sub] (the signature is never checked here).
+String jwt(String sub) =>
+    'h.${base64Url.encode(utf8.encode(jsonEncode({'sub': sub}))).replaceAll('=', '')}.s';
+
 void main() {
   setUpAll(() => registerFallbackValue(const DateRange(from: '', to: '')));
 
   late MockTrack repo;
   late List<DateRange> asked;
+  late List<({String? have, String? friends})> opts;
   late ProviderContainer c;
 
-  /// Signed in, clock frozen at [now]; `answer` decides what /track returns.
-  void start(FakeAsync f, Future<Track> Function(DateRange r) answer) {
+  /// Signed in, clock frozen at [now]; `answer` decides what /track returns (a Track, or a whole TrackAnswer).
+  void start(
+    FakeAsync f,
+    FutureOr<Object> Function(DateRange r) answer, {
+    String token = 't',
+    MemoryPrefs? prefs,
+    MockFriends? friends,
+  }) {
     repo = MockTrack();
     asked = [];
-    when(() => repo.fetch(any())).thenAnswer((i) {
+    opts = [];
+    when(
+      () => repo.fetch(
+        any(),
+        have: any(named: 'have'),
+        friends: any(named: 'friends'),
+      ),
+    ).thenAnswer((i) async {
       final r = i.positionalArguments.single as DateRange;
       asked.add(r);
-      return answer(r);
+      opts.add((
+        have: i.namedArguments[#have] as String?,
+        friends: i.namedArguments[#friends] as String?,
+      ));
+      final a = await answer(r);
+      return a is TrackAnswer ? a : TrackAnswer(a as Track);
     });
     c = ProviderContainer(
       overrides: [
-        ...baseOverrides(auth: fakeAuth(), track: repo),
+        ...baseOverrides(
+          auth: fakeAuth(token: token),
+          track: repo,
+          prefs: prefs,
+          friends: friends,
+        ),
         nowProvider.overrideWithValue(() => now),
       ],
     );
@@ -61,39 +91,38 @@ void main() {
     });
   });
 
-  test(
-    'refresh fetches only the tail and merges it; backs off 7→14→28→56→60 s',
-    () {
-      fakeAsync((f) {
-        final p1 = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
-        start(f, (_) async => trackWithLast('A', [p1]));
-        f.elapse(const Duration(seconds: 7));
-        expect(asked, hasLength(2));
-        expect(
-          asked[1].from,
-          isoMs(DateTime.fromMillisecondsSinceEpoch((p1.t - 900) * 1000)),
-        );
-        for (final gap in [14, 28, 56, 60, 60]) {
-          f.elapse(Duration(seconds: gap - 1));
-          final before = asked.length;
-          f.elapse(const Duration(seconds: 1));
-          expect(asked.length, before + 1, reason: 'next refresh after $gap s');
-        }
-      });
-    },
-  );
-
-  test('new prints: back to 7 s', () {
+  test('every 60 s: only the tail, with `have`', () {
     fakeAsync((f) {
+      final p1 = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
+      start(f, (_) async => trackWithLast('A', [p1]));
+      expect(opts.single.have, isNull);
+      f.elapse(const Duration(seconds: 59));
+      expect(asked, hasLength(1));
+      f.elapse(const Duration(seconds: 1));
+      expect(asked, hasLength(2));
+      expect(
+        asked[1].from,
+        isoMs(DateTime.fromMillisecondsSinceEpoch((p1.t - 900) * 1000)),
+      );
+      expect(opts[1].have, 'A');
+      f.elapse(const Duration(seconds: 60));
+      expect(asked, hasLength(3));
+    });
+  });
+
+  test('`unchanged`: the trail stays, only the newest point moves on', () {
+    fakeAsync((f) {
+      final p1 = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
       var n = 0;
-      start(f, (_) async => trackWithLast('T${n++ < 4 ? 0 : n}'));
-      f.elapse(
-        const Duration(seconds: 7 + 14 + 28),
-      ); // three quiet refreshes, delay now 56 s
-      final before = asked.length;
-      f.elapse(const Duration(seconds: 56)); // this one brings a new last point
-      f.elapse(const Duration(seconds: 7));
-      expect(asked.length, before + 2);
+      start(
+        f,
+        (_) => n++ == 0
+            ? trackWithLast('A', [p1])
+            : TrackAnswer(trackWithLast('B'), unchanged: true),
+      );
+      f.elapse(const Duration(seconds: 60));
+      expect(state().track.points, [p1]);
+      expect(state().track.last?.ts, 'B');
     });
   });
 
@@ -106,7 +135,7 @@ void main() {
         f.elapse(Duration.zero);
         final fetched = asked.length;
         final tick = state().tick;
-        f.elapse(const Duration(seconds: 7));
+        f.elapse(const Duration(seconds: 60));
         expect(asked.length, fetched);
         expect(state().tick, greaterThan(tick));
       });
@@ -138,7 +167,7 @@ void main() {
         (_) async => fail ? throw const NetworkError() : trackWithLast('A'),
       );
       fail = true;
-      f.elapse(const Duration(seconds: 7));
+      f.elapse(const Duration(seconds: 60));
       expect(state().track.last?.ts, 'A');
       expect(state().error, isNull);
     });
@@ -173,27 +202,17 @@ void main() {
     });
   });
 
-  test(
-    'resume refreshes at once and resets the backoff; paused does nothing',
-    () {
-      fakeAsync((f) {
-        start(f, (_) async => trackWithLast('A'));
-        f.elapse(const Duration(seconds: 7 + 14)); // delay now 28 s
-        ctl().paused();
-        final before = asked.length;
-        f.elapse(const Duration(minutes: 5));
-        expect(asked.length, before);
-        ctl().resumed();
-        f.elapse(Duration.zero);
-        expect(asked.length, before + 1);
-        // Like the web: the resume refresh found nothing new, so the next one doubles from 7 s to 14 s.
-        f.elapse(const Duration(seconds: 13));
-        expect(asked.length, before + 1);
-        f.elapse(const Duration(seconds: 1));
-        expect(asked.length, before + 2);
-      });
-    },
-  );
+  test('resume refreshes at once; paused does nothing', () {
+    fakeAsync((f) {
+      start(f, (_) async => trackWithLast('A'));
+      ctl().paused();
+      f.elapse(const Duration(minutes: 5));
+      expect(asked, hasLength(1));
+      ctl().resumed();
+      f.elapse(Duration.zero);
+      expect(asked, hasLength(2));
+    });
+  });
 
   test('unnamed stops after a full load: one full reload 20 s later picks up names', () {
     fakeAsync((f) {
@@ -235,7 +254,7 @@ void main() {
     });
   });
 
-  test('switching range during a background refresh keeps the 7 s rhythm', () {
+  test('switching range during a background refresh keeps the 60 s rhythm', () {
     fakeAsync((f) {
       final gate = Completer<Track>();
       var call = 0;
@@ -243,14 +262,107 @@ void main() {
         call++;
         return call == 2 ? gate.future : Future.value(trackWithLast('A'));
       });
-      f.elapse(const Duration(seconds: 7)); // the quiet refresh hangs
+      f.elapse(const Duration(seconds: 60)); // the quiet refresh hangs
       ctl().setRange(presetRange(Preset.d7, now));
       f.elapse(Duration.zero);
       gate.complete(trackWithLast('A'));
       f.elapse(Duration.zero);
       final before = asked.length;
-      f.elapse(const Duration(seconds: 7));
+      f.elapse(const Duration(seconds: 60));
       expect(asked.length, before + 1);
     });
   });
+
+  group('today kept on the phone', () {
+    final day = presetRange(Preset.today, now).from;
+    final p1 = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
+
+    test('written after a load of "Hôm nay"; reopening draws it at once and '
+        'asks only for the tail', () {
+      final prefs = MemoryPrefs();
+      fakeAsync((f) {
+        start(
+          f,
+          (_) async => trackWithLast('A', [p1]),
+          token: jwt('me'),
+          prefs: prefs,
+        );
+        expect(prefs.today?.who, 'me');
+        expect(prefs.today?.day, day);
+        expect(prefs.today?.cache.mine.points, [p1]);
+      });
+      fakeAsync((f) {
+        start(
+          f,
+          (_) async => TrackAnswer(trackWithLast('A'), unchanged: true),
+          token: jwt('me'),
+          prefs: prefs,
+        );
+        expect(asked.single.from, isNot(day));
+        expect(opts.single.have, 'A');
+        expect(state().track.points, [p1]);
+      });
+    });
+
+    test('another account: not used, and replaced', () {
+      final prefs = MemoryPrefs()
+        ..today = (
+          who: 'someone',
+          day: day,
+          cache: (mine: trackWithLast('X', [p1]), friends: const {}),
+        );
+      fakeAsync((f) {
+        start(f, (_) async => Track.empty, token: jwt('me'), prefs: prefs);
+        expect(asked.single.from, day);
+        expect(state().track, Track.empty);
+        expect(prefs.today?.who, 'me');
+      });
+    });
+
+    test('a past range is not kept', () {
+      final prefs = MemoryPrefs();
+      fakeAsync((f) {
+        start(f, (_) async => Track.empty, token: jwt('me'), prefs: prefs);
+        prefs.today = null;
+        ctl().setRange(presetRange(Preset.yesterday, now));
+        f.elapse(Duration.zero);
+        expect(prefs.today, isNull);
+      });
+    });
+
+    test('signing out forgets it', () {
+      final prefs = MemoryPrefs();
+      fakeAsync((f) {
+        start(f, (_) async => Track.empty, token: jwt('me'), prefs: prefs);
+        expect(prefs.today, isNotNull);
+        c.read(authControllerProvider.notifier).expired();
+        f.elapse(Duration.zero);
+        expect(prefs.today, isNull);
+      });
+    });
+  });
+
+  test(
+    'shown friends ride along; a friend coming on the map is asked for at once',
+    () {
+      fakeAsync((f) {
+        final friends = MockFriends();
+        when(friends.me)
+            .thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
+        when(friends.relations).thenAnswer(
+          (_) async => const Relations(
+            friends: [Friend(id: 'b', name: 'Bình', since: 'S')],
+          ),
+        );
+        start(
+          f,
+          (_) async => trackWithLast('A'),
+          prefs: MemoryPrefs()..shown = ['b'],
+          friends: friends,
+        );
+        // The first request went out before the friend list was in; the list brought 'b' on the map.
+        expect(opts.map((o) => o.friends), ['', 'b~~']);
+      });
+    },
+  );
 }

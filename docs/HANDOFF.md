@@ -7,7 +7,10 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 - All features of the design are implemented for normal users: sign-in, map with paw prints / stops / Hachiware,
   date filter + live refresh with backoff, day diary / top places, replay alone and together, share links, friends.
   No admin screen (by design).
-- 119 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+- Follows the web up to `travel-heatmap` e66386f (2026-11-03): one `/track` request a minute carries your trail
+  (`have` → `unchanged`) and your shown friends (`friends=`); `/friends/live` and `/friends/{id}/today` are no longer
+  called; "Hôm nay" is kept on the phone (`findme.today`) so reopening asks only for what is new.
+- 142 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Never run on a device.** Android Studio install failed on 2026-11-03 (account has no admin rights, exit 1812; only
   8.8 GB free on C:). Recommended next: Android SDK command-line tools in the user folder + a real phone (see
@@ -26,6 +29,10 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 
 ## Known gaps / decisions left open
 
+- The `flutter` wrapper hung in this shell on 2026-11-03 (a `git log` behind it waited on a pager). Workaround that
+  worked: `C:\src\flutter\bin\cache\dart-sdk\bin\dart.exe` with `FLUTTER_ROOT=C:\src\flutter` for `pub get`,
+  `run build_runner`, `analyze`, and `… flutter_tools.snapshot test` for tests.
+- Viewing a past range, shown friends are not refreshed (same as the web); pick Hôm nay to follow them.
 - iOS has no dev/prod schemes (needs a Mac) and has never been built; CI's macOS job is the first check.
 - System font instead of the web's Nunito (chapter 13 says how to add it).
 - Taps on stops / prints / friends show a SnackBar, not a map popup.

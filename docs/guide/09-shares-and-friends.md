@@ -27,8 +27,9 @@ Files: `lib/features/friends/` (`data/friends_repository.dart`, `presentation/fr
   nay"), **Hiện trên bản đồ**, **Xoá bạn** (asks first).
 - The 👥 button shows a badge with the number of incoming requests.
 
-Refresh rhythm (same as the web): the list and shown friends' positions every 7 s; a shown friend's prints for today
-every 60 s and immediately when you switch them on. Paused while the app is in the background. Which friends are
+Refresh rhythm (same as the web): the list every 60 s. Shown friends' prints and positions come with your own trail in
+the one `/track` request a minute (chapter 06), and right away when you switch a friend on; a friend the server leaves
+out of the answer (no longer a friend) drops off. Paused while the app is in the background. Which friends are
 shown is remembered on the phone (`shared_preferences`); a removed friend disappears from the map by itself.
 
 Tests: `test/features/shares/` and `test/features/friends/`.

@@ -63,16 +63,17 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme.session` | secure storage (Keystore / Keychain) | access + refresh token |
 | `findme:start` | shared_preferences | last point shown `[lon, lat]`, 4 decimals |
 | `findme.shownFriends` | shared_preferences | ids of friends shown on the map |
+| `findme.today` | shared_preferences | today's trail (yours + shown friends'), for one account (`sub`) and one day |
 
-Both `findme:start` and `findme.shownFriends` are cleared when you sign out or the session expires (the next login may be someone else).
+All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`
+also on a login without a map.
 
 ## Timings
 
 | What | Value |
 |---|---|
-| Trail refresh | 7 s, doubling to 60 s while nothing changes |
-| Friends list / live positions | 7 s |
-| A shown friend's prints today | 60 s |
+| Trail + shown friends (one `/track`) | 60 s, and at once when a friend is switched on |
+| Friends list | 60 s |
 | Access token renewal | when < 60 s left |
 | Replay alone / together | 120 ms per print (min 10 s) / 60 s |
 

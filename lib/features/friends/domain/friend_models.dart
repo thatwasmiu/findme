@@ -44,16 +44,3 @@ abstract class Relations with _$Relations {
 
   static const empty = Relations();
 }
-
-/// Where a friend is now.
-@freezed
-abstract class LivePoint with _$LivePoint {
-  const factory LivePoint({
-    required String id,
-    required double lat,
-    required double lon,
-    required String ts,
-  }) = _LivePoint;
-  factory LivePoint.fromJson(Map<String, dynamic> json) =>
-      _$LivePointFromJson(json);
-}

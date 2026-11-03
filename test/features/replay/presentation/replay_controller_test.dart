@@ -21,7 +21,7 @@ void main() {
   late ProviderContainer c;
   setUp(() async {
     final track = MockTrack();
-    when(() => track.fetch(any())).thenAnswer((_) async => Track.empty);
+    stubFetch(track, (_) async => Track.empty);
     c =
         ProviderContainer(
             overrides: baseOverrides(auth: fakeAuth(), track: track),

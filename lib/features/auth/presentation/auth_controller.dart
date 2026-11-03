@@ -21,7 +21,12 @@ class AuthController extends Notifier<AuthPhase> {
         } on NetworkError {
           next = AuthPhase.signedIn; // a session exists but cannot be renewed offline: show the map, retry later
         }
-        if (state == AuthPhase.loading) state = next;
+        if (state != AuthPhase.loading) return;
+        state = next;
+        // No session: a trail kept from an earlier one must not wait for the next person on this phone.
+        if (next == AuthPhase.signedOut) {
+          unawaited(ref.read(prefsProvider).clearToday());
+        }
       }),
     );
     return AuthPhase.loading;
@@ -48,8 +53,11 @@ class AuthController extends Notifier<AuthPhase> {
     unawaited(ref.read(prefsProvider).clear());
   }
 
-  /// The server said 403.
-  void noAccount() => state = AuthPhase.noAccount;
+  /// The server said 403. Like the web: a login without a map forgets today's trail kept on this phone.
+  void noAccount() {
+    state = AuthPhase.noAccount;
+    unawaited(ref.read(prefsProvider).clearToday());
+  }
 }
 
 final authControllerProvider = NotifierProvider<AuthController, AuthPhase>(

@@ -35,6 +35,8 @@ class TrackPoint {
 
   @override
   String toString() => 'TrackPoint($lon, $lat, $t, $acc)';
+
+  List<Object?> toJson() => [lon, lat, t, acc];
 }
 
 List<TrackPoint> trackPointsFromJson(Object? j) => [
@@ -82,4 +84,50 @@ abstract class Track with _$Track {
   }) = _Track;
 
   static const empty = Track();
+}
+
+/// One shown friend as the app holds it: today's prints and their newest point.
+typedef FriendTrail = ({List<TrackPoint> points, LastPoint? last});
+
+/// A friend's part of the combined /track answer.
+@immutable
+class FriendPart {
+  const FriendPart({
+    required this.id,
+    this.unchanged = false,
+    this.from,
+    this.points = const [],
+    this.last,
+  });
+
+  factory FriendPart.fromJson(Map<String, dynamic> j) => FriendPart(
+    id: j['id'] as String,
+    unchanged: j['unchanged'] == true,
+    from: j['from'] as String?,
+    points: trackPointsFromJson(j['points']),
+    last: j['last'] == null
+        ? null
+        : LastPoint.fromJson(j['last'] as Map<String, dynamic>),
+  );
+
+  final String id;
+  final bool unchanged;
+  final String? from;
+  final List<TrackPoint> points;
+  final LastPoint? last;
+}
+
+/// What `GET /track` answers: your trail (or [unchanged]: nothing new since `have`, only [Track.last] is filled) and
+/// the shown friends' parts.
+@immutable
+class TrackAnswer {
+  const TrackAnswer(
+    this.track, {
+    this.unchanged = false,
+    this.friends = const [],
+  });
+
+  final Track track;
+  final bool unchanged;
+  final List<FriendPart> friends;
 }
