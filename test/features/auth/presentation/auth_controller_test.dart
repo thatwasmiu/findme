@@ -82,4 +82,13 @@ void main() {
     c.read(authControllerProvider.notifier).expired();
     expect(c.read(authControllerProvider), AuthPhase.signedOut);
   });
+
+  test('cold start offline with a stored session: stay signed in', () async {
+    final auth = fakeAuth();
+    when(auth.getAccessToken).thenThrow(const NetworkError());
+    final c = ProviderContainer(overrides: baseOverrides(auth: auth));
+    c.read(authControllerProvider);
+    await settle(c);
+    expect(c.read(authControllerProvider), AuthPhase.signedIn);
+  });
 }

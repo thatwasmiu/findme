@@ -77,6 +77,14 @@ class FriendsController extends Notifier<FriendsState> {
       _routes?.cancel();
     });
     if (signedIn) {
+      // Timers are made here, synchronously, so onDispose always cancels them (Riverpod makes a new notifier on
+      // every rebuild, e.g. at sign-out, even while the first load below is still waiting).
+      _list = Timer.periodic(const Duration(milliseconds: friendsPollMs), (_) {
+        if (!_paused) unawaited(refresh());
+      });
+      _routes = Timer.periodic(const Duration(milliseconds: routeMs), (_) {
+        if (!_paused) unawaited(_loadToday(force: true));
+      });
       unawaited(
         Future.microtask(() async {
           final ids = await ref.read(prefsProvider).shownFriends();
@@ -84,14 +92,6 @@ class FriendsController extends Notifier<FriendsState> {
           state = state.copyWith(shownIds: ids);
           await refresh();
           await _loadToday();
-          _list = Timer.periodic(
-            const Duration(milliseconds: friendsPollMs),
-            (_) => _paused ? null : refresh(),
-          );
-          _routes = Timer.periodic(
-            const Duration(milliseconds: routeMs),
-            (_) => _paused ? null : _loadToday(force: true),
-          );
         }),
       );
     }
@@ -108,6 +108,7 @@ class FriendsController extends Notifier<FriendsState> {
   }
 
   Future<void> refresh() async {
+    if (!ref.mounted) return;
     try {
       final shown = state.shown.isNotEmpty || state.shownIds.isNotEmpty;
       final (me, rel, live) = await (
@@ -140,6 +141,7 @@ class FriendsController extends Notifier<FriendsState> {
 
   /// Today's prints of each shown friend that is due (or all of them when [force]).
   Future<void> _loadToday({bool force = false, List<String>? only}) async {
+    if (!ref.mounted) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     final due = (only ?? state.shown)
         .where(

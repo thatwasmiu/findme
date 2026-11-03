@@ -36,7 +36,7 @@ class AuthRepository {
     await _store.save(_fromResult(result, ''));
   }
 
-  /// A valid access token, or null (signed out or offline). The access token lives 1 h; when it is (nearly) gone,
+  /// A valid access token, or null (signed out). Throws [NetworkError] when renewal could not reach Cognito. The access token lives 1 h; when it is (nearly) gone,
   /// trade the refresh token (30 days) for a new one quietly. Concurrent callers share one renewal.
   Future<String?> getAccessToken() async {
     final s = await _store.load();
@@ -60,14 +60,13 @@ class AuthRepository {
       );
       await _store.save(n);
       return n.access;
-    } on AuthError {
-      await _store.save(
-        null,
-      ); // refresh token expired or revoked: sign in again
+    } on AuthError catch (e) {
+      // Only a refused refresh token means "sign in again"; throttling or a Cognito outage is temporary.
+      if (e.code != 'NotAuthorizedException') throw const NetworkError();
+      await _store.save(null); // refresh token expired or revoked
       return null;
-    } on NetworkError {
-      return null; // offline: keep the session for the next try
     }
+    // NetworkError (offline) goes to the caller: the session is kept for the next try.
   }
 
   /// Ends the session here and at Cognito (the refresh token stops working). Best effort.

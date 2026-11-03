@@ -139,10 +139,22 @@ void main() {
       expect(store.s?.refresh, 'R');
     });
 
-    test('offline refresh keeps session', () async {
+    test(
+      'offline refresh keeps session and says "offline", not "signed out"',
+      () async {
+        signedIn(-1);
+        answer((r) => throw offline(r));
+        await expectLater(repo.getAccessToken(), throwsA(isA<NetworkError>()));
+        expect(store.s, isNotNull);
+      },
+    );
+
+    test('Cognito hiccup (5xx, throttling) keeps the session', () async {
       signedIn(-1);
-      answer((r) => throw offline(r));
-      expect(await repo.getAccessToken(), isNull);
+      answer((_) => fail('TooManyRequestsException'));
+      await expectLater(repo.getAccessToken(), throwsA(isA<NetworkError>()));
+      answer((_) => (status: 500, body: null));
+      await expectLater(repo.getAccessToken(), throwsA(isA<NetworkError>()));
       expect(store.s, isNotNull);
     });
 

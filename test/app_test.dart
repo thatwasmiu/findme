@@ -1,4 +1,5 @@
 import 'package:findme/app.dart';
+import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/shares/domain/share.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
@@ -79,5 +80,37 @@ void main() {
     expect(find.text('Đăng nhập 💖'), findsOneWidget);
     expect(find.text('📍 Find Me'), findsNothing);
     await t.pumpWidget(const SizedBox()); // stop the polling timers
+  });
+
+  testWidgets('an open sheet closes when the session expires', (t) async {
+    final track = MockTrack();
+    when(() => track.fetch(any())).thenAnswer((_) async => Track.empty);
+    final shares = MockShares();
+    when(shares.list).thenAnswer(
+      (_) async => [
+        Share(id: 'a' * 22, label: 'Mẹ', createdAt: isoMs(DateTime(2026)), expiresAt: isoMs(DateTime(2099))),
+      ],
+    );
+    final friends = MockFriends();
+    when(friends.me).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
+    when(friends.relations).thenAnswer((_) async => Relations.empty);
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: baseOverrides(auth: fakeAuth(), track: track, shares: shares, friends: friends),
+        child: const FindMeApp(showTiles: false),
+      ),
+    );
+    await t.pump();
+    await t.pump();
+    await t.tap(find.text('🔗 Chia sẻ'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.text('Mẹ'), findsOneWidget);
+    ProviderScope.containerOf(t.element(find.byType(FindMeApp))).read(authControllerProvider.notifier).expired();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.text('Mẹ'), findsNothing);
+    expect(find.text('Đăng nhập 💖'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
   });
 }

@@ -82,4 +82,14 @@ void main() {
     );
     expect(adapter.requests, isEmpty);
   });
+
+  test('token renewal offline -> NetworkError, not AuthExpired', () async {
+    adapter = FakeAdapter((_) => (status: 200, body: null));
+    final c = ApiClient(
+      cfg,
+      () async => throw const NetworkError(),
+      dio: fakeDio(adapter),
+    );
+    await expectLater(c.send('GET', '/x'), throwsA(isA<NetworkError>()));
+  });
 }

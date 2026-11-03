@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,10 +13,14 @@ class AuthController extends Notifier<AuthPhase> {
   AuthPhase build() {
     unawaited(
       Future.microtask(() async {
-        final t = await ref.read(authRepositoryProvider).getAccessToken();
-        if (state == AuthPhase.loading) {
-          state = t == null ? AuthPhase.signedOut : AuthPhase.signedIn;
+        AuthPhase next;
+        try {
+          final t = await ref.read(authRepositoryProvider).getAccessToken();
+          next = t == null ? AuthPhase.signedOut : AuthPhase.signedIn;
+        } on NetworkError {
+          next = AuthPhase.signedIn; // a session exists but cannot be renewed offline: show the map, retry later
         }
+        if (state == AuthPhase.loading) state = next;
       }),
     );
     return AuthPhase.loading;
