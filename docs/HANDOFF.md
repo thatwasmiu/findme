@@ -28,6 +28,9 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 3. Compare with the web on the same day: paw colours and sizes, stop sizes, tile tint, wording.
 4. `flutter test integration_test --flavor dev --dart-define-from-file=config/example.json` on the emulator.
 5. Check the first CI run on GitHub (Actions tab); the iOS job runs on pushes to main.
+6. iPhone without a Mac: add the `FINDME_DEV_CONFIG` secret (chapter 12), run the iOS job, download
+   `findme-unsigned-ipa`, install with Sideloadly using a second Apple ID (chapter 14 A2). The CI `.ipa` step
+   (release build + packing) has never run yet; its first run is the test.
 
 ## Known gaps / decisions left open
 

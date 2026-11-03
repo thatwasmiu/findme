@@ -25,8 +25,8 @@ pages before paying.
 | | Free Apple ID ("Personal Team") | Apple Developer Program |
 |---|---|---|
 | Cost | 0 | **99 USD per year** (shown in local currency when you enrol) |
-| Needs a Mac with Xcode | yes | to build and sign: yes, or a cloud Mac / Codemagic (chapter 13) |
-| Installs on | your own iPhone(s), plugged into the Mac | any iPhone, through TestFlight or the App Store |
+| Needs a Mac with Xcode | yes, or Sideloadly on Windows (A2) | to build and sign: yes, or a cloud Mac / Codemagic (chapter 13) |
+| Installs on | your own iPhone(s), plugged into the Mac (or the Windows PC, A2) | any iPhone, through TestFlight or the App Store |
 | App expires after | **7 days**: the app stops opening; re-install from Xcode | 90 days per TestFlight build; App Store: never |
 | Limits | about 3 apps per device; no TestFlight, no App Store, no push notifications | none relevant to Find Me |
 | Good for | trying the app on your own phone | sharing with family and friends, publishing |
@@ -36,7 +36,13 @@ pages before paying.
 You need a Mac (borrowed is fine) and a USB cable.
 
 1. **Apple ID with two-factor authentication.** If you have an iPhone you already have one. Check it at
-   <https://account.apple.com>.
+   <https://account.apple.com>. No Apple ID yet? It is free and needs no Apple device:
+   - <https://account.apple.com> → **Create Your Apple Account** (on an iPhone: Settings → Sign in → Create Apple
+     Account);
+   - name, birthday, an email you own (any provider; it becomes the Apple ID), a password, and a phone number that
+     gets SMS (any phone);
+   - enter the codes sent to the email and the phone. Two-factor authentication is then on, which Xcode needs. No
+     payment card is asked for.
 2. On the Mac: install **Xcode** from the Mac App Store, then Flutter (flutter.dev → macOS install), and clone this
    repo.
 3. `flutter pub get`, then open `ios/Runner.xcworkspace` in Xcode.
@@ -54,8 +60,43 @@ You need a Mac (borrowed is fine) and a USB cable.
 
 After 7 days the app no longer opens. Plug in and repeat step 7.
 
-> Windows tools that sign with a free Apple ID (e.g. Sideloadly, AltStore) exist. They are third-party, ask for your
-> Apple ID password, and Apple does not support them. This guide does not use them.
+### A2. Free, without a Mac: Sideloadly on Windows (third-party)
+
+**Sideloadly** (sideloadly.io, free, donations) signs an `.ipa` with a free Apple ID on Windows and installs it over the
+cable. Same limits as A: 7 days, about 3 apps per device.
+
+> **Caution.** Sideloadly is not Apple's: you type your Apple ID password into it, and Apple does not support it. Use
+> a **second Apple ID made only for this** (steps in A.1), never the one with your photos, iCloud and payments.
+
+You need:
+
+- an iPhone and its USB cable;
+- **iTunes** and **iCloud** for Windows, the versions downloaded from apple.com (not the Microsoft Store ones), so
+  Windows can talk to the iPhone;
+- an **unsigned `findme.ipa`**. CI makes it: GitHub → **Actions** → CI → **Run workflow** (or any push to `main`) →
+  the finished run → **Artifacts** → `findme-unsigned-ipa` (a zip; unzip it). Set the `FINDME_DEV_CONFIG` secret
+  first (chapter 12, step 1.3), or the app opens on "Config missing or invalid". The same on a Mac by hand:
+
+  ```bash
+  flutter build ios --release --no-codesign --dart-define-from-file=config/dev.json
+  mkdir -p Payload && cp -R build/ios/iphoneos/Runner.app Payload/
+  zip -qr findme.ipa Payload
+  ```
+
+Steps:
+
+1. Install iTunes and iCloud (apple.com), then Sideloadly. Restart Windows.
+2. Plug in the iPhone, unlock it, tap **Trust**. On iOS 16+: **Settings → Privacy & Security → Developer Mode → On**
+   (the phone restarts).
+3. Sideloadly: drag `findme.ipa` in, pick the iPhone, type the (second) Apple ID, **Start**. Enter the Apple ID
+   password and the two-factor code when asked.
+4. Bundle ID: a free team cannot use one someone else registered. If Sideloadly reports it, set
+   **Advanced options → Bundle ID** to something personal like `com.yourname.findme`.
+5. First launch says "Untrusted Developer": **Settings → General → VPN & Device Management** → the Apple ID →
+   **Trust**.
+
+After 7 days the app no longer opens: run step 3 again (or Sideloadly's **Automatic refresh**, which needs the PC on
+and on the same Wi-Fi as the phone).
 
 ### B. Paid: Apple Developer Program (TestFlight and App Store)
 

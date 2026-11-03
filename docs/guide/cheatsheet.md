@@ -96,4 +96,7 @@ also on a login without a map.
 | `flutter build ipa --release --dart-define-from-file=config/prod.json` | iOS archive (Mac only) |
 | `version: 1.0.0+N` in `pubspec.yaml` | Raise `N` before every store upload |
 | Apple Developer Program | 99 USD/year; free Apple ID = own iPhone only, 7-day installs |
+| Apple ID | free at account.apple.com: email + phone for SMS, no Apple device needed |
+| iPhone without a Mac | Sideloadly (Windows, free, third-party) + `findme-unsigned-ipa` from CI, second Apple ID; chapter 14 A2 |
+| `FINDME_DEV_CONFIG` | GitHub Actions secret = content of `config/dev.json`; CI's APK / `.ipa` use it (else placeholders) |
 | Google Play Console | 25 USD once; new personal accounts: 12 testers × 14 days before production |

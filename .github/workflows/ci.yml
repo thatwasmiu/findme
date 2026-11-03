@@ -34,14 +34,24 @@ jobs:
         with:
           name: coverage
           path: coverage/lcov.info
-      - run: flutter build apk --flavor dev --debug --dart-define-from-file=config/example.json --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
+        env:
+          CFG: ${{ secrets.FINDME_DEV_CONFIG }}
+        run: |
+          if [ -n "$CFG" ]; then
+            printf '%s' "$CFG" > config/dev.json
+            echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
+          fi
+      - run: flutter build apk --flavor dev --debug --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
       - uses: actions/upload-artifact@v4
         with:
           name: app-dev-debug-apk
           path: build/app/outputs/flutter-apk/app-dev-debug.apk
 
   ios:
-    name: Build iOS (no signing)
+    name: Build iOS (unsigned .ipa)
     # macOS minutes cost 10x on private repos: only on main, or when started by hand.
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
@@ -53,4 +63,24 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build ios --no-codesign --dart-define-from-file=config/example.json --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
+        env:
+          CFG: ${{ secrets.FINDME_DEV_CONFIG }}
+        run: |
+          if [ -n "$CFG" ]; then
+            printf '%s' "$CFG" > config/dev.json
+            echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
+          fi
+      # Release: an iOS debug build does not start without a debugger attached.
+      - run: flutter build ios --release --no-codesign --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - name: Pack the unsigned .ipa (sign and install it with Sideloadly, guide chapter 14 A2)
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry findme.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: findme-unsigned-ipa
+          path: findme.ipa
