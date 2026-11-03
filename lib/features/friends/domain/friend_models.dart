@@ -1,0 +1,59 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'friend_models.freezed.dart';
+part 'friend_models.g.dart';
+
+@freezed
+abstract class Me with _$Me {
+  const factory Me({required String name, required String friendCode}) = _Me;
+  factory Me.fromJson(Map<String, dynamic> json) => _$MeFromJson(json);
+}
+
+@freezed
+abstract class Friend with _$Friend {
+  const factory Friend({
+    required String id,
+    required String name,
+    required String since,
+    String? lastTs,
+  }) = _Friend;
+  factory Friend.fromJson(Map<String, dynamic> json) => _$FriendFromJson(json);
+}
+
+/// A friend request, in or out.
+@freezed
+abstract class Pending with _$Pending {
+  const factory Pending({
+    required String id,
+    required String name,
+    required String at,
+  }) = _Pending;
+  factory Pending.fromJson(Map<String, dynamic> json) =>
+      _$PendingFromJson(json);
+}
+
+@freezed
+abstract class Relations with _$Relations {
+  const factory Relations({
+    @Default(<Friend>[]) List<Friend> friends,
+    @Default(<Pending>[]) List<Pending> incoming,
+    @Default(<Pending>[]) List<Pending> outgoing,
+  }) = _Relations;
+  factory Relations.fromJson(Map<String, dynamic> json) =>
+      _$RelationsFromJson(json);
+
+  static const empty = Relations();
+}
+
+/// Where a friend is now.
+@freezed
+abstract class LivePoint with _$LivePoint {
+  const factory LivePoint({
+    required String id,
+    required double lat,
+    required double lon,
+    required String ts,
+  }) = _LivePoint;
+  factory LivePoint.fromJson(Map<String, dynamic> json) =>
+      _$LivePointFromJson(json);
+}
