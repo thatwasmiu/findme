@@ -9,7 +9,9 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
   No admin screen (by design).
 - 119 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
-- **Never run on a device.** The Android SDK / Android Studio / emulator are not installed yet (owner, guide
+- **Never run on a device.** Android Studio install failed on 2026-11-03 (account has no admin rights, exit 1812; only
+  8.8 GB free on C:). Recommended next: Android SDK command-line tools in the user folder + a real phone (see
+  `plans/handoffs/HANDOFF_findme-flutter-app_2026-11-03.md`). The Android SDK / emulator are not installed yet (owner, guide
   chapter 01). Not yet done because of that: an APK build, the integration test on the emulator, a visual check
   against the web.
 - Pushed to https://github.com/thatwasmiu/findme (private) on 2026-11-03; first CI run not checked yet (Actions tab).
