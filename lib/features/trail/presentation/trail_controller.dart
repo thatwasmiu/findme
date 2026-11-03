@@ -17,6 +17,9 @@ const pollMs = 7000;
 /// Nothing new for a while (Overland uploads in batches): ask less often, down to this.
 const idlePollMs = 60000;
 
+/// After a load with unnamed stops: one full reload to pick up their names.
+const renameMs = 20000;
+
 class TrailState {
   const TrailState({
     required this.range,
@@ -55,7 +58,9 @@ class TrailController extends Notifier<TrailState> {
   int _seq = 0; // only the latest load may update state
   ({DateRange range, Track track})?
   _shown; // what is on the map, for which range
+  DateRange? _renamed; // the range already given its one "pick up names" reload
   Timer? _timer;
+  Timer? _rename;
   int _delay = pollMs;
   bool _busy = false;
   bool _paused = false;
@@ -67,8 +72,12 @@ class TrailController extends Notifier<TrailState> {
     final signedIn = ref.watch(
       signedInProvider,
     ); // signing out rebuilds this empty
-    ref.onDispose(() => _timer?.cancel());
+    ref.onDispose(() {
+      _timer?.cancel();
+      _rename?.cancel();
+    });
     _shown = null;
+    _renamed = null;
     final initial = TrailState(range: presetRange(Preset.today, _now));
     if (signedIn) {
       unawaited(
@@ -87,8 +96,8 @@ class TrailController extends Notifier<TrailState> {
     _restartPolling();
   }
 
-  /// [quiet]: a background refresh: no spinner, no error banner.
-  Future<void> load({bool quiet = false}) async {
+  /// [quiet]: a background refresh: no spinner, no error banner. [full]: the whole range, not only the newest part.
+  Future<void> load({bool quiet = false, bool full = false}) async {
     final mine = ++_seq;
     bool latest() => mine == _seq;
     final range = state.range;
@@ -96,7 +105,7 @@ class TrailController extends Notifier<TrailState> {
     try {
       // "Hôm nay" / "7 ngày"… end when they were picked: stretch them to now so new prints show up.
       final to = liveTo(range, now: _now);
-      final prev = quiet && _shown?.range == range ? _shown : null;
+      final prev = quiet && !full && _shown?.range == range ? _shown : null;
       final from = prev == null ? range.from : tailFrom(prev.track, range.from);
       final got = await ref
           .read(trackRepositoryProvider)
@@ -105,6 +114,19 @@ class TrailController extends Notifier<TrailState> {
       final tr = prev == null ? got : mergeTail(prev.track, got, from);
       _shown = (range: range, track: tr);
       state = state.copyWith(track: tr, error: () => null);
+      // Stop names come from a slow lookup on the server and refreshes fetch only the newest part, so older
+      // unnamed stops would never get theirs: one full reload a little later picks them up (the web's RENAME_MS).
+      if (prev == null &&
+          _renamed != range &&
+          tr.stops.any((s) => s.name == null)) {
+        _renamed = range;
+        _rename?.cancel();
+        _rename = Timer(const Duration(milliseconds: renameMs), () {
+          if (ref.mounted && _shown?.range == range) {
+            unawaited(load(quiet: true, full: true));
+          }
+        });
+      }
     } on AuthExpired {
       if (latest()) ref.read(authControllerProvider.notifier).expired();
     } on AccountMissing {
@@ -141,8 +163,14 @@ class TrailController extends Notifier<TrailState> {
         state = state.copyWith(tick: state.tick + 1);
       } else {
         final before = _shown?.track.last?.ts;
+        final seq = _seq;
         await load(quiet: true);
         if (!ref.mounted) return;
+        // A new range was picked meanwhile: setRange already restarted the 7 s rhythm.
+        if (_seq != seq + 1) {
+          _busy = false;
+          return;
+        }
         // Nothing new: wait twice as long next time (7 s → 14 s → … → 60 s); new prints: back to 7 s.
         _delay = _shown?.track.last?.ts == before
             ? min(idlePollMs, _delay * 2)
@@ -171,7 +199,12 @@ final trailControllerProvider = NotifierProvider<TrailController, TrailState>(
 /// Where the map should fly next (lon, lat); the 👀 pill and the trail sheet rows set it.
 class FlyTo extends Notifier<(double, double)?> {
   @override
-  (double, double)? build() => null;
+  (double, double)? build() {
+    ref.watch(
+      signedInProvider,
+    ); // forgotten on sign-out like the rest of the account
+    return null;
+  }
 
   void go(double lon, double lat) => state = (lon, lat);
 }

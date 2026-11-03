@@ -98,9 +98,13 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
     try {
       return await fn();
     } on AuthExpired {
-      ref.read(authControllerProvider.notifier).expired();
+      if (mounted) {
+        ref
+            .read(authControllerProvider.notifier)
+            .expired(); // closed meanwhile: the next call will tell
+      }
     } on AccountMissing {
-      ref.read(authControllerProvider.notifier).noAccount();
+      if (mounted) ref.read(authControllerProvider.notifier).noAccount();
     } on Object catch (e) {
       if (mounted) _say(err: onError(e));
     }

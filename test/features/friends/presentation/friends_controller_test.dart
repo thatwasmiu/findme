@@ -139,11 +139,19 @@ void main() {
       final gate = Completer<Relations>();
       repo = MockFriends();
       prefs = MemoryPrefs();
-      when(repo.me).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
+      when(repo.me)
+          .thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
       when(repo.relations).thenAnswer((_) => gate.future);
-      c = ProviderContainer(overrides: baseOverrides(auth: fakeAuth(), friends: repo, prefs: prefs))
-        ..listen(friendsControllerProvider, (_, _) {})
-        ..read(authControllerProvider);
+      c =
+          ProviderContainer(
+              overrides: baseOverrides(
+                auth: fakeAuth(),
+                friends: repo,
+                prefs: prefs,
+              ),
+            )
+            ..listen(friendsControllerProvider, (_, _) {})
+            ..read(authControllerProvider);
       f.elapse(Duration.zero);
       c.read(authControllerProvider.notifier).expired();
       f.elapse(Duration.zero);
@@ -151,6 +159,19 @@ void main() {
       f.elapse(const Duration(minutes: 3));
       expect(f.periodicTimerCount, 0);
       verify(repo.relations).called(1);
+    });
+  });
+
+  test('back in the app: stale friend routes refresh at once', () {
+    fakeAsync((f) {
+      start(f, shown: ['b']);
+      verify(() => repo.today('b')).called(1);
+      c.read(friendsControllerProvider.notifier).paused();
+      f.elapse(const Duration(minutes: 2));
+      verifyNever(() => repo.today('b'));
+      c.read(friendsControllerProvider.notifier).resumed();
+      f.elapse(Duration.zero);
+      verify(() => repo.today('b')).called(1);
     });
   });
 }

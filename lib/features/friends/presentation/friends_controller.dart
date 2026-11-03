@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
+
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
@@ -142,7 +144,7 @@ class FriendsController extends Notifier<FriendsState> {
   /// Today's prints of each shown friend that is due (or all of them when [force]).
   Future<void> _loadToday({bool force = false, List<String>? only}) async {
     if (!ref.mounted) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = clock.now().millisecondsSinceEpoch;
     final due = (only ?? state.shown)
         .where(
           (id) =>
@@ -214,6 +216,7 @@ class FriendsController extends Notifier<FriendsState> {
   void resumed() {
     _paused = false;
     unawaited(refresh());
+    unawaited(_loadToday()); // only the routes older than routeMs
   }
 }
 

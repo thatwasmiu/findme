@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/theme/app_theme.dart';
 import 'package:findme/features/shares/domain/share.dart';
@@ -174,5 +176,35 @@ void main() {
 
   test('shareLink drops a trailing slash', () {
     expect(shareLink(testConfig, 'x'), 'https://findme.test/s/x');
+  });
+
+  testWidgets('closing the sheet while a call is running does not crash', (
+    t,
+  ) async {
+    final gate = Completer<List<Share>>();
+    when(repo.list).thenAnswer((_) => gate.future);
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...baseOverrides(auth: fakeAuth(), shares: repo),
+          nowProvider.overrideWithValue(() => now),
+        ],
+        child: MaterialApp(
+          theme: buildTheme(),
+          home: const Scaffold(body: SharesSheet()),
+        ),
+      ),
+    );
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...baseOverrides(auth: fakeAuth(), shares: repo),
+          nowProvider.overrideWithValue(() => now),
+        ],
+        child: const MaterialApp(home: SizedBox()),
+      ),
+    );
+    gate.completeError(const AuthExpired());
+    await t.pump();
   });
 }

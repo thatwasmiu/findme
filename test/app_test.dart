@@ -88,15 +88,26 @@ void main() {
     final shares = MockShares();
     when(shares.list).thenAnswer(
       (_) async => [
-        Share(id: 'a' * 22, label: 'Mẹ', createdAt: isoMs(DateTime(2026)), expiresAt: isoMs(DateTime(2099))),
+        Share(
+          id: 'a' * 22,
+          label: 'Mẹ',
+          createdAt: isoMs(DateTime(2026)),
+          expiresAt: isoMs(DateTime(2099)),
+        ),
       ],
     );
     final friends = MockFriends();
-    when(friends.me).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
+    when(friends.me)
+        .thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
     when(friends.relations).thenAnswer((_) async => Relations.empty);
     await t.pumpWidget(
       ProviderScope(
-        overrides: baseOverrides(auth: fakeAuth(), track: track, shares: shares, friends: friends),
+        overrides: baseOverrides(
+          auth: fakeAuth(),
+          track: track,
+          shares: shares,
+          friends: friends,
+        ),
         child: const FindMeApp(showTiles: false),
       ),
     );
@@ -106,7 +117,9 @@ void main() {
     await t.pump();
     await t.pump(const Duration(milliseconds: 500));
     expect(find.text('Mẹ'), findsOneWidget);
-    ProviderScope.containerOf(t.element(find.byType(FindMeApp))).read(authControllerProvider.notifier).expired();
+    ProviderScope.containerOf(t.element(find.byType(FindMeApp)))
+        .read(authControllerProvider.notifier)
+        .expired();
     await t.pump();
     await t.pump(const Duration(milliseconds: 500));
     expect(find.text('Mẹ'), findsNothing);

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:findme/core/errors/app_errors.dart';
+import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,11 +35,18 @@ class AuthController extends Notifier<AuthPhase> {
 
   Future<void> signOut() async {
     state = AuthPhase.signedOut;
-    await ref.read(authRepositoryProvider).logout();
+    await Future.wait([
+      ref.read(authRepositoryProvider).logout(),
+      ref.read(prefsProvider).clear(),
+    ]);
   }
 
   /// The server said 401 (or the session is gone).
-  void expired() => state = AuthPhase.signedOut;
+  void expired() {
+    state = AuthPhase.signedOut;
+    // The next login may be someone else: forget where this account's map was and whom it showed.
+    unawaited(ref.read(prefsProvider).clear());
+  }
 
   /// The server said 403.
   void noAccount() => state = AuthPhase.noAccount;

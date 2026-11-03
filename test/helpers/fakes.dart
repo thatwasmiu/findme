@@ -31,6 +31,11 @@ class MemoryPrefs implements Prefs {
   Future<List<String>> shownFriends() async => shown;
   @override
   Future<void> saveShownFriends(List<String> ids) async => shown = [...ids];
+  @override
+  Future<void> clear() async {
+    start = null;
+    shown = [];
+  }
 }
 
 const testConfig = AppConfig(

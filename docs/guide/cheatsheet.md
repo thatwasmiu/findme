@@ -64,6 +64,8 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme:start` | shared_preferences | last point shown `[lon, lat]`, 4 decimals |
 | `findme.shownFriends` | shared_preferences | ids of friends shown on the map |
 
+Both `findme:start` and `findme.shownFriends` are cleared when you sign out or the session expires (the next login may be someone else).
+
 ## Timings
 
 | What | Value |

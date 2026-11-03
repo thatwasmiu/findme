@@ -194,4 +194,63 @@ void main() {
       });
     },
   );
+
+  test('unnamed stops after a full load: one full reload 20 s later picks up names', () {
+    fakeAsync((f) {
+      final today = presetRange(Preset.today, now);
+      final p = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
+      final stop = Stop(
+        lon: 1,
+        lat: 1,
+        start: isoMs(DateTime(2026, 10, 28, 10)),
+        end: isoMs(DateTime(2026, 10, 28, 11)),
+        seconds: 3600,
+      );
+      start(
+        f,
+        (_) async => Track(
+          points: [p],
+          stops: [stop],
+          last: const LastPoint(lon: 1, lat: 1, ts: 'A'),
+        ),
+      );
+      f.elapse(const Duration(seconds: 100));
+      expect(asked.where((r) => r.from == today.from), hasLength(2));
+    });
+  });
+
+  test('named stops: no extra full reload', () {
+    fakeAsync((f) {
+      final today = presetRange(Preset.today, now);
+      final p = TrackPoint(1, 1, now.millisecondsSinceEpoch ~/ 1000 - 60);
+      start(
+        f,
+        (_) async => Track(
+          points: [p],
+          last: const LastPoint(lon: 1, lat: 1, ts: 'A'),
+        ),
+      );
+      f.elapse(const Duration(seconds: 100));
+      expect(asked.where((r) => r.from == today.from), hasLength(1));
+    });
+  });
+
+  test('switching range during a background refresh keeps the 7 s rhythm', () {
+    fakeAsync((f) {
+      final gate = Completer<Track>();
+      var call = 0;
+      start(f, (_) {
+        call++;
+        return call == 2 ? gate.future : Future.value(trackWithLast('A'));
+      });
+      f.elapse(const Duration(seconds: 7)); // the quiet refresh hangs
+      ctl().setRange(presetRange(Preset.d7, now));
+      f.elapse(Duration.zero);
+      gate.complete(trackWithLast('A'));
+      f.elapse(Duration.zero);
+      final before = asked.length;
+      f.elapse(const Duration(seconds: 7));
+      expect(asked.length, before + 1);
+    });
+  });
 }

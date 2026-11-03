@@ -1,5 +1,6 @@
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -90,5 +91,38 @@ void main() {
     c.read(authControllerProvider);
     await settle(c);
     expect(c.read(authControllerProvider), AuthPhase.signedIn);
+  });
+
+  test(
+    "leaving the account forgets this phone's map start and shown friends",
+    () async {
+      for (final leave in [
+        (AuthController c) => c.signOut(),
+        (AuthController c) async => c.expired(),
+      ]) {
+        final prefs = MemoryPrefs()
+          ..start = (1, 2)
+          ..shown = ['b'];
+        final c = ProviderContainer(
+          overrides: baseOverrides(auth: fakeAuth(), prefs: prefs),
+        );
+        c.read(authControllerProvider);
+        await settle(c);
+        await leave(c.read(authControllerProvider.notifier));
+        await settle(c);
+        expect(prefs.start, isNull);
+        expect(prefs.shown, isEmpty);
+      }
+    },
+  );
+
+  test('the fly-to target is dropped on sign out', () async {
+    final c = ProviderContainer(overrides: baseOverrides(auth: fakeAuth()));
+    c.listen(flyToProvider, (_, _) {});
+    c.read(authControllerProvider);
+    await settle(c);
+    c.read(flyToProvider.notifier).go(1, 2);
+    await c.read(authControllerProvider.notifier).signOut();
+    expect(c.read(flyToProvider), isNull);
   });
 }

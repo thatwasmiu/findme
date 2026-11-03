@@ -12,6 +12,9 @@ abstract interface class Prefs {
   /// Which friends are shown on the map.
   Future<List<String>> shownFriends();
   Future<void> saveShownFriends(List<String> ids);
+
+  /// Forget both (another account may sign in next).
+  Future<void> clear();
 }
 
 class SharedPrefs implements Prefs {
@@ -47,6 +50,13 @@ class SharedPrefs implements Prefs {
   @override
   Future<void> saveShownFriends(List<String> ids) async {
     await (await _p).setStringList(_shown, ids);
+  }
+
+  @override
+  Future<void> clear() async {
+    final p = await _p;
+    await p.remove(_start);
+    await p.remove(_shown);
   }
 }
 
