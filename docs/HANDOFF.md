@@ -12,7 +12,7 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 - **Never run on a device.** The Android SDK / Android Studio / emulator are not installed yet (owner, guide
   chapter 01). Not yet done because of that: an APK build, the integration test on the emulator, a visual check
   against the web.
-- No GitHub remote yet: CI (`.github/workflows/ci.yml`) has never run (guide chapter 12).
+- Pushed to https://github.com/thatwasmiu/findme (private) on 2026-11-03; first CI run not checked yet (Actions tab).
 
 ## Next steps
 
@@ -20,7 +20,7 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 2. `config/dev.json` from the web's `config.json` + `WEB_ORIGIN` (chapter 02); `flutter run --flavor dev …`.
 3. Compare with the web on the same day: paw colours and sizes, stop sizes, tile tint, wording.
 4. `flutter test integration_test --flavor dev --dart-define-from-file=config/example.json` on the emulator.
-5. Create the private GitHub repo and push; check both CI jobs (run the iOS one by hand).
+5. Check the first CI run on GitHub (Actions tab); the iOS job runs on pushes to main.
 
 ## Known gaps / decisions left open
 
