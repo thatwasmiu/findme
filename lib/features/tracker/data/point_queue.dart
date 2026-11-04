@@ -40,7 +40,7 @@ class PointQueue {
   Future<List<Fix>> peek(int max) =>
       _serial(() async => (await _read(_file)).take(max).toList());
 
-  Future<void> commit(int n) => _serial(() async => _drop(n));
+  Future<void> commit(int n) => _serial(() => _drop(n));
 
   Future<void> reject(int n) => _serial(() async {
     final moved = (await _read(_file)).take(n);
