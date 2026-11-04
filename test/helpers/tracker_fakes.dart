@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
@@ -91,4 +92,20 @@ class FakeTracker extends TrackerController {
   Future<void> sendNow() async => calls.add('sendNow');
   @override
   Future<void> saveToken(String raw) async => calls.add('saveToken:$raw');
+}
+
+/// The iOS significant-change bridge, by hand: counts start/stop, [fire] a wake.
+class FakeWake implements WakeChannel {
+  int starts = 0;
+  int stops = 0;
+  void Function()? _onWake;
+
+  void fire() => _onWake?.call();
+
+  @override
+  Future<void> start() async => starts++;
+  @override
+  Future<void> stop() async => stops++;
+  @override
+  void onWake(void Function() f) => _onWake = f;
 }

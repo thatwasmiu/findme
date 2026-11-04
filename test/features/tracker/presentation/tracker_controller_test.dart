@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
+import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
@@ -34,6 +35,7 @@ void main() {
   late PointQueue queue;
   late MemoryTrackerStore store;
   late FakeLocation gps;
+  late FakeWake wake;
   late MockIngest ingest;
   late DateTime now;
   late ProviderContainer c;
@@ -55,6 +57,7 @@ void main() {
     queue = PointQueue(dir);
     store = MemoryTrackerStore()..saved = (token: 'tok', sub: 'sub-1');
     gps = FakeLocation();
+    wake = FakeWake();
     ingest = MockIngest();
     now = DateTime.utc(2026, 11, 4, 12);
     answer(IngestResult.ok);
@@ -67,6 +70,7 @@ void main() {
         ),
         pointQueueProvider.overrideWith((_) async => queue),
         locationSourceProvider.overrideWithValue(gps),
+        wakeChannelProvider.overrideWithValue(wake),
         ingestClientProvider.overrideWithValue(ingest),
         trackerClockProvider.overrideWithValue(() => now),
       ],
@@ -222,5 +226,30 @@ void main() {
     expect(store.saved, isNull);
     expect(store.forgets, 1);
     expect(st().on, isFalse);
+  });
+
+  test('significant-change monitoring follows the switch', () async {
+    await ctl().turnOn();
+    expect(wake.starts, 1);
+    await ctl().turnOff();
+    expect(wake.stops, 1);
+    store.on = true;
+    await ctl().resume();
+    expect(wake.starts, 2); // iOS wants it restarted after a relaunch
+    await ctl().forget();
+    expect(wake.stops, 2);
+  });
+
+  test('a wake re-subscribes to GPS while on (iOS paused it)', () async {
+    await ctl().turnOn();
+    expect(gps.listens, 1);
+    wake.fire();
+    await settle();
+    expect(gps.listens, 2);
+    expect(gps.listening, isTrue);
+    await ctl().turnOff();
+    wake.fire();
+    await settle();
+    expect(gps.listens, 2);
   });
 }

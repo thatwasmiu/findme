@@ -5,6 +5,7 @@ import 'package:findme/features/auth/data/session_store.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart';
@@ -76,8 +77,19 @@ class TrackerController extends Notifier<TrackerState> {
 
   @override
   TrackerState build() {
-    ref.onDispose(_stop);
+    ref
+      ..onDispose(_stop)
+      ..read(wakeChannelProvider).onWake(() => unawaited(wake()));
     return const TrackerState();
+  }
+
+  /// iOS woke the app (significant location change, possibly a background relaunch): start GPS again, since iOS
+  /// may have paused it while you stood still.
+  Future<void> wake() async {
+    if (_fixes == null) return;
+    unawaited(_fixes!.cancel());
+    _fixes = null;
+    await _start();
   }
 
   /// At app start (also a background relaunch): carry on if tracking was left on.
@@ -103,6 +115,7 @@ class TrackerController extends Notifier<TrackerState> {
 
   Future<void> turnOff() async {
     _stop();
+    await ref.read(wakeChannelProvider).stop();
     await _store.setEnabled(on: false);
     state = state.copyWith(
       on: false,
@@ -133,6 +146,7 @@ class TrackerController extends Notifier<TrackerState> {
   /// This account's tracking ends on this phone: one last upload (best effort), then queue and token are gone.
   Future<void> forget() async {
     _stop();
+    await ref.read(wakeChannelProvider).stop();
     try {
       await _upload(force: true).timeout(const Duration(seconds: 10));
     } on Object {
@@ -156,6 +170,7 @@ class TrackerController extends Notifier<TrackerState> {
       const Duration(minutes: 1),
       (_) => unawaited(_upload()),
     );
+    await ref.read(wakeChannelProvider).start();
     final token = await _store.token();
     state = state.copyWith(
       on: true,
