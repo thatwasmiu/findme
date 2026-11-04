@@ -1,12 +1,14 @@
 import 'package:findme/app.dart';
 import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/config/version.dart';
+import 'package:findme/core/debug/debug_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('Find Me $appVersion');
+  if (debugConsoleEnabled) DebugLog.instance.hookErrors();
   try {
     final cfg = AppConfig.fromEnvironment();
     runApp(

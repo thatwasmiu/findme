@@ -25,6 +25,8 @@ All commands run in PowerShell in the project folder. Flutter lives in `C:\src\f
 | `flutter clean` | Deletes build output (when a build is stuck) |
 | `… --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm'))"` | Add to any build: commit + time shown as "Phiên bản …" in the 👥 sheet (else "dev") |
 
+Dev builds: the 🐞 button opens the debug console (HTTP calls with status and error code, errors, environment).
+
 ## Quality
 
 | Command | Does |

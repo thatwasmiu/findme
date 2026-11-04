@@ -1,3 +1,5 @@
+import 'package:findme/core/debug/debug_console.dart';
+import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/theme/app_theme.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
@@ -31,6 +33,9 @@ class _FindMeAppState extends ConsumerState<FindMeApp> {
       title: 'Find Me',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      builder: debugConsoleEnabled
+          ? (_, child) => DebugOverlay(navigator: _navigator, child: child!)
+          : null,
       home: ref.watch(signedInProvider)
           ? MapScreen(showTiles: widget.showTiles)
           : const WelcomeScreen(),

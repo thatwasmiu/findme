@@ -82,6 +82,21 @@ The repo ships `.vscode/launch.json` with two configurations. In VS Code: Run an
 
 The app never logs tokens, coordinates, share ids, friend codes, emails or passwords (same rule as the backend).
 
+### The 🐞 debug console (dev builds only)
+
+Every `--flavor dev` build shows a small 🐞 button over the app (drag it out of the way). A tap opens a sheet with:
+
+| Tab | Shows |
+|---|---|
+| **HTTP** | Every call to the API and to Cognito, newest first: time, status, milliseconds, method and path (or the Cognito action, e.g. `Cognito InitiateAuth`), and the server's error code (`UserNotFoundException`, `self`…). Red = failed or no answer. |
+| **Errors** | Flutter errors (layout, build) and uncaught errors, with their message. A red dot on the 🐞 means there is at least one. |
+| **Env** | Flavor, build stamp, API / Cognito / web addresses, signed in or not, when the access token runs out. |
+
+🗑 clears both lists. The console keeps the last 200 entries in memory only: nothing is sent anywhere or kept after
+the app closes. It follows the rule above: friend, share and request ids in paths show as `•`, query values are
+dropped (`/api/track?from&to&have`), and bodies are never shown, only the error code. Prod builds compile it out
+(`debugConsoleEnabled` in `lib/core/debug/debug_log.dart` is `appFlavor == 'dev'`).
+
 ## Building an APK to install on a phone
 
 ```powershell

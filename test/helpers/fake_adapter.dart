@@ -14,6 +14,12 @@ class FakeAdapter implements HttpClientAdapter {
   Reply Function(RequestOptions req) handler;
   final requests = <RequestOptions>[];
 
+  /// The bodies as they went on the wire (after dio's encoding), one per request.
+  final wire = <String>[];
+
+  /// What the replies say they are. Cognito answers `application/x-amz-json-1.1`, which dio does not decode.
+  String contentType = Headers.jsonContentType;
+
   /// `'GET https://api.test/track'` for each request so far (no query string).
   List<String> get calls => requests
       .map((r) => '${r.method} ${r.uri.scheme}://${r.uri.host}${r.uri.path}')
@@ -26,6 +32,11 @@ class FakeAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    wire.add(
+      requestStream == null
+          ? ''
+          : utf8.decode(await requestStream.expand((c) => c).toList()),
+    );
     final r = handler(options);
     final bytes = r.body == null
         ? Uint8List(0)
@@ -34,7 +45,7 @@ class FakeAdapter implements HttpClientAdapter {
       bytes,
       r.status,
       headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
+        Headers.contentTypeHeader: [contentType],
       },
     );
   }

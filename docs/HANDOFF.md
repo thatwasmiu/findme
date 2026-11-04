@@ -15,7 +15,14 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 - API on the app's own address (`travel-heatmap` b4929b0, live 2026-11-04): `API_URL` = `<WEB_ORIGIN>/api`. A
   relative `API_URL` (the web's `/api`) is refused with the config error screen. Update the `FINDME_DEV_CONFIG`
   secret if it still holds the `execute-api` address (that one keeps working until API Gateway is replaced).
-- 143 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+- **Sign-in fixed on devices** (2026-11-04): Cognito speaks `application/x-amz-json-1.1`, which dio neither encodes
+  (it sent the body form-encoded → `SerializationException`) nor decodes (every error read as "HTTP 400", and a
+  right password failed too). `cognito_api.dart` now sends and reads JSON text itself; the auth tests use Cognito's
+  real content type and check the bytes on the wire. A wrong login on the emulator says "Sai email hoặc mật khẩu.";
+  a real account has not been tried yet.
+- **🐞 debug console** in dev builds (`lib/core/debug/`, guide chapter 02): HTTP calls (masked paths, status, ms,
+  error code), Flutter / uncaught errors, environment. In memory only, last 200; compiled out of prod.
+- 148 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Runs on an Android emulator** (2026-11-04): SDK, NDK and emulator from zip files on `D:\Android` (no Android
   Studio, no admin; guide chapter 01 Step 3b). User env vars `ANDROID_HOME`, `ANDROID_AVD_HOME`,

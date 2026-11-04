@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
@@ -55,7 +57,8 @@ void main() {
   );
 
   setUp(() {
-    adapter = FakeAdapter((_) => ok({}));
+    adapter = FakeAdapter((_) => ok({}))
+      ..contentType = 'application/x-amz-json-1.1'; // what Cognito really sends
     store = MemoryStore();
     repo = AuthRepository(CognitoApi(cfg, dio: fakeDio(adapter)), store);
   });
@@ -79,6 +82,8 @@ void main() {
             'AuthParameters': {'USERNAME': 'me@x.vn', 'PASSWORD': 'pw'},
           },
         });
+        // What Cognito really receives: JSON text, not dio's form encoding.
+        expect(jsonDecode(adapter.wire.single), sent()['body']);
         expect(store.s?.access, 'A');
         expect(store.s?.refresh, 'R');
         expect(await repo.getAccessToken(), 'A');

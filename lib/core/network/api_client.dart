@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:findme/core/config/app_config.dart';
+import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/errors/app_errors.dart';
 
 typedef TokenGetter = Future<String?> Function();
@@ -7,7 +8,7 @@ typedef TokenGetter = Future<String?> Function();
 /// The one way to call the Find Me API: adds the bearer token and maps 401/403 like every web `call()` does.
 /// Repositories map the remaining statuses (400/404/409) to their own errors.
 class ApiClient {
-  ApiClient(this._cfg, this._token, {Dio? dio}) : _dio = dio ?? Dio();
+  ApiClient(this._cfg, this._token, {Dio? dio}) : _dio = dio ?? appDio();
 
   final AppConfig _cfg;
   final TokenGetter _token;
