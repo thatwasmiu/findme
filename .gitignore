@@ -40,3 +40,6 @@ ios/Runner/GeneratedPluginRegistrant.*
 # Store signing secrets (chapter 14)
 *.p8
 *.p12
+
+# Local build/run shortcuts with this PC's paths
+dev.bat
