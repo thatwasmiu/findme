@@ -3,6 +3,7 @@ import 'package:findme/features/friends/presentation/friends_sheet.dart';
 import 'package:findme/features/replay/presentation/replay_bar.dart';
 import 'package:findme/features/replay/presentation/replay_controller.dart';
 import 'package:findme/features/shares/presentation/shares_sheet.dart';
+import 'package:findme/features/tracker/presentation/tracker_sheet.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
 import 'package:findme/features/trail/presentation/top_bar.dart';
@@ -94,6 +95,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       incomingCount: incoming,
                       onShare: () => SharesSheet.open(context),
                       onFriends: () => FriendsSheet.open(context),
+                      onTrack: () => TrackerSheet.open(context),
                     ),
             ),
           ),

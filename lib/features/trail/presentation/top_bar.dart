@@ -2,22 +2,27 @@ import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/date_filter.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Brand, "👀 x phút trước", share, friends, sign out, the date filter and the status line (the web's top bar).
+/// Brand, "👀 x phút trước", share, friends, tracking, sign out, the date filter and the status line (the web's top bar).
 class TopBar extends ConsumerWidget {
   const TopBar({
     required this.onShare,
     required this.onFriends,
+    required this.onTrack,
     required this.incomingCount,
     super.key,
   });
 
   final VoidCallback onShare;
   final VoidCallback onFriends;
+
+  /// Opens 🧭 Ghi hành trình (pink while recording).
+  final VoidCallback onTrack;
   final int incomingCount;
 
   @override
@@ -61,6 +66,14 @@ class TopBar extends ConsumerWidget {
                     : 'Bạn bè',
                 badge: incomingCount,
                 onTap: onFriends,
+              ),
+              Pill(
+                label: '🧭',
+                semanticLabel: 'Ghi hành trình',
+                selected: ref.watch(
+                  trackerControllerProvider.select((t) => t.on),
+                ),
+                onTap: onTrack,
               ),
               Pill(
                 label: '👋',

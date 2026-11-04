@@ -121,6 +121,7 @@ void main() {
 
   group('top bar', () {
     late MockTrack track;
+    var tracked = 0;
     Future<ProviderContainer> pump(
       WidgetTester t, {
       int incoming = 0,
@@ -153,6 +154,7 @@ void main() {
               body: TopBar(
                 onShare: () {},
                 onFriends: () {},
+                onTrack: () => tracked++,
                 incomingCount: incoming,
               ),
             ),
@@ -182,6 +184,8 @@ void main() {
         c.read(trailControllerProvider).range,
         presetRange(Preset.d7, now),
       );
+      await t.tap(find.text('🧭'));
+      expect(tracked, 1);
       await t.tap(find.bySemanticsLabel('Đăng xuất'));
       await t.pump();
       expect(c.read(authControllerProvider), AuthPhase.signedOut);

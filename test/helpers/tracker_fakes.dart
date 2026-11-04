@@ -74,10 +74,21 @@ class FakeTracker extends TrackerController {
   int forgets = 0;
   int resumes = 0;
 
+  /// Every other action, by name (`turnOn`, `sendNow`, `saveToken:<raw>`…).
+  final calls = <String>[];
+
   @override
   TrackerState build() => initial;
   @override
   Future<void> forget() async => forgets++;
   @override
   Future<void> resume() async => resumes++;
+  @override
+  Future<void> turnOn() async => calls.add('turnOn');
+  @override
+  Future<void> turnOff() async => calls.add('turnOff');
+  @override
+  Future<void> sendNow() async => calls.add('sendNow');
+  @override
+  Future<void> saveToken(String raw) async => calls.add('saveToken:$raw');
 }
