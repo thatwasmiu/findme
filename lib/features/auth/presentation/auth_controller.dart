@@ -6,6 +6,7 @@ import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/data/session_store.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// noAccount: signed in, but this login has no map (e.g. the admin).
@@ -41,9 +42,8 @@ class AuthController extends Notifier<AuthPhase> {
     await auth.login(email, password);
     // Another account on this phone: the previous one's tracking (its token, its unsent points) ends first, so
     // nobody's points go out under someone else's token.
-    final pasted = await ref.read(trackerStoreProvider).token();
-    if (pasted != null &&
-        pasted.sub != subOf(await auth.getAccessToken() ?? '')) {
+    final owner = await ref.read(trackerStoreProvider).owner();
+    if (owner != null && owner != subOf(await auth.getAccessToken() ?? '')) {
       await ref.read(trackerControllerProvider.notifier).forget();
     }
     state = AuthPhase.signedIn;
@@ -52,7 +52,12 @@ class AuthController extends Notifier<AuthPhase> {
   /// A deliberate sign-out also ends tracking on this phone (a lapsed session, [expired], does not).
   Future<void> signOut() async {
     state = AuthPhase.signedOut;
-    await ref.read(trackerControllerProvider.notifier).forget();
+    try {
+      await ref.read(trackerControllerProvider.notifier).forget();
+    } on Object catch (e) {
+      // Storage or file trouble must not keep the session alive.
+      debugPrint('tracker forget failed: ${e.runtimeType}');
+    }
     await Future.wait([
       ref.read(authRepositoryProvider).logout(),
       ref.read(prefsProvider).clear(),

@@ -150,6 +150,30 @@ void main() {
       expect(tracker(c).forgets, 0);
     });
 
+    test('sign-in as another account forgets a queue with no token', () async {
+      final auth = fakeAuth(token: jwt('sub-2'));
+      when(() => auth.login(any(), any())).thenAnswer((_) async {});
+      final store = MemoryTrackerStore()..owned = 'sub-1';
+      final c = ProviderContainer(
+        overrides: baseOverrides(auth: auth, trackerStore: store),
+      );
+      c.read(authControllerProvider);
+      await settle(c);
+      await c.read(authControllerProvider.notifier).signIn('a', 'b');
+      expect(tracker(c).forgets, 1);
+    });
+
+    test('signOut still signs out when the tracker fails', () async {
+      final auth = fakeAuth();
+      final c = ProviderContainer(overrides: baseOverrides(auth: auth));
+      c.read(authControllerProvider);
+      await settle(c);
+      tracker(c).failForget = true;
+      await c.read(authControllerProvider.notifier).signOut();
+      verify(auth.logout).called(1);
+      expect(c.read(authControllerProvider), AuthPhase.signedOut);
+    });
+
     for (final (who, forgets) in [('sub-1', 0), ('sub-2', 1)]) {
       test(
         'sign-in as $who after sub-1 pasted the token: forgets $forgets',

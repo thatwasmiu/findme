@@ -11,7 +11,7 @@ import UIKit
   private var channel: FlutterMethodChannel?
 
   /// A background relaunch opens no window, so the storyboard's (implicit) engine is never created: this one runs
-  /// `main()` instead, which resumes tracking.
+  /// the screenless Dart entrypoint `trackerBoot` (lib/main.dart), which resumes tracking.
   private var backgroundEngine: FlutterEngine?
 
   override func application(
@@ -23,7 +23,7 @@ import UIKit
       // Apple: restart the service on every relaunch, or it stops delivering.
       significant.startMonitoringSignificantLocationChanges()
       let engine = FlutterEngine(name: "findme.background")
-      engine.run()
+      engine.run(withEntrypoint: "trackerBoot")
       GeneratedPluginRegistrant.register(with: engine)
       listen(on: engine.binaryMessenger)
       backgroundEngine = engine

@@ -44,4 +44,17 @@ void main() {
     expect(await s.token(), isNull);
     expect(await s.enabled(), isFalse);
   });
+
+  test(
+    "owner: the token's account, else the one that switched it on",
+    () async {
+      expect(await s.owner(), isNull);
+      await s.setOwner('sub-9');
+      expect(await s.owner(), 'sub-9');
+      await s.saveToken('t', 'sub-1');
+      expect(await s.owner(), 'sub-1');
+      await s.forget();
+      expect(await s.owner(), isNull);
+    },
+  );
 }

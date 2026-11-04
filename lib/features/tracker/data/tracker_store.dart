@@ -16,6 +16,10 @@ abstract interface class TrackerStore {
   Future<bool> enabled();
   Future<void> setEnabled({required bool on});
   Future<void> forget();
+
+  /// The account (Cognito `sub`) this phone's tracking belongs to: the token's, else whoever switched it on.
+  Future<String?> owner();
+  Future<void> setOwner(String sub);
 }
 
 class SecureTrackerStore implements TrackerStore {
@@ -27,6 +31,7 @@ class SecureTrackerStore implements TrackerStore {
   /// A plain bool in the legacy SharedPreferences file: Android's boot receiver reads it natively as
   /// `flutter.findme.tracking` in `FlutterSharedPreferences`.
   static const _onKey = 'findme.tracking';
+  static const _ownerKey = 'findme.trackerOwner';
 
   final FlutterSecureStorage _secure;
 
@@ -64,7 +69,19 @@ class SecureTrackerStore implements TrackerStore {
   @override
   Future<void> forget() async {
     await _secure.delete(key: _tokenKey);
-    await (await SharedPreferences.getInstance()).remove(_onKey);
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_onKey);
+    await p.remove(_ownerKey);
+  }
+
+  @override
+  Future<String?> owner() async =>
+      (await token())?.sub ??
+      (await SharedPreferences.getInstance()).getString(_ownerKey);
+
+  @override
+  Future<void> setOwner(String sub) async {
+    await (await SharedPreferences.getInstance()).setString(_ownerKey, sub);
   }
 }
 

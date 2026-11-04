@@ -70,6 +70,7 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme.ingest` | secure storage | the pasted ingest token + the account (`sub`) that saved it (chapter 15) |
 | `findme.tracking` | shared_preferences | tracking on/off (Android's boot receiver reads it as `flutter.findme.tracking`) |
 | `findme.trackerDisclosure` | shared_preferences | the location explanation was accepted once |
+| `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was pasted |
 | `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`

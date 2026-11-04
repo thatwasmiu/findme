@@ -111,8 +111,8 @@ channel?.invokeMethod("wake", arguments: nil)   // on every significant change
 2. `didFinishLaunchingWithOptions` runs on every start. If `launchOptions` contains `.location`, iOS started us
    *because of a location event*: there is no window. Apple says to restart significant monitoring right away.
    With no window, Flutter's usual engine (created by the window's storyboard) never starts, so this code starts
-   its own `FlutterEngine`, registers the plugins and runs `main()`. `FindMeApp` then calls `resume()`: tracking
-   is back.
+   its own `FlutterEngine`, registers the plugins and runs the screenless Dart function `trackerBoot` (the same
+   one Android uses after a reboot). It calls `resume()`: tracking is back.
 3. `didInitializeImplicitFlutterEngine` runs when the normal, windowed engine starts (you opened the app). The
    background engine is stopped, so only one copy of Dart writes the queue.
 4. `locationManager(_:didUpdateLocations:)` is each significant change: it sends `wake` to Dart, and Dart restarts
@@ -123,7 +123,8 @@ declares the receiver and the `RECEIVE_BOOT_COMPLETED` permission). It reads the
 (`shared_preferences` keeps it in the `FlutterSharedPreferences` file with a `flutter.` prefix). If it was on, it
 starts a Flutter engine without any screen and runs the Dart function `trackerBoot` (marked
 `@pragma('vm:entry-point')` so the compiler keeps it). `trackerBoot` resumes the tracker; geolocator's foreground
-service shows its notification again.
+service shows its notification again. When you then open the app, `MainActivity` stops that screenless engine before the
+screen's own Dart starts, so only one copy ever writes the queue (the iPhone does the same in `AppDelegate`).
 
 ## 3. Run
 

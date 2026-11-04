@@ -252,4 +252,38 @@ void main() {
     await settle();
     expect(gps.listens, 2);
   });
+
+  test('forget waits for a running upload, then sends the rest', () async {
+    final hold = Completer<IngestResult>();
+    var calls = 0;
+    when(() => ingest.send(any(), any(), any())).thenAnswer((_) {
+      calls++;
+      return calls == 1 ? hold.future : Future.value(IngestResult.ok);
+    });
+    await ctl().turnOn();
+    await emit(
+      4,
+      waitUploads: false,
+    ); // 1st fix in flight, 3 more queue behind it
+    final gone = ctl().forget();
+    hold.complete(IngestResult.ok);
+    await gone;
+    expect(calls, 2);
+    expect(store.saved, isNull);
+  });
+
+  test('a fix still being written does not survive forget', () async {
+    store.saved = null;
+    await ctl().turnOn();
+    gps.emit(fx()); // not awaited: forget races the append
+    await ctl().forget();
+    await settle();
+    expect(await queue.count(), 0);
+  });
+
+  test('turnOn remembers whose tracking this is', () async {
+    store.saved = null;
+    await ctl().turnOn();
+    expect(await store.owner(), 'sub-1');
+  });
 }

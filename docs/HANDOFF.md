@@ -9,7 +9,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   iOS significant-location relaunch (Swift in `AppDelegate`), Android reboot restart (`BootReceiver.kt`), Play
   disclosure dialog. Token is **pasted** for now (`ponytail:`, until the server API hands it out). Guide chapter 15,
   Play drafts in `docs/guide/play-store-location.md`. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-04-*`.
-  **Unit/widget tested only.** Not yet seen on a device: recording with the emulator route, the reboot restart,
+  A fresh whole-branch review's critical/important findings are fixed (two engines on one queue after an Android
+  reboot; forget() racing uploads/appends; account switch with no token; sign-out surviving a tracker error; iOS
+  background engine now runs `trackerBoot`). **Unit/widget tested only.** Not yet seen on a device: recording with the emulator route, the reboot restart,
   anything on iPhone. The Swift has never compiled (iOS CI runs only on main / by hand).
 - All features of the design are implemented for normal users: sign-in, map with paw prints / stops / Hachiware,
   date filter + live refresh with backoff, day diary / top places, replay alone and together, share links, friends.

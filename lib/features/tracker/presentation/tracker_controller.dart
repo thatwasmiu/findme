@@ -110,6 +110,10 @@ class TrackerController extends Notifier<TrackerState> {
       return;
     }
     await _store.setEnabled(on: true);
+    // Whose points these are, even before a token is pasted: another account signing in ends them (AuthController).
+    final access = await ref.read(authRepositoryProvider).getAccessToken();
+    final sub = subOf(access ?? '');
+    if (sub != null) await _store.setOwner(sub);
     await _start();
   }
 
@@ -148,10 +152,15 @@ class TrackerController extends Notifier<TrackerState> {
     _stop();
     await ref.read(wakeChannelProvider).stop();
     try {
-      await _upload(force: true).timeout(const Duration(seconds: 10));
+      await () async {
+        await _work; // fixes already received are written first
+        await _running; // an upload in flight is not forced: wait for it…
+        await _upload(force: true); // …then send whatever is left
+      }().timeout(const Duration(seconds: 10));
     } on Object {
       // offline or slow: those fixes are lost with the account's queue, by design
     }
+    await _work; // nothing lands in the queue after it is cleared
     await (await _queue).clear();
     await _store.forget();
     _failures = 0;

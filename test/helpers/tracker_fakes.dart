@@ -19,8 +19,14 @@ String jwt(String sub) {
 
 class MemoryTrackerStore implements TrackerStore {
   IngestToken? saved;
+  String? owned;
   bool on = false;
   int forgets = 0;
+
+  @override
+  Future<String?> owner() async => saved?.sub ?? owned;
+  @override
+  Future<void> setOwner(String sub) async => owned = sub;
 
   @override
   Future<IngestToken?> token() async => saved;
@@ -38,6 +44,7 @@ class MemoryTrackerStore implements TrackerStore {
   Future<void> forget() async {
     forgets++;
     saved = null;
+    owned = null;
     on = false;
   }
 }
@@ -74,6 +81,7 @@ class FakeTracker extends TrackerController {
   final TrackerState initial;
   int forgets = 0;
   int resumes = 0;
+  bool failForget = false;
 
   /// Every other action, by name (`turnOn`, `sendNow`, `saveToken:<raw>`…).
   final calls = <String>[];
@@ -81,7 +89,11 @@ class FakeTracker extends TrackerController {
   @override
   TrackerState build() => initial;
   @override
-  Future<void> forget() async => forgets++;
+  Future<void> forget() async {
+    forgets++;
+    if (failForget) throw StateError('storage broken');
+  }
+
   @override
   Future<void> resume() async => resumes++;
   @override
