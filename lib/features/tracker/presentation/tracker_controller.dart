@@ -11,6 +11,9 @@ import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart';
+import 'package:findme/features/tracker/domain/upload_policy.dart'
+    as policy
+    show uploadEvery;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,6 +32,8 @@ class TrackerState {
     this.lastOk,
     this.lastFix,
     this.sending = false,
+    this.indicator = false,
+    this.uploadEvery = policy.uploadEvery,
   });
 
   /// Recording right now.
@@ -42,6 +47,12 @@ class TrackerState {
   final DateTime? lastFix;
   final bool sending;
 
+  /// iPhone shows its blue location indicator while recording.
+  final bool indicator;
+
+  /// Chosen wait between uploads.
+  final Duration uploadEvery;
+
   TrackerState copyWith({
     bool? on,
     TrackerProblem? problem,
@@ -50,6 +61,8 @@ class TrackerState {
     DateTime? lastOk,
     DateTime? lastFix,
     bool? sending,
+    bool? indicator,
+    Duration? uploadEvery,
   }) => TrackerState(
     on: on ?? this.on,
     problem: problem ?? this.problem,
@@ -58,6 +71,8 @@ class TrackerState {
     lastOk: lastOk ?? this.lastOk,
     lastFix: lastFix ?? this.lastFix,
     sending: sending ?? this.sending,
+    indicator: indicator ?? this.indicator,
+    uploadEvery: uploadEvery ?? this.uploadEvery,
   );
 }
 
@@ -96,9 +111,27 @@ class TrackerController extends Notifier<TrackerState> {
     await _start();
   }
 
+  /// The "Hiện chỉ báo vị trí" switch: saved; a running GPS stream restarts with it.
+  Future<void> setIndicator({required bool on}) async {
+    await _store.setIndicator(on: on);
+    state = state.copyWith(indicator: on);
+    await wake();
+  }
+
+  /// The "Gửi mỗi" choice: saved; what waits goes now if it is already due.
+  Future<void> setUploadEvery(Duration d) async {
+    await _store.setUploadEvery(d);
+    state = state.copyWith(uploadEvery: d);
+    await _upload();
+  }
+
   /// At app start (also a background relaunch): carry on if tracking was left on.
   Future<void> resume() async {
     await _refresh();
+    state = state.copyWith(
+      indicator: await _store.indicator(),
+      uploadEvery: await _store.uploadEvery(),
+    );
     if (!await _store.enabled()) return;
     if (await _gps.access() != LocationAccess.always) {
       state = state.copyWith(on: false, problem: TrackerProblem.needAlways);
@@ -114,6 +147,7 @@ class TrackerController extends Notifier<TrackerState> {
       return;
     }
     await _store.setEnabled(on: true);
+    state = state.copyWith(uploadEvery: await _store.uploadEvery());
     // Whose points these are, even before a token is pasted: another account signing in ends them (AuthController).
     final access = await ref.read(authRepositoryProvider).getAccessToken();
     final sub = subOf(access ?? '');
@@ -164,11 +198,17 @@ class TrackerController extends Notifier<TrackerState> {
   }
 
   Future<void> _start() async {
-    _fixes ??= _gps.fixes().listen(
-      _onFix,
-      onError: (Object _) =>
-          state = state.copyWith(on: false, problem: TrackerProblem.needAlways),
-    );
+    final indicator = await _store.indicator();
+    // Checked again after the await, so two starts at once never subscribe twice.
+    _fixes ??= _gps
+        .fixes(indicator: indicator)
+        .listen(
+          _onFix,
+          onError: (Object _) => state = state.copyWith(
+            on: false,
+            problem: TrackerProblem.needAlways,
+          ),
+        );
     // Standing still sends no fixes; this still uploads what waits once the 5 minutes are up.
     _tick ??= Timer.periodic(
       const Duration(minutes: 1),
@@ -296,6 +336,7 @@ class TrackerController extends Notifier<TrackerState> {
             lastOk: state.lastOk,
             now: _now(),
             notBefore: _notBefore,
+            every: state.uploadEvery,
           )) {
         final batch = await q.peek(maxBatch);
         if (batch.isEmpty) break;

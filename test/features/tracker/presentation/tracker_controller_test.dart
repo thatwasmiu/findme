@@ -381,4 +381,57 @@ void main() {
     await ctl().turnOn();
     expect(await store.owner(), 'sub-1');
   });
+
+  test(
+    'the location indicator restarts GPS with it and is remembered',
+    () async {
+      await ctl().turnOn();
+      expect(gps.lastIndicator, isFalse);
+      await ctl().setIndicator(on: true);
+      expect(gps.listens, 2);
+      expect(gps.lastIndicator, isTrue);
+      expect(gps.listening, isTrue);
+      expect(store.indicatorOn, isTrue);
+      expect(st().indicator, isTrue);
+    },
+  );
+
+  test('indicator while off: saved, GPS not started', () async {
+    await ctl().setIndicator(on: true);
+    expect(gps.listens, 0);
+    expect(store.indicatorOn, isTrue);
+  });
+
+  test('resume uses the saved indicator setting', () async {
+    store
+      ..on = true
+      ..indicatorOn = true;
+    await ctl().resume();
+    expect(gps.lastIndicator, isTrue);
+    expect(st().indicator, isTrue);
+  });
+
+  test('a shorter interval sends what waits once it is due', () async {
+    await ctl().turnOn();
+    await emit(1); // first upload: lastOk = now
+    await emit(3);
+    verify(() => ingest.send(any(), any(), any())).called(1);
+    now = now.add(const Duration(minutes: 2));
+    await ctl().setUploadEvery(const Duration(minutes: 1));
+    await ctl().idle();
+    verify(() => ingest.send(any(), any(that: hasLength(3)), any())).called(1);
+    expect(store.every, const Duration(minutes: 1));
+    expect(st().uploadEvery, const Duration(minutes: 1));
+  });
+
+  test('a longer interval holds fixes past 5 minutes', () async {
+    store.every = const Duration(minutes: 30);
+    await ctl().turnOn();
+    await emit(1);
+    verify(() => ingest.send(any(), any(), any())).called(1);
+    now = now.add(const Duration(minutes: 10));
+    await emit(3);
+    verifyNever(() => ingest.send(any(), any(), any()));
+    expect(st().uploadEvery, const Duration(minutes: 30));
+  });
 }

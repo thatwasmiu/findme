@@ -30,6 +30,13 @@ Phones free memory by terminating background apps. Two survival tricks:
 - **Android: restart after reboot.** The foreground service is rarely killed, but a reboot ends everything. A
   **boot receiver** (Android calls it when the phone has started) checks "was tracking on?" and starts it again.
 
+### The blue indicator (iPhone)
+
+The 🧭 sheet on an iPhone has **Hiện chỉ báo vị trí** (Overland calls it "App using location"). On, iOS shows a
+blue pill by the clock while Find Me records in the background; tapping it opens the app. It changes nothing about
+accuracy, battery or how often fixes come: it is a visible "still recording" sign, handy while testing (no blue
+pill = not recording). Off by default. Android has no such switch: its notification already plays that role.
+
 ### Batteries and accuracy
 
 The settings are Overland's recommended ones, fixed in code (`lib/features/tracker/data/geolocator_source.dart`):
@@ -49,8 +56,9 @@ Removing lines means rewriting the file. Writing over `queue.jsonl` directly cou
 died in the middle. So the new content goes to `queue.jsonl.tmp`, then a **rename** swaps it in. A rename is atomic:
 afterwards there is either the old file or the new one, never a mix.
 
-When does it upload? As soon as 50 fixes wait, or 5 minutes after the last successful upload, or when you press
-**Gửi ngay**. A failure (no network, server error) waits 1, 2, 4, 8, 16, then 30 minutes before trying again.
+When does it upload? As soon as 50 fixes wait, or when the time picked under **Gửi mỗi** in the 🧭 sheet (1, 5,
+15, 30 minutes or 1 hour; default 5 minutes) has passed since the last successful upload, or when you press
+**Gửi ngay**. A longer wait means fewer requests and a little less battery, but friends see you later. A failure (no network, server error) waits 1, 2, 4, 8, 16, then 30 minutes before trying again.
 
 | Server answer | What the app does |
 |---|---|

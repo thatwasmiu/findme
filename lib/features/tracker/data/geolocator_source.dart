@@ -22,8 +22,8 @@ class GeolocatorSource implements LocationSource {
   }
 
   @override
-  Stream<Fix> fixes() =>
-      Geolocator.getPositionStream(locationSettings: _settings())
+  Stream<Fix> fixes({bool indicator = false}) =>
+      Geolocator.getPositionStream(locationSettings: _settings(indicator))
           // Before a first fix some phones send 0,0 or a negative accuracy; the server would drop them anyway.
           .where(
             (p) => p.accuracy >= 0 && !(p.latitude == 0 && p.longitude == 0),
@@ -40,26 +40,28 @@ class GeolocatorSource implements LocationSource {
   @override
   Future<void> openSettings() => Geolocator.openAppSettings();
 
-  static LocationSettings _settings() => switch (defaultTargetPlatform) {
-    TargetPlatform.iOS => AppleSettings(
-      accuracy: LocationAccuracy.medium, // kCLLocationAccuracyHundredMeters
-      distanceFilter: 10,
-      pauseLocationUpdatesAutomatically: true,
-    ),
-    _ => AndroidSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
-      intervalDuration: const Duration(seconds: 10),
-      // POST_NOTIFICATIONS is not requested. ponytail: Android 13+ hides this notification until the user allows
-      // notifications; the service still runs. Request it if users miss the notification.
-      foregroundNotificationConfig: const ForegroundNotificationConfig(
-        notificationTitle: 'Find Me đang ghi hành trình',
-        notificationText: 'Chạm để mở',
-        notificationChannelName: 'Ghi hành trình',
-        setOngoing: true,
-      ),
-    ),
-  };
+  static LocationSettings _settings(bool indicator) =>
+      switch (defaultTargetPlatform) {
+        TargetPlatform.iOS => AppleSettings(
+          accuracy: LocationAccuracy.medium, // kCLLocationAccuracyHundredMeters
+          distanceFilter: 10,
+          pauseLocationUpdatesAutomatically: true,
+          showBackgroundLocationIndicator: indicator,
+        ),
+        _ => AndroidSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+          intervalDuration: const Duration(seconds: 10),
+          // POST_NOTIFICATIONS is not requested. ponytail: Android 13+ hides this notification until the user allows
+          // notifications; the service still runs. Request it if users miss the notification.
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationTitle: 'Find Me đang ghi hành trình',
+            notificationText: 'Chạm để mở',
+            notificationChannelName: 'Ghi hành trình',
+            setOngoing: true,
+          ),
+        ),
+      };
 
   static LocationAccess _map(LocationPermission p) => switch (p) {
     LocationPermission.always => LocationAccess.always,

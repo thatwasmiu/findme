@@ -57,4 +57,21 @@ void main() {
       expect(await s.owner(), isNull);
     },
   );
+
+  test(
+    'indicator: off by default, kept across forget (a phone setting)',
+    () async {
+      expect(await s.indicator(), isFalse);
+      await s.setIndicator(on: true);
+      await s.forget();
+      expect(await s.indicator(), isTrue);
+    },
+  );
+
+  test('upload interval: 5 min by default, kept across forget', () async {
+    expect(await s.uploadEvery(), const Duration(minutes: 5));
+    await s.setUploadEvery(const Duration(minutes: 15));
+    await s.forget();
+    expect(await s.uploadEvery(), const Duration(minutes: 15));
+  });
 }

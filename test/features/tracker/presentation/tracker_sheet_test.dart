@@ -3,6 +3,7 @@ import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/tracker/presentation/tracker_sheet.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,4 +136,36 @@ void main() {
     await t.pumpAndSettle();
     expect(tracker.calls, ['turnOff']);
   });
+
+  testWidgets('iPhone: indicator switch calls setIndicator', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await pump(t, const TrackerState(on: true));
+    expect(find.text('Hiện chỉ báo vị trí'), findsOneWidget);
+    await t.tap(find.byKey(const Key('indicator')));
+    await t.pump();
+    expect(tracker.calls, ['setIndicator:true']);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('Android: no indicator switch', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await pump(t, const TrackerState(on: true));
+    expect(find.text('Hiện chỉ báo vị trí'), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets(
+    'upload interval: current one selected, tap calls setUploadEvery',
+    (t) async {
+      await pump(t, const TrackerState(on: true));
+      for (final l in ['1 phút', '5 phút', '15 phút', '30 phút', '1 giờ']) {
+        expect(find.text(l), findsOneWidget);
+      }
+      await t.tap(find.text('15 phút'));
+      await t.pump();
+      expect(tracker.calls, ['setUploadEvery:15']);
+    },
+  );
 }

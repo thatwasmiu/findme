@@ -71,6 +71,8 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme.tracking` | shared_preferences | tracking on/off (Android's boot receiver reads it as `flutter.findme.tracking`) |
 | `findme.trackerDisclosure` | shared_preferences | the location explanation was accepted once |
 | `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was fetched |
+| `findme.trackerIndicator` | shared_preferences | iPhone: show the blue location indicator while tracking (a phone setting, kept on sign-out) |
+| `findme.trackerUploadMinutes` | shared_preferences | "Gửi mỗi": minutes between uploads (1, 5, 15, 30, 60; default 5; kept on sign-out) |
 | `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`
@@ -85,7 +87,7 @@ another account signs in, never by an expired session.
 | Friends list | 60 s |
 | Access token renewal | when < 60 s left |
 | Replay alone / together | 120 ms per print (min 10 s) / 60 s |
-| Tracker upload | at 50 waiting fixes, or 5 min after the last ok, or Gửi ngay; ≤ 500 per request |
+| Tracker upload | at 50 waiting fixes, or "Gửi mỗi" (default 5 min) after the last ok, or Gửi ngay; ≤ 500 per request |
 | Tracker backoff after a failure | 1, 2, 4, 8, 16, 30 min |
 | GPS | Android: every 10 s if moved 10 m; iPhone: ~100 m accuracy, pauses when still |
 

@@ -10,8 +10,9 @@ abstract interface class LocationSource {
   /// Asks the user; may return less than [LocationAccess.always] (Android 11+ only grants that in settings).
   Future<LocationAccess> request();
 
-  /// Background-capable stream of fixes, until cancelled.
-  Stream<Fix> fixes();
+  /// Background-capable stream of fixes, until cancelled. [indicator]: iPhone shows its blue location indicator
+  /// while recording in the background (Overland's "App using location" switch); ignored on Android.
+  Stream<Fix> fixes({bool indicator = false});
   Future<void> openSettings();
 }
 

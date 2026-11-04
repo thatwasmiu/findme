@@ -39,4 +39,22 @@ void main() {
   test('inside backoff window -> wait, even when full', () {
     expect(go(500, waitLeft: const Duration(seconds: 30)), isFalse);
   });
+
+  test('a longer chosen interval waits longer; 50 fixes still go at once', () {
+    bool go15(int queued, Duration sinceOk) => shouldUpload(
+      queued: queued,
+      lastOk: now.subtract(sinceOk),
+      now: now,
+      notBefore: null,
+      every: const Duration(minutes: 15),
+    );
+    expect(go15(3, const Duration(minutes: 6)), isFalse);
+    expect(go15(3, const Duration(minutes: 16)), isTrue);
+    expect(go15(50, const Duration(minutes: 1)), isTrue);
+  });
+
+  test('the choices offered', () {
+    expect([for (final d in uploadChoices) d.inMinutes], [1, 5, 15, 30, 60]);
+    expect(uploadEvery, const Duration(minutes: 5));
+  });
 }

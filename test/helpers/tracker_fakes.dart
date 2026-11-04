@@ -21,7 +21,19 @@ class MemoryTrackerStore implements TrackerStore {
   IngestToken? saved;
   String? owned;
   bool on = false;
+  bool indicatorOn = false;
+  Duration every = const Duration(minutes: 5);
+
+  @override
+  Future<Duration> uploadEvery() async => every;
+  @override
+  Future<void> setUploadEvery(Duration d) async => every = d;
   int forgets = 0;
+
+  @override
+  Future<bool> indicator() async => indicatorOn;
+  @override
+  Future<void> setIndicator({required bool on}) async => indicatorOn = on;
 
   @override
   Future<String?> owner() async => saved?.sub ?? owned;
@@ -66,10 +78,14 @@ class FakeLocation implements LocationSource {
   @override
   Future<LocationAccess> request() async => granted = afterRequest;
   @override
-  Stream<Fix> fixes() {
+  Stream<Fix> fixes({bool indicator = false}) {
     listens++;
+    lastIndicator = indicator;
     return ctl.stream;
   }
+
+  /// What the last [fixes] call asked for (iOS blue location indicator).
+  bool? lastIndicator;
 
   @override
   Future<void> openSettings() async => settingsOpened++;
@@ -102,6 +118,12 @@ class FakeTracker extends TrackerController {
   Future<void> turnOff() async => calls.add('turnOff');
   @override
   Future<void> sendNow() async => calls.add('sendNow');
+  @override
+  Future<void> setIndicator({required bool on}) async =>
+      calls.add('setIndicator:$on');
+  @override
+  Future<void> setUploadEvery(Duration d) async =>
+      calls.add('setUploadEvery:${d.inMinutes}');
 }
 
 /// The iOS significant-change bridge, by hand: counts start/stop, [fire] a wake.

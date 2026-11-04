@@ -5,6 +5,7 @@ import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/domain/upload_policy.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter/foundation.dart';
@@ -111,6 +112,18 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
             ],
           ),
           Notice(status, error: bad),
+          if (defaultTargetPlatform == TargetPlatform.iOS)
+            Row(
+              children: [
+                const Expanded(child: Text('Hiện chỉ báo vị trí')),
+                Switch(
+                  key: const Key('indicator'),
+                  value: s.indicator,
+                  activeThumbColor: Palette.pink,
+                  onChanged: (v) => unawaited(ctl.setIndicator(on: v)),
+                ),
+              ],
+            ),
           if (s.problem == TrackerProblem.needAlways)
             Align(
               alignment: Alignment.centerLeft,
@@ -125,6 +138,24 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
           Text('Điểm cuối: ${when(s.lastFix)}'),
           if (s.rejected > 0)
             Notice('Điểm bị từ chối: ${s.rejected}', error: true),
+          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text('Gửi mỗi'),
+              for (final d in uploadChoices)
+                Pill(
+                  label: d.inMinutes < 60
+                      ? '${d.inMinutes} phút'
+                      : '${d.inHours} giờ',
+                  selected: s.uploadEvery == d,
+                  onTap: () => unawaited(ctl.setUploadEvery(d)),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerLeft,
