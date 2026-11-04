@@ -217,6 +217,8 @@ Steps 3–5 (the licence is accepted in point 2); continue with Step 6.
 | `sdkmanager did not install NDK 28.2.13676358` | `android.exe --sdk=D:\Android\Sdk sdk install ndk/28.2.13676358` (the version from the message) |
 | `PANIC: Unknown AVD name` | `ANDROID_AVD_HOME` is not set in this PowerShell: open a new one after point 3 |
 | Emulator window black / very slow | Close other apps (it needs ~3 GB of free RAM); try `-gpu swiftshader_indirect` |
+| Only a black strip at the top of the screen | The window opened mostly above the screen (a 2400-px phone is taller than a laptop screen). Drag it down by its title bar, or close it and start again; the owner's local `dev emu` moves and shrinks it automatically |
+| Shut it down | `D:\Android\Sdk\platform-tools\adb.exe emu kill` or the window's ✕ (both save its state for a quick next start) |
 | Build fills up C: | `GRADLE_USER_HOME` not picked up: open a new PowerShell (point 3) |
 
 ---
