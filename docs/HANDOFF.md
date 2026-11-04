@@ -21,8 +21,12 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
   real content type and check the bytes on the wire. A wrong login on the emulator says "Sai email hoặc mật khẩu.";
   a real account has not been tried yet.
 - **🐞 debug console** in dev builds (`lib/core/debug/`, guide chapter 02): HTTP calls (masked paths, status, ms,
-  error code), Flutter / uncaught errors, environment. In memory only, last 200; compiled out of prod.
-- 148 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+  error code; a tap shows the URL and both bodies, secrets as •••), Flutter / uncaught / map tile errors,
+  environment. A second 🐞 tap closes it. In memory only, last 200; compiled out of prod.
+- **Map tiles on the owner's office network:** TLS to every `openstreetmap.org` host is reset (curl on the PC too;
+  other tile hosts and the API work), so the map stays mostly grey there. Not an app bug; works elsewhere. Open
+  question: a dev-only tile server override if the office network is where testing happens.
+- 151 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Runs on an Android emulator** (2026-11-04): SDK, NDK and emulator from zip files on `D:\Android` (no Android
   Studio, no admin; guide chapter 01 Step 3b). User env vars `ANDROID_HOME`, `ANDROID_AVD_HOME`,

@@ -20,6 +20,9 @@ class HttpEntry extends DebugEntry {
     required this.status,
     required this.ms,
     this.error,
+    this.url,
+    this.request,
+    this.response,
   });
 
   final String method;
@@ -31,6 +34,11 @@ class HttpEntry extends DebugEntry {
 
   /// The server's error code (`UserNotFoundException`, `self`…) or why there was no answer.
   final String? error;
+
+  /// The full URL, and the bodies as indented JSON with secrets masked (`showBody`). Null: none.
+  final String? url;
+  final String? request;
+  final String? response;
 
   bool get failed => status == null || status! >= 400;
 }
@@ -67,6 +75,17 @@ class DebugLog extends ChangeNotifier {
     http.clear();
     errors.clear();
     notifyListeners();
+  }
+
+  DateTime? _lastTile;
+
+  /// A map tile that did not load. A blocked tile server fails dozens at once: one entry per 30 s at most, so they
+  /// do not push everything else out of the list.
+  void tileFailed(Object error) {
+    final now = DateTime.now();
+    if (_lastTile != null && now.difference(_lastTile!).inSeconds < 30) return;
+    _lastTile = now;
+    add(ErrorEntry('Map tile', error.toString()));
   }
 
   /// Flutter errors (layout, build) and uncaught async errors go to the console too; the old handlers still run.
@@ -111,7 +130,38 @@ String maskUrl(Uri u) {
   return '/$path${keys.isEmpty ? '' : '?$keys'}';
 }
 
-/// Times every request and writes it to [DebugLog]. Bodies are read only for an error code.
+final _secret = RegExp('password|token|secret', caseSensitive: false);
+
+/// A body as the console shows it: JSON indented, any value under a key with password / token / secret in its
+/// name replaced by •••, cut at [maxChars]. Null or empty: null.
+String? showBody(Object? data, {int maxChars = 20000}) {
+  if (data == null || data == '') return null;
+  Object? v = data;
+  if (v is String) {
+    try {
+      v = jsonDecode(v);
+    } on FormatException {
+      return _cut(data as String, maxChars);
+    }
+  }
+  return _cut(const JsonEncoder.withIndent('  ').convert(_redact(v)), maxChars);
+}
+
+Object? _redact(Object? v) => switch (v) {
+  Map() => {
+    for (final e in v.entries)
+      '${e.key}': _secret.hasMatch('${e.key}') ? '•••' : _redact(e.value),
+  },
+  List() => [for (final x in v) _redact(x)],
+  _ => v,
+};
+
+String _cut(String s, int max) => s.length <= max
+    ? s
+    : '${s.substring(0, max)}\n… (${s.length} characters in all)';
+
+/// Times every request and writes it to [DebugLog] with its URL and both bodies (secrets masked). The
+/// Authorization header is never read.
 class DebugHttpLog extends Interceptor {
   DebugHttpLog([DebugLog? log]) : _log = log ?? DebugLog.instance;
   final DebugLog _log;
@@ -154,6 +204,9 @@ class DebugHttpLog extends Interceptor {
         status: status,
         ms: start == null ? 0 : DateTime.now().difference(start).inMilliseconds,
         error: why ?? (status != null && status >= 400 ? _code(body) : null),
+        url: o.uri.toString(),
+        request: showBody(o.data),
+        response: showBody(body),
       ),
     );
   }

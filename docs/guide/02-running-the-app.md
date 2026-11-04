@@ -84,18 +84,25 @@ The app never logs tokens, coordinates, share ids, friend codes, emails or passw
 
 ### The 🐞 debug console (dev builds only)
 
-Every `--flavor dev` build shows a small 🐞 button over the app (drag it out of the way). A tap opens a sheet with:
+Every `--flavor dev` build shows a small 🐞 button over the app (drag it out of the way). A tap opens a sheet; a
+second tap closes it. The sheet has:
 
 | Tab | Shows |
 |---|---|
-| **HTTP** | Every call to the API and to Cognito, newest first: time, status, milliseconds, method and path (or the Cognito action, e.g. `Cognito InitiateAuth`), and the server's error code (`UserNotFoundException`, `self`…). Red = failed or no answer. |
-| **Errors** | Flutter errors (layout, build) and uncaught errors, with their message. A red dot on the 🐞 means there is at least one. |
+| **HTTP** | Every call to the API and to Cognito, newest first: time, status, milliseconds, method and path (or the Cognito action, e.g. `Cognito InitiateAuth`), and the server's error code (`UserNotFoundException`, `self`…). Red = failed or no answer. **Tap a call** for the full URL and the request and response bodies (indented JSON, selectable to copy). |
+| **Errors** | Flutter errors (layout, build), uncaught errors, and map tiles that did not load (one entry per 30 s). A red dot on the 🐞 means there is at least one. |
 | **Env** | Flavor, build stamp, API / Cognito / web addresses, signed in or not, when the access token runs out. |
 
 🗑 clears both lists. The console keeps the last 200 entries in memory only: nothing is sent anywhere or kept after
-the app closes. It follows the rule above: friend, share and request ids in paths show as `•`, query values are
-dropped (`/api/track?from&to&have`), and bodies are never shown, only the error code. Prod builds compile it out
-(`debugConsoleEnabled` in `lib/core/debug/debug_log.dart` is `appFlavor == 'dev'`).
+the app closes, and prod builds compile it out (`debugConsoleEnabled` in `lib/core/debug/debug_log.dart` is
+`appFlavor == 'dev'`). The one-line rows mask ids in paths (`/api/friends/•`) and drop query values; the opened call
+shows the real URL and bodies (your trail's coordinates included), with any value under a key containing
+`password`, `token` or `secret` shown as `•••`. The `Authorization` header is never read. Bodies longer than 20,000
+characters are cut.
+
+**Map stays grey?** Open Errors: `Map tile … Connection reset by peer` means this network blocks
+`tile.openstreetmap.org` (some company networks do; `curl https://tile.openstreetmap.org/0/0/0.png` fails the same way
+on the PC). Try the phone on mobile data or another Wi-Fi.
 
 ## Building an APK to install on a phone
 

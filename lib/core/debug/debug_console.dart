@@ -30,20 +30,25 @@ class DebugOverlay extends StatefulWidget {
 
 class _DebugOverlayState extends State<DebugOverlay> {
   Offset? _at;
+  bool _shown = false; // the 🐞 stays above the sheet: a second tap closes it instead of stacking another
 
-  void _open() {
-    final ctx = widget.navigator.currentContext;
-    if (ctx == null) return;
-    unawaited(
-      showModalBottomSheet<void>(
-        context: ctx,
-        isScrollControlled: true,
-        showDragHandle: true,
-        backgroundColor: Colors.white, // the app's sheets are 95% white; logs need a solid background
-        builder: (_) =>
-            const FractionallySizedBox(heightFactor: 0.85, child: DebugSheet()),
-      ),
+  Future<void> _toggle() async {
+    final nav = widget.navigator.currentState;
+    if (nav == null) return;
+    if (_shown) {
+      nav.pop();
+      return;
+    }
+    _shown = true;
+    await showModalBottomSheet<void>(
+      context: nav.context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white, // the app's sheets are 95% white; logs need a solid background
+      builder: (_) =>
+          const FractionallySizedBox(heightFactor: 0.85, child: DebugSheet()),
     );
+    _shown = false;
   }
 
   @override
@@ -69,7 +74,7 @@ class _DebugOverlayState extends State<DebugOverlay> {
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: _open,
+                onTap: () => unawaited(_toggle()),
                 child: Semantics(
                   label: 'Debug console',
                   button: true,
@@ -152,11 +157,15 @@ class DebugSheet extends ConsumerWidget {
           itemBuilder: (_, i) => rows[i],
         );
 
+  /// One call; a tap opens the full URL and both bodies (copyable).
   static Widget _httpRow(HttpEntry e) {
     final color = e.failed ? Colors.red.shade700 : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 8),
+      expandedCrossAxisAlignment: CrossAxisAlignment.start,
+      shape: const Border(),
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -168,8 +177,30 @@ class DebugSheet extends ConsumerWidget {
             Text(e.error!, style: _mono.copyWith(color: color)),
         ],
       ),
+      children: [
+        if (e.url != null) _block('URL', e.url!),
+        _block('Request', e.request ?? '(no body)'),
+        _block('Response', e.response ?? '(no body)'),
+      ],
     );
   }
+
+  static Widget _block(String label, String text) => Padding(
+    padding: const EdgeInsets.only(top: 6),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: _mono.copyWith(fontWeight: FontWeight.w700)),
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.all(8),
+          color: const Color(0xFFF3F3F6),
+          child: SelectableText(text, style: _mono.copyWith(fontSize: 11)),
+        ),
+      ],
+    ),
+  );
 
   static Widget _errorRow(ErrorEntry e) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),

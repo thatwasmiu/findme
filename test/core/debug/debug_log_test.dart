@@ -24,6 +24,38 @@ void main() {
     );
   });
 
+  test(
+    'showBody: indented JSON, secrets masked at any depth, long bodies cut',
+    () {
+      expect(showBody(null), isNull);
+      expect(showBody(''), isNull);
+      final b = showBody({
+        'AuthenticationResult': {
+          'AccessToken': 'a',
+          'RefreshToken': 'r',
+          'ExpiresIn': 3600,
+        },
+        'list': [
+          {'password': 'p'},
+        ],
+      })!;
+      expect(b, contains('"ExpiresIn": 3600'));
+      expect(b, isNot(contains('"a"')));
+      expect(b, isNot(contains('"r"')));
+      expect(b, isNot(contains('"p"')));
+      expect(showBody('not json'), 'not json');
+      expect(showBody('x' * 50, maxChars: 10), startsWith('xxxxxxxxxx\n… (50'));
+    },
+  );
+
+  test('map tile failures: one entry per burst, not one per tile', () {
+    final log = DebugLog();
+    for (var i = 0; i < 50; i++) {
+      log.tileFailed('Connection reset by peer');
+    }
+    expect(log.errors.single.type, 'Map tile');
+  });
+
   group('DebugHttpLog', () {
     late DebugLog log;
     late FakeAdapter adapter;
@@ -68,6 +100,9 @@ void main() {
         expect(e.what, 'Cognito InitiateAuth');
         expect(e.error, 'UserNotFoundException');
         expect(e.failed, isTrue);
+        expect(e.request, contains('"PASSWORD": "•••"'));
+        expect(e.request, isNot(contains('secret')));
+        expect(e.response, contains('UserNotFoundException'));
       },
     );
 
@@ -94,7 +129,14 @@ void main() {
     addTearDown(DebugLog.instance.clear);
     DebugLog.instance
       ..add(
-        HttpEntry(method: 'GET', what: '/api/track?from', status: 200, ms: 143),
+        HttpEntry(
+          method: 'GET',
+          what: '/api/track?from',
+          status: 200,
+          ms: 143,
+          url: 'https://x.vn/api/track?from=1',
+          response: '{"points": []}',
+        ),
       )
       ..add(ErrorEntry('StateError', 'Bad state: boom'));
     final nav = GlobalKey<NavigatorState>();
@@ -112,6 +154,11 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('HTTP (1)'), findsOneWidget);
     expect(find.text('GET /api/track?from'), findsOneWidget);
+    // A tap on a call shows its URL and bodies.
+    await t.tap(find.text('GET /api/track?from'));
+    await t.pumpAndSettle();
+    expect(find.text('https://x.vn/api/track?from=1'), findsOneWidget);
+    expect(find.text('{"points": []}'), findsOneWidget);
     await t.tap(find.text('Errors (1)'));
     await t.pumpAndSettle();
     expect(find.text('Bad state: boom'), findsOneWidget);
@@ -119,4 +166,30 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('https://api.test'), findsOneWidget);
   });
+
+  testWidgets(
+    'a second tap on the 🐞 closes the console instead of opening another',
+    (t) async {
+      final nav = GlobalKey<NavigatorState>();
+      await t.pumpWidget(
+        ProviderScope(
+          overrides: baseOverrides(auth: fakeAuth()),
+          child: MaterialApp(
+            navigatorKey: nav,
+            builder: (_, child) => DebugOverlay(navigator: nav, child: child!),
+            home: const Scaffold(body: SizedBox()),
+          ),
+        ),
+      );
+      await t.tap(find.text('🐞'));
+      await t.pumpAndSettle();
+      expect(find.byType(DebugSheet), findsOneWidget);
+      await t.tap(find.text('🐞'));
+      await t.pumpAndSettle();
+      expect(find.byType(DebugSheet), findsNothing);
+      await t.tap(find.text('🐞'));
+      await t.pumpAndSettle();
+      expect(find.byType(DebugSheet), findsOneWidget);
+    },
+  );
 }

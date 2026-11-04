@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/time/format.dart';
@@ -233,6 +234,9 @@ class _MapViewState extends ConsumerState<MapView>
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'app.findme.mobile',
               maxZoom: 19,
+              errorTileCallback: debugConsoleEnabled
+                  ? (_, error, _) => DebugLog.instance.tileFailed(error)
+                  : null,
             ),
           ),
         PawLayer(points: widget.points),
