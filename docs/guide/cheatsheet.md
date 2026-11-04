@@ -67,9 +67,14 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme:start` | shared_preferences | last point shown `[lon, lat]`, 4 decimals |
 | `findme.shownFriends` | shared_preferences | ids of friends shown on the map |
 | `findme.today` | shared_preferences | today's trail (yours + shown friends'), for one account (`sub`) and one day |
+| `findme.ingest` | secure storage | the pasted ingest token + the account (`sub`) that saved it (chapter 15) |
+| `findme.tracking` | shared_preferences | tracking on/off (Android's boot receiver reads it as `flutter.findme.tracking`) |
+| `findme.trackerDisclosure` | shared_preferences | the location explanation was accepted once |
+| `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`
-also on a login without a map.
+also on a login without a map. The tracker's keys and files are cleared only by a deliberate sign-out (👋) or when
+another account signs in, never by an expired session.
 
 ## Timings
 
@@ -79,6 +84,17 @@ also on a login without a map.
 | Friends list | 60 s |
 | Access token renewal | when < 60 s left |
 | Replay alone / together | 120 ms per print (min 10 s) / 60 s |
+| Tracker upload | at 50 waiting fixes, or 5 min after the last ok, or Gửi ngay; ≤ 500 per request |
+| Tracker backoff after a failure | 1, 2, 4, 8, 16, 30 min |
+| GPS | Android: every 10 s if moved 10 m; iPhone: ~100 m accuracy, pauses when still |
+
+## Tracker (chapter 15)
+
+| Command | Does |
+|---|---|
+| `flutter test test/features/tracker` | Tracker unit + widget tests |
+| `D:\Android\Sdk\platform-tools\adb.exe reboot` | Reboots the emulator or phone (tracking should come back on its own) |
+| Emulator ⋯ → Location → Routes → Play route | Fakes a walk |
 
 ## Git and CI
 

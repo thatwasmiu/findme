@@ -20,5 +20,6 @@ A step-by-step guide to the Find Me Flutter app (Android + iOS), written for som
 | 12 | [CI with GitHub Actions](12-ci.md) |
 | 13 | [Later: iOS without a Mac, signing, App Store and Play Store](13-later-ios-and-store-release.md) |
 | 14 | [Store accounts and app IDs](14-store-accounts-and-app-ids.md): free Apple ID, free 7-day iPhone install (Mac or Sideloadly), Apple Developer Program, APK, Google Play |
+| 15 | [Background tracking](15-background-tracking.md): Find Me replaces Overland; foreground service, significant location change, the upload queue, first Swift/Kotlin code, Google Play's location rules |
 
 Every command and config key in one place: [cheatsheet.md](cheatsheet.md).

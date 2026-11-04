@@ -274,3 +274,5 @@ uploads come from you.
 
 Sources checked: [Apple Developer Program](https://developer.apple.com/programs/),
 [Play Console testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465).
+
+Next: [15. Background tracking](15-background-tracking.md).

@@ -1,9 +1,16 @@
 # Handoff: Find Me mobile (Flutter)
 
-Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
+Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file is only the current state.
 
 ## Where things stand
 
+- **Tracker (Find Me replaces Overland)** on branch `feat/tracker` (2026-11-04, not merged): 🧭 on the map →
+  "Ghi hành trình". Background GPS (geolocator), crash-safe queue file, uploads to `/ingest` in Overland's format,
+  iOS significant-location relaunch (Swift in `AppDelegate`), Android reboot restart (`BootReceiver.kt`), Play
+  disclosure dialog. Token is **pasted** for now (`ponytail:`, until the server API hands it out). Guide chapter 15,
+  Play drafts in `docs/guide/play-store-location.md`. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-04-*`.
+  **Unit/widget tested only.** Not yet seen on a device: recording with the emulator route, the reboot restart,
+  anything on iPhone. The Swift has never compiled (iOS CI runs only on main / by hand).
 - All features of the design are implemented for normal users: sign-in, map with paw prints / stops / Hachiware,
   date filter + live refresh with backoff, day diary / top places, replay alone and together, share links, friends.
   No admin screen (by design).
@@ -37,6 +44,8 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
 
 ## Next steps
 
+0. Tracker on devices (chapter 15 §5): emulator route + background, offline, `adb reboot`; then iOS CI (Actions →
+   Run workflow on `feat/tracker`) to compile the Swift; then the iPhone relaunch test on a test account.
 1. Owner: add `C:\src\flutter\bin` to PATH. Start the emulator (`D:\Android\Sdk\emulator\emulator.exe -avd findme`),
    then `flutter run --flavor dev --dart-define-from-file=config/dev.json` and sign in. Shortcut on the owner's PC:
    `dev.bat` in the repo root (gitignored, this PC's paths): `dev emu`, `dev run`, `dev build`, `dev install`,
