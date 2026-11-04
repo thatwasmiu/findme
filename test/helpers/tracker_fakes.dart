@@ -83,7 +83,7 @@ class FakeTracker extends TrackerController {
   int resumes = 0;
   bool failForget = false;
 
-  /// Every other action, by name (`turnOn`, `sendNow`, `saveToken:<raw>`…).
+  /// Every other action, by name (`turnOn`, `sendNow`…).
   final calls = <String>[];
 
   @override
@@ -102,8 +102,6 @@ class FakeTracker extends TrackerController {
   Future<void> turnOff() async => calls.add('turnOff');
   @override
   Future<void> sendNow() async => calls.add('sendNow');
-  @override
-  Future<void> saveToken(String raw) async => calls.add('saveToken:$raw');
 }
 
 /// The iOS significant-change bridge, by hand: counts start/stop, [fire] a wake.

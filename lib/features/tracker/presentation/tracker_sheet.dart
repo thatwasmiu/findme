@@ -4,7 +4,6 @@ import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
-import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
@@ -20,7 +19,7 @@ const _disclosure =
     'Vị trí được gửi về máy chủ Find Me để vẽ hành trình của bạn, và chỉ hiện cho bạn bè '
     'cùng những link chia sẻ mà bạn chọn. Bạn có thể tắt bất cứ lúc nào.';
 
-/// 📍 Ghi hành trình: the switch, what the tracker is doing, and (for now) the pasted ingest token.
+/// 📍 Ghi hành trình: the switch and what the tracker is doing. The ingest token is fetched by the controller.
 class TrackerSheet extends ConsumerStatefulWidget {
   const TrackerSheet({super.key});
 
@@ -37,26 +36,6 @@ class TrackerSheet extends ConsumerStatefulWidget {
 }
 
 class _TrackerSheetState extends ConsumerState<TrackerSheet> {
-  final _token = TextEditingController();
-  bool _hasToken = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_loadToken());
-  }
-
-  Future<void> _loadToken() async {
-    final t = await ref.read(trackerStoreProvider).token();
-    if (mounted) setState(() => _hasToken = t != null);
-  }
-
-  @override
-  void dispose() {
-    _token.dispose();
-    super.dispose();
-  }
-
   Future<void> _switch({required bool on}) async {
     final ctl = ref.read(trackerControllerProvider.notifier);
     if (!on) {
@@ -101,6 +80,10 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
       TrackerProblem.needAlways => ('Thiếu quyền vị trí "Luôn luôn"', true),
       TrackerProblem.badToken => ('Token sai hoặc đã đổi', true),
       TrackerProblem.noToken => ('Chưa có token', true),
+      TrackerProblem.noAccount => (
+        'Tài khoản này không ghi được hành trình',
+        true,
+      ),
       TrackerProblem.none => (s.on ? 'Đang ghi' : 'Đã tắt', false),
     };
     return Padding(
@@ -150,34 +133,6 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
               style: PillStyle.on,
               onTap: s.sending ? null : () => unawaited(ctl.sendNow()),
             ),
-          ),
-          const SizedBox(height: 16),
-          // ponytail: pasted ingest token until the server hands it out after sign-in; delete TokenField + saveToken then.
-          const Text('Token', style: TextStyle(fontWeight: FontWeight.w700)),
-          if (_hasToken) const Notice('Đã lưu token'),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('ingestToken'),
-                  controller: _token,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: const InputDecoration(hintText: 'Dán token'),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Pill(
-                label: 'Lưu',
-                onTap: () async {
-                  if (_token.text.trim().isEmpty) return;
-                  await ctl.saveToken(_token.text);
-                  _token.clear();
-                  if (mounted) setState(() => _hasToken = true);
-                },
-              ),
-            ],
           ),
           if (defaultTargetPlatform == TargetPlatform.android) ...[
             const SizedBox(height: 16),

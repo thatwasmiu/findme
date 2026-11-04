@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/data/session_store.dart';
+import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
@@ -13,7 +15,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// What the status line says is wrong, if anything. needAlways wins over token problems.
-enum TrackerProblem { none, noToken, badToken, needAlways }
+/// noToken: none yet (signed out, offline…); badToken: even a fresh one was refused; noAccount: the server will not
+/// give this login one (403), asked again only by "Gửi ngay" or the switch.
+enum TrackerProblem { none, noToken, badToken, noAccount, needAlways }
 
 @immutable
 class TrackerState {
@@ -114,7 +118,11 @@ class TrackerController extends Notifier<TrackerState> {
     final access = await ref.read(authRepositoryProvider).getAccessToken();
     final sub = subOf(access ?? '');
     if (sub != null) await _store.setOwner(sub);
+    if (state.problem == TrackerProblem.noAccount) {
+      state = state.copyWith(problem: TrackerProblem.none);
+    }
     await _start();
+    await _upload(); // fetches the ingest token now, not at the first fix
   }
 
   Future<void> turnOff() async {
@@ -132,19 +140,6 @@ class TrackerController extends Notifier<TrackerState> {
   Future<void> sendNow() {
     _notBefore = null;
     return _upload(force: true);
-  }
-
-  // ponytail: pasted ingest token until the server hands it out after sign-in; delete TokenField + saveToken then.
-  Future<void> saveToken(String raw) async {
-    final access = await ref.read(authRepositoryProvider).getAccessToken();
-    await _store.saveToken(raw, subOf(access ?? '') ?? '');
-    _notBefore = null;
-    state = state.copyWith(
-      problem: state.problem == TrackerProblem.needAlways
-          ? null
-          : TrackerProblem.none,
-    );
-    await _upload();
   }
 
   /// This account's tracking ends on this phone: one last upload (best effort), then queue and token are gone.
@@ -183,7 +178,11 @@ class TrackerController extends Notifier<TrackerState> {
     final token = await _store.token();
     state = state.copyWith(
       on: true,
-      problem: token == null ? TrackerProblem.noToken : TrackerProblem.none,
+      problem: token != null
+          ? TrackerProblem.none
+          : state.problem == TrackerProblem.noAccount
+          ? null
+          : TrackerProblem.noToken,
     );
   }
 
@@ -228,6 +227,47 @@ class TrackerController extends Notifier<TrackerState> {
     );
   }
 
+  void _failed() {
+    _failures++;
+    _notBefore = _now().add(backoff(_failures));
+  }
+
+  /// Asks the server for this account's ingest token and keeps it (the old one stops working). null: none now,
+  /// [TrackerState.problem] says why.
+  Future<String?> _issue() async {
+    final keep = state.problem == TrackerProblem.needAlways;
+    try {
+      final sub = subOf(
+        await ref.read(authRepositoryProvider).getAccessToken() ?? '',
+      );
+      final owner = await _store.owner();
+      // Signed out, or someone else signed in (their points must never go out under this account's token, nor
+      // these under theirs): wait for this account's sign-in.
+      if (sub == null || (owner != null && owner != sub)) {
+        if (!keep) state = state.copyWith(problem: TrackerProblem.noToken);
+        return null;
+      }
+      final t = await ref.read(ingestClientProvider).newToken();
+      await _store.saveToken(t, sub);
+      if (!keep) state = state.copyWith(problem: TrackerProblem.none);
+      return t;
+    } on AccountMissing {
+      if (!keep) state = state.copyWith(problem: TrackerProblem.noAccount);
+    } on AuthExpired {
+      if (!keep) state = state.copyWith(problem: TrackerProblem.noToken);
+      if (ref.read(signedInProvider)) {
+        ref.read(authControllerProvider.notifier).expired();
+      }
+    } on AppError {
+      // offline, 429 (too many new tokens), 5xx: try again after the backoff
+      if (!keep && state.problem != TrackerProblem.badToken) {
+        state = state.copyWith(problem: TrackerProblem.noToken);
+      }
+      _failed();
+    }
+    return null;
+  }
+
   /// One upload run at a time; [force] = "Gửi ngay": ignore the thresholds and the backoff, send everything.
   Future<void> _upload({bool force = false}) {
     if (_uploading) return Future.value();
@@ -237,14 +277,17 @@ class TrackerController extends Notifier<TrackerState> {
 
   Future<void> _uploadRun({required bool force}) async {
     try {
-      final token = await _store.token();
-      if (token == null) {
-        if (state.problem != TrackerProblem.needAlways) {
-          state = state.copyWith(problem: TrackerProblem.noToken);
+      if (state.problem == TrackerProblem.noAccount && !force) return;
+      var token = (await _store.token())?.token;
+      var fresh = false;
+      if (token == null || state.problem == TrackerProblem.badToken) {
+        if (!force && _notBefore != null && _now().isBefore(_notBefore!)) {
+          return;
         }
-        return;
+        token = await _issue();
+        if (token == null) return;
+        fresh = true;
       }
-      if (state.problem == TrackerProblem.badToken) return;
       final q = await _queue;
       state = state.copyWith(sending: true);
       while (force ||
@@ -258,7 +301,7 @@ class TrackerController extends Notifier<TrackerState> {
         if (batch.isEmpty) break;
         final r = await ref
             .read(ingestClientProvider)
-            .send(token.token, batch, deviceIdForPlatform);
+            .send(token!, batch, deviceIdForPlatform);
         if (r == IngestResult.ok) {
           await q.commit(batch.length);
           _failures = 0;
@@ -267,11 +310,17 @@ class TrackerController extends Notifier<TrackerState> {
         } else if (r == IngestResult.rejected) {
           await q.reject(batch.length);
         } else if (r == IngestResult.unauthorized) {
-          state = state.copyWith(problem: TrackerProblem.badToken);
-          break;
+          // Rotated elsewhere (another phone asked for one): ask once more; a fresh token refused is a real problem.
+          if (fresh) {
+            state = state.copyWith(problem: TrackerProblem.badToken);
+            _failed();
+            break;
+          }
+          token = await _issue();
+          if (token == null) break;
+          fresh = true;
         } else {
-          _failures++;
-          _notBefore = _now().add(backoff(_failures));
+          _failed();
           break;
         }
       }

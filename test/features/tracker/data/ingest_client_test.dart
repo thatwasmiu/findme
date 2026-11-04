@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:findme/core/errors/app_errors.dart';
+import 'package:findme/core/network/api_client.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,10 +20,40 @@ void main() {
     final a = FakeAdapter(h);
     final r = await IngestClient(
       testConfig,
+      ApiClient(testConfig, () async => 'access'),
       dio: fakeDio(a),
     ).send('tok', fixes, 'android');
     return (r, a);
   }
+
+  Future<(String, FakeAdapter)> issue(Reply Function(RequestOptions) h) async {
+    final a = FakeAdapter(h);
+    final api = ApiClient(testConfig, () async => 'access', dio: fakeDio(a));
+    return (await IngestClient(testConfig, api).newToken(), a);
+  }
+
+  test('newToken posts to /me/ingest-token with the sign-in token', () async {
+    final (t, a) = await issue(
+      (_) => (
+        status: 200,
+        body: {'url': 'https://findme.test/api/ingest', 'token': 'ab' * 32},
+      ),
+    );
+    expect(t, 'ab' * 32);
+    expect(a.calls, ['POST https://api.test/me/ingest-token']);
+    expect(a.requests.single.headers['Authorization'], 'Bearer access');
+  });
+
+  test('newToken 403 -> AccountMissing, 429 -> ApiStatus', () async {
+    await expectLater(
+      issue((_) => (status: 403, body: null)),
+      throwsA(isA<AccountMissing>()),
+    );
+    await expectLater(
+      issue((_) => (status: 429, body: null)),
+      throwsA(isA<ApiStatus>().having((e) => e.status, 'status', 429)),
+    );
+  });
 
   test('sends bearer and body to <api>/ingest', () async {
     final (_, a) = await answer((_) => (status: 200, body: {'result': 'ok'}));

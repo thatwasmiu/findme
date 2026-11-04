@@ -55,15 +55,25 @@ When does it upload? As soon as 50 fixes wait, or 5 minutes after the last succe
 | Server answer | What the app does |
 |---|---|
 | `200 {"result":"ok"}` | Removes that batch. |
-| `401` | The token is wrong, was replaced, or the account is switched off. Keeps everything, stops sending, shows **Token sai hoặc đã đổi**. Pasting a new token sends at once. |
+| `401` | The token was replaced (another phone asked for one) or the account is switched off. Asks for a new token once and sends again. If the fresh token is refused too: keeps everything, shows **Token sai hoặc đã đổi**, tries again after the backoff. |
 | `400` | The server says the batch is malformed: a bug in the app. Moves it to `rejected.jsonl` (kept, not retried) and shows **Điểm bị từ chối: N**, so one bad batch cannot block the rest. |
 | anything else, or no answer | Keeps everything, tries again later. Not shown as a problem. |
 
-### The token (temporary)
+### The token
 
-For now you paste the account's Overland token once into the 🧭 sheet (admin page → **Tạo token**). It is stored in
-the Keychain / Keystore like the sign-in session (chapter 04), never shown again, never logged. A later server API
-will hand it to the app after sign-in, and the paste field goes away (marked `ponytail:` in the code).
+The app gets the ingest token itself: when tracking is switched on with no token, or after `/ingest` says 401, it
+calls `POST /me/ingest-token` with the sign-in token (like `/me`). The server makes a new token for the account
+(the old one, e.g. Overland's, stops at once) and the app keeps it in the Keychain / Keystore like the sign-in
+session (chapter 04), with the account's `sub`, never shown, never logged.
+
+| `/me/ingest-token` answer | What the app does |
+|---|---|
+| `200 {"url", "token"}` | Saves the token, uploads. (`url` is `<API_URL>/ingest` and is not used.) |
+| `401` | The usual signed-out screen; shows **Chưa có token** until you sign in again. Fixes are kept. |
+| `403` | Admin login or a switched-off account: **Tài khoản này không ghi được hành trình**, not asked again until **Gửi ngay** or the switch. |
+| `429`, other errors, no answer | **Chưa có token**, tries again after the backoff. |
+
+It is only asked for while the account that owns the tracking is signed in, never for someone else's sign-in.
 
 Only a deliberate **sign-out (👋)** ends tracking on this phone: one last upload attempt, then the queue and the
 token are deleted. When the sign-in merely expires (30 days, or a 401 from the API), tracking carries on: the ingest
@@ -132,8 +142,7 @@ screen's own Dart starts, so only one copy ever writes the queue (the iPhone doe
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
-1. Sign in, tap **🧭**. Paste the account's ingest token (copy it from the admin page; switch the keyboard to
-   English first, see `travel-heatmap` ch04 troubleshooting) and tap **Lưu**.
+1. Sign in, tap **🧭**.
 2. Turn **Ghi hành trình** on. Read the explanation, **Đồng ý**. Allow location; on Android 11+ the app shows
    **Thiếu quyền vị trí "Luôn luôn"**: tap **Mở cài đặt** → Permissions → Location → **Allow all the time**, come
    back, switch on again.
@@ -171,7 +180,7 @@ On devices (by hand; not done automatically):
 | Offline | Emulator: turn Wi-Fi + data off, walk the route, turn back on, **Gửi ngay** | Điểm chờ gửi back to 0, nothing missing on the map |
 | Reboot (Android) | Tracking on, then `adb reboot`, wait for the home screen, play the route | The notification **Find Me đang ghi hành trình** is back without opening the app, Điểm cuối moves |
 | iPhone relaunch | Sideloaded build (chapter 14), tracking on, leave it in the background for hours (iOS kills it eventually), walk > 1 km | Points from after the walk appear; a gap of ≤ ~500 m is normal |
-| Sign-out | 👋, sign in again | Token field empty, Điểm chờ gửi 0 |
+| Sign-out | 👋, sign in again | Đã tắt, Điểm chờ gửi 0 |
 
 `adb` lives in `D:\Android\Sdk\platform-tools` (chapter 01).
 
@@ -179,8 +188,8 @@ On devices (by hand; not done automatically):
 
 Two apps sending for the same account at the same time would interleave their points (both iPhones say
 `device_id: iphone`). So: try Find Me on a **different** account first. When you switch your own account, turn
-Overland's tracking off (or uninstall it) *before* switching Find Me's on. Find Me can reuse the same token, or make
-a new one on the admin page (that stops Overland's at once).
+Overland's tracking off (or uninstall it) *before* switching Find Me's on. Switching Find Me on asks the server for a
+new token, which stops Overland's at once.
 
 ## 7. Google Play
 
@@ -197,8 +206,9 @@ Play reviews apps that read location in the background. What it needs, and where
 | Symptom | Fix |
 |---|---|
 | **Thiếu quyền vị trí "Luôn luôn"** | Settings → Apps → Find Me → Permissions → Location → Allow all the time (iPhone: Settings → Find Me → Location → Always, Precise on). |
-| **Chưa có token** | Paste the token and tap Lưu. Fixes are kept meanwhile. |
-| **Token sai hoặc đã đổi** | The server said 401. Check the token on the PC with ch03's `curl`; a Vietnamese keyboard may have rewritten it. Paste it again. |
+| **Chưa có token** | Signed out (sign in again) or offline / server busy (it retries; **Gửi ngay** asks now). Fixes are kept meanwhile. |
+| **Token sai hoặc đã đổi** | `/ingest` refused even a fresh token: the account is probably switched off. Check it on the admin page. |
+| **Tài khoản này không ghi được hành trình** | `/me/ingest-token` said 403: an admin login or a switched-off account. |
 | Notification missing on Android 13+ | Notifications for Find Me are off; tracking still runs. Allow notifications to see it. |
 | Stops after a while (Android) | Battery optimisation: Settings → Apps → Find Me → Battery → Unrestricted. The 🧭 sheet has a shortcut. |
 | Stops after a while (iPhone) | You force-quit it, or Low Power Mode is on, or the sideload expired (reinstall). |
@@ -242,7 +252,7 @@ and device, so nothing is duplicated and nothing is lost.
 <summary>3. Why does a 401 from /ingest not sign you out?</summary>
 
 The ingest token and the sign-in session are different things. A wrong ingest token only stops uploads; the
-fixes stay queued until a good token is pasted.
+fixes stay queued until a new token works.
 </details>
 
 <details>

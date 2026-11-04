@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/debug/debug_log.dart';
+import 'package:findme/core/network/api_client.dart';
+import 'package:findme/core/network/api_client_provider.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,10 +13,19 @@ enum IngestResult { ok, unauthorized, rejected, retry }
 /// Uploads a batch to `/ingest` like Overland does. Not `ApiClient`: that one sends the sign-in token and treats a
 /// 401 as "signed out", while a bad ingest token must only stop uploads.
 class IngestClient {
-  IngestClient(this._cfg, {Dio? dio}) : _dio = dio ?? appDio();
+  IngestClient(this._cfg, this._api, {Dio? dio}) : _dio = dio ?? appDio();
 
   final AppConfig _cfg;
+  final ApiClient _api;
   final Dio _dio;
+
+  /// `POST /me/ingest-token` with the sign-in token: a new ingest token for this account; its old one stops at once.
+  /// Throws like [ApiClient.send]: AuthExpired (401), AccountMissing (403), ApiStatus (429…), NetworkError.
+  // ponytail: the answer's `url` is ignored, uploads go to `<API_URL>/ingest` (the same place); store it if they differ.
+  Future<String> newToken() async =>
+      (await _api.send('POST', '/me/ingest-token')
+              as Map<String, dynamic>)['token']
+          as String;
 
   Future<IngestResult> send(
     String token,
@@ -47,5 +58,6 @@ class IngestClient {
 }
 
 final ingestClientProvider = Provider<IngestClient>(
-  (ref) => IngestClient(ref.watch(appConfigProvider)),
+  (ref) =>
+      IngestClient(ref.watch(appConfigProvider), ref.watch(apiClientProvider)),
 );

@@ -67,10 +67,10 @@ iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
 | `findme:start` | shared_preferences | last point shown `[lon, lat]`, 4 decimals |
 | `findme.shownFriends` | shared_preferences | ids of friends shown on the map |
 | `findme.today` | shared_preferences | today's trail (yours + shown friends'), for one account (`sub`) and one day |
-| `findme.ingest` | secure storage | the pasted ingest token + the account (`sub`) that saved it (chapter 15) |
+| `findme.ingest` | secure storage | the ingest token from `POST /me/ingest-token` + the account (`sub`) it belongs to (chapter 15) |
 | `findme.tracking` | shared_preferences | tracking on/off (Android's boot receiver reads it as `flutter.findme.tracking`) |
 | `findme.trackerDisclosure` | shared_preferences | the location explanation was accepted once |
-| `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was pasted |
+| `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was fetched |
 | `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`

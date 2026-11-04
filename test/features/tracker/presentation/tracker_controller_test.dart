@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:findme/core/errors/app_errors.dart';
+import 'package:findme/features/auth/data/auth_repository.dart';
+import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
@@ -61,6 +64,7 @@ void main() {
     ingest = MockIngest();
     now = DateTime.utc(2026, 11, 4, 12);
     answer(IngestResult.ok);
+    when(() => ingest.newToken()).thenAnswer((_) async => 'issued');
     c = ProviderContainer(
       overrides: [
         ...baseOverrides(
@@ -111,32 +115,123 @@ void main() {
     },
   );
 
-  test('no token -> queues, problem noToken, send never called', () async {
+  void issues(Future<String> Function() f) =>
+      when(() => ingest.newToken()).thenAnswer((_) => f());
+  void signedInAs(String? token) =>
+      when(() => c.read(authRepositoryProvider).getAccessToken())
+          .thenAnswer((_) async => token);
+
+  test('no token -> turnOn asks the server for one and keeps it', () async {
     store.saved = null;
+    issues(() async => 'fresh');
     await ctl().turnOn();
-    await emit(3);
-    expect(st().problem, TrackerProblem.noToken);
-    expect(st().queued, 3);
-    verifyNever(() => ingest.send(any(), any(), any()));
+    await ctl().idle();
+    expect(store.saved, (token: 'fresh', sub: 'sub-1'));
+    expect(st().problem, TrackerProblem.none);
+    await emit(1);
+    verify(() => ingest.send('fresh', any(), any())).called(1);
   });
 
-  test('401 -> badToken; saveToken clears it, the next fix uploads', () async {
-    answer(IngestResult.unauthorized);
+  test(
+    'no token while offline -> noToken, queued, asked again after the backoff',
+    () async {
+      store.saved = null;
+      issues(() async => throw const NetworkError());
+      await ctl().turnOn();
+      await emit(3);
+      expect(st().problem, TrackerProblem.noToken);
+      expect(st().queued, 3);
+      verify(() => ingest.newToken())
+          .called(1); // the backoff holds the next fixes back
+      verifyNever(() => ingest.send(any(), any(), any()));
+      issues(() async => 'fresh');
+      now = now.add(const Duration(minutes: 2));
+      await emit(1);
+      expect(st().problem, TrackerProblem.none);
+      verify(() => ingest.send('fresh', any(that: hasLength(4)), any()))
+          .called(1);
+    },
+  );
+
+  test('no token, signed out -> noToken, nothing asked', () async {
+    store
+      ..saved = null
+      ..owned = 'sub-1'
+      ..on = true;
+    signedInAs(null);
+    await ctl().resume();
+    await emit(2);
+    expect(st().problem, TrackerProblem.noToken);
+    verifyNever(() => ingest.newToken());
+  });
+
+  test('someone else signed in -> no token is asked for them', () async {
+    store
+      ..saved = null
+      ..owned = 'sub-1'
+      ..on = true;
+    signedInAs(jwt('sub-2'));
+    await ctl().resume();
+    await emit(1);
+    expect(st().problem, TrackerProblem.noToken);
+    verifyNever(() => ingest.newToken());
+  });
+
+  test('403 -> noAccount, not asked again until Gửi ngay', () async {
+    store.saved = null;
+    issues(() async => throw const AccountMissing());
+    await ctl().turnOn();
+    await emit(3);
+    expect(st().problem, TrackerProblem.noAccount);
+    verify(() => ingest.newToken()).called(1);
+    await ctl().sendNow();
+    verify(() => ingest.newToken()).called(1);
+  });
+
+  test('sign-in 401 -> noToken and the usual signed-out screen', () async {
+    store.saved = null;
+    issues(() async => throw const AuthExpired());
+    c.read(authControllerProvider.notifier).state = AuthPhase.signedIn;
+    await ctl().turnOn();
+    await ctl().idle();
+    expect(st().problem, TrackerProblem.noToken);
+    expect(c.read(authControllerProvider), AuthPhase.signedOut);
+  });
+
+  test('ingest 401 -> a new token once, and the batch goes out', () async {
+    var n = 0;
+    when(() => ingest.send(any(), any(), any())).thenAnswer(
+      (_) async => n++ == 0 ? IngestResult.unauthorized : IngestResult.ok,
+    );
+    issues(() async => 'new');
     await ctl().turnOn();
     await emit(1);
-    expect(st().problem, TrackerProblem.badToken);
-    await emit(60);
-    verify(() => ingest.send(any(), any(), any())).called(1);
-    expect(st().queued, 61);
-    answer(IngestResult.ok);
-    await ctl().saveToken('  new  ');
+    verify(() => ingest.send('tok', any(), any())).called(1);
+    verify(() => ingest.send('new', any(that: hasLength(1)), any())).called(1);
     expect(store.saved, (token: 'new', sub: 'sub-1'));
     expect(st().problem, TrackerProblem.none);
-    await ctl().idle();
-    // A new token sends what waited at once.
-    verify(() => ingest.send('new', any(that: hasLength(61)), any())).called(1);
     expect(st().queued, 0);
   });
+
+  test(
+    'a fresh token refused too -> badToken, asked again after the backoff',
+    () async {
+      answer(IngestResult.unauthorized);
+      issues(() async => 'new');
+      await ctl().turnOn();
+      await emit(1);
+      expect(st().problem, TrackerProblem.badToken);
+      verify(() => ingest.newToken()).called(1);
+      await emit(5);
+      verifyNever(() => ingest.newToken());
+      answer(IngestResult.ok);
+      now = now.add(const Duration(minutes: 2));
+      await emit(1);
+      verify(() => ingest.newToken()).called(1);
+      expect(st().problem, TrackerProblem.none);
+      expect(st().queued, 0);
+    },
+  );
 
   test('400 -> that batch is rejected, the rest is still sent', () async {
     for (var i = 0; i < 600; i++) {

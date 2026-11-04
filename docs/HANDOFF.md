@@ -7,7 +7,11 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - **Tracker (Find Me replaces Overland)** on branch `feat/tracker` (2026-11-04, not merged): 🧭 on the map →
   "Ghi hành trình". Background GPS (geolocator), crash-safe queue file, uploads to `/ingest` in Overland's format,
   iOS significant-location relaunch (Swift in `AppDelegate`), Android reboot restart (`BootReceiver.kt`), Play
-  disclosure dialog. Token is **pasted** for now (`ponytail:`, until the server API hands it out). Guide chapter 15,
+  disclosure dialog. The ingest token comes from `POST /me/ingest-token` (2026-11-04; the paste field is gone):
+  asked for when tracking starts with none, or once after `/ingest` says 401; 403 → "Tài khoản này không ghi được
+  hành trình"; 429/offline → backoff. **The server side of `/me/ingest-token` is not in `travel-heatmap` yet**
+  (checked at b4929b0): until it is live, a phone with no token cannot get one (API Gateway answers an unknown
+  route with 403 or 404, so it shows "Tài khoản này không ghi được hành trình" or "Chưa có token"). Guide chapter 15,
   Play drafts in `docs/guide/play-store-location.md`. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-04-*`.
   A fresh whole-branch review's critical/important findings are fixed (two engines on one queue after an Android
   reboot; forget() racing uploads/appends; account switch with no token; sign-out surviving a tracker error; iOS
@@ -35,7 +39,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - **Map tiles on the owner's office network:** TLS to every `openstreetmap.org` host is reset (curl on the PC too;
   other tile hosts and the API work), so the map stays mostly grey there. Not an app bug; works elsewhere. Open
   question: a dev-only tile server override if the office network is where testing happens.
-- 151 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+- 228 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Runs on an Android emulator** (2026-11-04): SDK, NDK and emulator from zip files on `D:\Android` (no Android
   Studio, no admin; guide chapter 01 Step 3b). User env vars `ANDROID_HOME`, `ANDROID_AVD_HOME`,

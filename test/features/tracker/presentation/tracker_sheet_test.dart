@@ -20,16 +20,11 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  Future<void> pump(
-    WidgetTester t,
-    TrackerState s, {
-    bool savedToken = false,
-  }) async {
+  Future<void> pump(WidgetTester t, TrackerState s) async {
     tallView(t);
     tracker = FakeTracker(s);
     gps = FakeLocation();
     store = MemoryTrackerStore();
-    if (savedToken) store.saved = (token: 'secret-tok', sub: 's');
     await t.pumpWidget(
       ProviderScope(
         overrides: [
@@ -65,6 +60,10 @@ void main() {
     (
       const TrackerState(on: true, problem: TrackerProblem.noToken),
       'Chưa có token',
+    ),
+    (
+      const TrackerState(on: true, problem: TrackerProblem.noAccount),
+      'Tài khoản này không ghi được hành trình',
     ),
   ]) {
     testWidgets('status: $text', (t) async {
@@ -135,20 +134,5 @@ void main() {
     await t.tap(find.byType(Switch));
     await t.pumpAndSettle();
     expect(tracker.calls, ['turnOff']);
-  });
-
-  testWidgets('token field obscures input and is empty with a saved token', (
-    t,
-  ) async {
-    await pump(t, const TrackerState(), savedToken: true);
-    expect(find.text('Đã lưu token'), findsOneWidget);
-    final field = t.widget<TextField>(find.byKey(const Key('ingestToken')));
-    expect(field.obscureText, isTrue);
-    expect(field.controller!.text, isEmpty);
-    expect(find.text('secret-tok'), findsNothing);
-    await t.enterText(find.byKey(const Key('ingestToken')), ' abc ');
-    await t.tap(find.text('Lưu'));
-    await t.pump();
-    expect(tracker.calls, ['saveToken: abc ']);
   });
 }
