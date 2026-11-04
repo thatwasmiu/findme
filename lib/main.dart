@@ -2,6 +2,7 @@ import 'package:findme/app.dart';
 import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/config/version.dart';
 import 'package:findme/core/debug/debug_log.dart';
+import 'package:findme/features/tracker/boot.dart';
 import 'package:findme/features/tracker/data/geolocator_source.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:flutter/material.dart';
@@ -27,4 +28,14 @@ void main() {
       ConfigErrorApp(e.message),
     ); // missing config: say how to fix it instead of crashing
   }
+}
+
+/// Run by Android's `BootReceiver` after a reboot when tracking was on: no screen, just the tracker.
+@pragma('vm:entry-point')
+Future<void> trackerBoot() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await startTrackerHeadless([
+    appConfigProvider.overrideWithValue(AppConfig.fromEnvironment()),
+    locationSourceProvider.overrideWithValue(GeolocatorSource()),
+  ]);
 }
