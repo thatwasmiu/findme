@@ -43,3 +43,4 @@ ios/Runner/GeneratedPluginRegistrant.*
 
 # Local build/run shortcuts with this PC's paths
 dev.bat
+dev-emu.ps1
