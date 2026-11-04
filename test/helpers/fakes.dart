@@ -4,6 +4,8 @@ import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/shares/data/shares_repository.dart';
+import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/data/track_repository.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/domain/models.dart';
@@ -11,6 +13,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+
+import 'tracker_fakes.dart';
 
 class MockAuth extends Mock implements AuthRepository;
 
@@ -99,6 +103,8 @@ List<Override> baseOverrides({
   MockShares? shares,
   MockFriends? friends,
   MemoryPrefs? prefs,
+  MemoryTrackerStore? trackerStore,
+  bool fakeTracker = true,
 }) => [
   appConfigProvider.overrideWithValue(testConfig),
   authRepositoryProvider.overrideWithValue(auth),
@@ -106,6 +112,8 @@ List<Override> baseOverrides({
   if (track != null) trackRepositoryProvider.overrideWithValue(track),
   if (shares != null) sharesRepositoryProvider.overrideWithValue(shares),
   friendsRepositoryProvider.overrideWithValue(friends ?? quietFriends()),
+  trackerStoreProvider.overrideWithValue(trackerStore ?? MemoryTrackerStore()),
+  if (fakeTracker) trackerControllerProvider.overrideWith(FakeTracker.new),
 ];
 
 /// A tall test screen, so long lazy lists build every row.

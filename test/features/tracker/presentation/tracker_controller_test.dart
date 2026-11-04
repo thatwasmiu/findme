@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
-import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
@@ -61,9 +60,12 @@ void main() {
     answer(IngestResult.ok);
     c = ProviderContainer(
       overrides: [
-        ...baseOverrides(auth: fakeAuth(token: jwt('sub-1'))),
+        ...baseOverrides(
+          auth: fakeAuth(token: jwt('sub-1')),
+          trackerStore: store,
+          fakeTracker: false,
+        ),
         pointQueueProvider.overrideWith((_) async => queue),
-        trackerStoreProvider.overrideWithValue(store),
         locationSourceProvider.overrideWithValue(gps),
         ingestClientProvider.overrideWithValue(ingest),
         trackerClockProvider.overrideWithValue(() => now),

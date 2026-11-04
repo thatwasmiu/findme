@@ -5,6 +5,7 @@ import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockIngest extends Mock implements IngestClient;
@@ -64,4 +65,19 @@ class FakeLocation implements LocationSource {
 
   @override
   Future<void> openSettings() async => settingsOpened++;
+}
+
+/// The tracker as other features see it: counts [forget] calls, does nothing else.
+class FakeTracker extends TrackerController {
+  FakeTracker([this.initial = const TrackerState()]);
+  final TrackerState initial;
+  int forgets = 0;
+  int resumes = 0;
+
+  @override
+  TrackerState build() => initial;
+  @override
+  Future<void> forget() async => forgets++;
+  @override
+  Future<void> resume() async => resumes++;
 }

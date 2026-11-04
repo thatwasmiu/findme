@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
+import 'package:findme/features/auth/data/session_store.dart';
+import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// noAccount: signed in, but this login has no map (e.g. the admin).
@@ -34,19 +37,29 @@ class AuthController extends Notifier<AuthPhase> {
 
   /// Rethrows the login error so the form can show it.
   Future<void> signIn(String email, String password) async {
-    await ref.read(authRepositoryProvider).login(email, password);
+    final auth = ref.read(authRepositoryProvider);
+    await auth.login(email, password);
+    // Another account on this phone: the previous one's tracking (its token, its unsent points) ends first, so
+    // nobody's points go out under someone else's token.
+    final pasted = await ref.read(trackerStoreProvider).token();
+    if (pasted != null &&
+        pasted.sub != subOf(await auth.getAccessToken() ?? '')) {
+      await ref.read(trackerControllerProvider.notifier).forget();
+    }
     state = AuthPhase.signedIn;
   }
 
+  /// A deliberate sign-out also ends tracking on this phone (a lapsed session, [expired], does not).
   Future<void> signOut() async {
     state = AuthPhase.signedOut;
+    await ref.read(trackerControllerProvider.notifier).forget();
     await Future.wait([
       ref.read(authRepositoryProvider).logout(),
       ref.read(prefsProvider).clear(),
     ]);
   }
 
-  /// The server said 401 (or the session is gone).
+  /// The server said 401 (or the session is gone). Tracking carries on: its token is not the session's.
   void expired() {
     state = AuthPhase.signedOut;
     // The next login may be someone else: forget where this account's map was and whom it showed.

@@ -1,11 +1,13 @@
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/tracker_fakes.dart';
 
 /// An account-scoped value: rebuilt (empty) whenever the user leaves the signed-in phase.
 final _scoped = NotifierProvider<_Bag, List<String>>(_Bag.new);
@@ -124,5 +126,47 @@ void main() {
     c.read(flyToProvider.notifier).go(1, 2);
     await c.read(authControllerProvider.notifier).signOut();
     expect(c.read(flyToProvider), isNull);
+  });
+
+  group('tracking ends only on a deliberate sign-out', () {
+    FakeTracker tracker(ProviderContainer c) =>
+        c.read(trackerControllerProvider.notifier) as FakeTracker;
+
+    test('signOut forgets the tracker', () async {
+      final c = ProviderContainer(overrides: baseOverrides(auth: fakeAuth()));
+      c.read(authControllerProvider);
+      await settle(c);
+      await c.read(authControllerProvider.notifier).signOut();
+      expect(tracker(c).forgets, 1);
+    });
+
+    test('expired and noAccount do not', () async {
+      final c = ProviderContainer(overrides: baseOverrides(auth: fakeAuth()));
+      c.read(authControllerProvider);
+      await settle(c);
+      c.read(authControllerProvider.notifier).noAccount();
+      c.read(authControllerProvider.notifier).expired();
+      await settle(c);
+      expect(tracker(c).forgets, 0);
+    });
+
+    for (final (who, forgets) in [('sub-1', 0), ('sub-2', 1)]) {
+      test(
+        'sign-in as $who after sub-1 pasted the token: forgets $forgets',
+        () async {
+          final auth = fakeAuth(token: jwt(who));
+          when(() => auth.login(any(), any())).thenAnswer((_) async {});
+          final store = MemoryTrackerStore()
+            ..saved = (token: 't', sub: 'sub-1');
+          final c = ProviderContainer(
+            overrides: baseOverrides(auth: auth, trackerStore: store),
+          );
+          c.read(authControllerProvider);
+          await settle(c);
+          await c.read(authControllerProvider.notifier).signIn('a', 'b');
+          expect(tracker(c).forgets, forgets);
+        },
+      );
+    }
   });
 }
