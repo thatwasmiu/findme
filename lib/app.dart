@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:findme/core/debug/debug_console.dart';
 import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/theme/app_theme.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/auth/presentation/welcome_screen.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/map_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +23,13 @@ class FindMeApp extends ConsumerStatefulWidget {
 
 class _FindMeAppState extends ConsumerState<FindMeApp> {
   final _navigator = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Also runs when iOS relaunches the app in the background: tracking that was on carries on.
+    unawaited(ref.read(trackerControllerProvider.notifier).resume());
+  }
 
   @override
   Widget build(BuildContext context) {

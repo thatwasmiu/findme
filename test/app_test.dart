@@ -2,6 +2,7 @@ import 'package:findme/app.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/shares/domain/share.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'helpers/fakes.dart';
+import 'helpers/tracker_fakes.dart';
 
 /// The whole app with fake data: sign in → map with the day diary → open share links → sign out.
 void main() {
@@ -126,5 +128,23 @@ void main() {
     expect(find.text('Mẹ'), findsNothing);
     expect(find.text('Đăng nhập 💖'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('app start resumes tracking, signed in or not', (t) async {
+    final c = ProviderContainer(
+      overrides: baseOverrides(auth: fakeAuth(token: null)),
+    );
+    addTearDown(c.dispose);
+    await t.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: const FindMeApp(showTiles: false),
+      ),
+    );
+    await t.pump();
+    expect(
+      (c.read(trackerControllerProvider.notifier) as FakeTracker).resumes,
+      1,
+    );
   });
 }
