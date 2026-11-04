@@ -192,4 +192,19 @@ void main() {
       expect(find.byType(DebugSheet), findsOneWidget);
     },
   );
+
+  test('showBody masks coordinates and maskUrl keeps /ingest', () {
+    final shown = showBody({
+      'locations': [
+        {
+          'geometry': {
+            'coordinates': [106.7, 10.77],
+          },
+        },
+      ],
+    })!;
+    expect(shown, contains('•••'));
+    expect(shown, isNot(contains('106.7')));
+    expect(maskUrl(Uri.parse('https://x.vn/api/ingest')), '/api/ingest');
+  });
 }

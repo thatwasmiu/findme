@@ -108,6 +108,7 @@ class DebugLog extends ChangeNotifier {
 // Path words that are routes, not data. Everything else (friend, share and request ids) shows as •.
 const _routeWords = {
   'api',
+  'ingest',
   'track',
   'me',
   'friends',
@@ -130,10 +131,13 @@ String maskUrl(Uri u) {
   return '/$path${keys.isEmpty ? '' : '?$keys'}';
 }
 
-final _secret = RegExp('password|token|secret', caseSensitive: false);
+final _secret = RegExp(
+  'password|token|secret|coordinates',
+  caseSensitive: false,
+);
 
-/// A body as the console shows it: JSON indented, any value under a key with password / token / secret in its
-/// name replaced by •••, cut at [maxChars]. Null or empty: null.
+/// A body as the console shows it: JSON indented, any value under a key with password / token / secret /
+/// coordinates in its name replaced by •••, cut at [maxChars]. Null or empty: null.
 String? showBody(Object? data, {int maxChars = 20000}) {
   if (data == null || data == '') return null;
   Object? v = data;
