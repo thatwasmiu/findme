@@ -21,7 +21,7 @@ The app needs four values, the same ones the web app reads from `travel-heatmap/
 
 | Key | What it is | Where to find it |
 |---|---|---|
-| `API_URL` | The Find Me HTTP API | web `config.json` → `apiUrl` |
+| `API_URL` | The Find Me HTTP API | `WEB_ORIGIN` + `/api`, e.g. `https://findme.example.com/api` (the web's `config.json` says only `/api`: the app needs the full address) |
 | `AUTHORITY` | The Cognito issuer URL | web `config.json` → `authority` |
 | `CLIENT_ID` | The Cognito app client id | web `config.json` → `clientId` |
 | `WEB_ORIGIN` | The web app's address (share links open there) | the CloudFront / own domain you open in the browser, e.g. `https://findme.example.com` |
@@ -104,7 +104,7 @@ flutter build apk --flavor dev --debug --dart-define-from-file=config/dev.json -
 | Symptom | Fix |
 |---|---|
 | `No supported devices connected` | Start the emulator (Step 3) |
-| Red "Config missing or invalid" screen | Step 2; check all four keys are filled in |
+| Red "Config missing or invalid" screen | Step 2; check all four keys are filled in, and `API_URL` is a full `https://…/api` address |
 | Sign-in says "Không kết nối được" | Emulator has no internet, or `AUTHORITY` is wrong |
 | Map is grey | Emulator has no internet (tiles come from openstreetmap.org) |
 | Gradle error about Java | `flutter config --jdk-dir "C:\Program Files\Android\Android Studio\jbr"` |

@@ -12,6 +12,9 @@ Written 2026-11-03. Read `CLAUDE.md` first; this file is only the current state.
   called; "Hôm nay" is kept on the phone (`findme.today`) so reopening asks only for what is new. Also the web's
   build stamp (8c1254e): "Phiên bản <commit> <time UTC>" at the bottom of the 👥 sheet and printed at start-up, from
   `--dart-define=APP_VERSION=…` (CI sets it; chapter 02 has the command), "dev" without it.
+- API on the app's own address (`travel-heatmap` b4929b0, live 2026-11-04): `API_URL` = `<WEB_ORIGIN>/api`. A
+  relative `API_URL` (the web's `/api`) is refused with the config error screen. Update the `FINDME_DEV_CONFIG`
+  secret if it still holds the `execute-api` address (that one keeps working until API Gateway is replaced).
 - 142 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Never run on a device.** Android Studio install failed on 2026-11-03 (account has no admin rights, exit 1812; only

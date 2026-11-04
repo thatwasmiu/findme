@@ -26,8 +26,13 @@ class AppConfig {
       return v;
     }
 
+    // The web's config.json now says "/api" (same origin); the app needs the full address.
+    final api = need('API_URL');
+    if (!api.startsWith('https://') && !api.startsWith('http://')) {
+      throw StateError(bad);
+    }
     return AppConfig(
-      apiUrl: need('API_URL'),
+      apiUrl: api,
       authority: need('AUTHORITY'),
       clientId: need('CLIENT_ID'),
       webOrigin: need('WEB_ORIGIN'),

@@ -43,7 +43,7 @@ All commands run in PowerShell in the project folder. Flutter lives in `C:\src\f
 
 | Key | Value | Web equivalent |
 |---|---|---|
-| `API_URL` | Find Me HTTP API URL | `config.json` → `apiUrl` |
+| `API_URL` | Find Me HTTP API URL | `WEB_ORIGIN` + `/api` (full address, not the web's bare `/api`) |
 | `AUTHORITY` | `https://cognito-idp.<region>.amazonaws.com/<pool id>` | `authority` |
 | `CLIENT_ID` | Cognito app client id | `clientId` |
 | `WEB_ORIGIN` | Web app address; share links are `WEB_ORIGIN/s/<id>` | the site you open |

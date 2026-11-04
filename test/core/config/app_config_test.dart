@@ -36,4 +36,11 @@ void main() {
       );
     }
   });
+
+  test('a relative API_URL (as in the web config: /api) is refused', () {
+    expect(
+      () => AppConfig.fromMap(Map.of(full)..['API_URL'] = '/api'),
+      throwsA(isA<StateError>()),
+    );
+  });
 }
