@@ -12,13 +12,18 @@ class GeolocatorSource implements LocationSource {
 
   @override
   Future<LocationAccess> request() async {
-    var p = await Geolocator.requestPermission();
+    // Already "all the time": asking again is pointless, and geolocator_android 5.2.1 would answer whileInUse
+    // (it re-asks only FINE/COARSE, and reads "no background in the answer" as no background).
+    if (await Geolocator.checkPermission() == LocationPermission.always) {
+      return LocationAccess.always;
+    }
     // The second ask is the "always" step (iOS, Android 10). Android 11+ answers whileInUse: the user has to pick
     // "Allow all the time" in settings, which the tracker sheet sends them to.
-    if (p == LocationPermission.whileInUse) {
-      p = await Geolocator.requestPermission();
+    if (await Geolocator.requestPermission() == LocationPermission.whileInUse) {
+      await Geolocator.requestPermission();
     }
-    return _map(p);
+    // What the phone now has decides, not what a request answered.
+    return _map(await Geolocator.checkPermission());
   }
 
   @override
