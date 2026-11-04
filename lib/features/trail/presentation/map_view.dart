@@ -219,6 +219,8 @@ class _MapViewState extends ConsumerState<MapView>
       mapController: _map,
       options: MapOptions(
         initialCenter: home,
+        // OSM has no tiles past 19: beyond it the map would be grey. Leaflet (the web) caps this by itself.
+        maxZoom: 19,
         onTap: _onTap,
         onMapReady: () {
           _ready = true;

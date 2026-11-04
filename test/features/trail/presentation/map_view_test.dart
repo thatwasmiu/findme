@@ -1,8 +1,10 @@
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../helpers/fakes.dart';
 
@@ -94,4 +96,20 @@ void main() {
       expect(find.bySemanticsLabel('Phát lại'), findsOneWidget);
     },
   );
+
+  testWidgets('cannot zoom past the last tile level (19): no gray map', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      host(
+        const MapView(points: pts, stops: [stop], showTiles: false),
+        MemoryPrefs(),
+      ),
+    );
+    await t.pumpAndSettle();
+    final map = t.widget<FlutterMap>(find.byType(FlutterMap)).mapController!
+      ..move(const LatLng(21.03, 105.78), 22);
+    await t.pump();
+    expect(map.camera.zoom, 19);
+  });
 }
