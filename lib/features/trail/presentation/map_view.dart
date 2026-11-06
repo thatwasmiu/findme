@@ -7,6 +7,7 @@ import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/time/format.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/domain/trail_math.dart';
+import 'package:findme/features/trail/presentation/hachiware.dart';
 import 'package:findme/features/trail/presentation/paw_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -336,10 +337,7 @@ class _MapViewState extends ConsumerState<MapView>
     width: 56,
     height: 66,
     alignment: Alignment.topCenter,
-    child: Semantics(
-      label: label,
-      child: Image.asset('assets/images/hachiware.webp'),
-    ),
+    child: Hachiware(label: label),
   );
 }
 

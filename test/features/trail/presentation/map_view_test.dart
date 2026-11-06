@@ -8,9 +8,16 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../helpers/fakes.dart';
 
+/// Reduced motion: Hachiware's endless hop would keep pumpAndSettle from ever settling (hachiware_test covers it).
 Widget host(Widget map, MemoryPrefs prefs) => ProviderScope(
   overrides: baseOverrides(auth: fakeAuth(), prefs: prefs),
-  child: MaterialApp(home: Scaffold(body: map)),
+  child: MaterialApp(
+    builder: (c, child) => MediaQuery(
+      data: MediaQuery.of(c).copyWith(disableAnimations: true),
+      child: child!,
+    ),
+    home: Scaffold(body: map),
+  ),
 );
 
 void main() {
