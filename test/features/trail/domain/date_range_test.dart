@@ -30,9 +30,6 @@ void main() {
     test('7d starts local midnight 6 days before today', () {
       expect(presetRange(Preset.d7, now).from, '2026-10-20T17:00:00.000Z');
     });
-    test('30d', () {
-      expect(presetRange(Preset.d30, now).from, '2026-09-27T17:00:00.000Z');
-    });
     test('customRange covers the whole local day', () {
       expect(
         customRange('2026-10-01', '2026-10-01'),
@@ -42,12 +39,11 @@ void main() {
         ),
       );
     });
-    test('preset labels are the web ones', () {
+    test('preset labels (the web has 30 ngày too; the app does not)', () {
       expect(Preset.values.map((p) => p.label).toList(), [
         'Hôm nay',
         'Hôm qua',
         '7 ngày',
-        '30 ngày',
       ]);
     });
     test('isoMs always has milliseconds and Z', () {

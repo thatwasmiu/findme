@@ -5,7 +5,8 @@ Files: `lib/features/trail/presentation/trail_controller.dart`, `date_filter.dar
 
 ## The date filter
 
-Presets **Hôm nay / Hôm qua / 7 ngày / 30 ngày**, and 📅 opens a range picker. Ranges are in the phone's local time,
+Presets **Hôm nay / Hôm qua / 7 ngày** (the web also has 30 ngày; the app leaves it out), and 📅 opens a range
+picker. Ranges are in the phone's local time,
 sent to the API as JS-style ISO strings (`2026-10-26T17:00:00.000Z`, always with milliseconds: `isoMs()`). The API
 serves at most ~31 days; more → "Chọn tối đa 31 ngày một lần nhé 📅".
 

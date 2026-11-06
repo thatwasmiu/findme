@@ -19,12 +19,12 @@ class DateRange {
   String toString() => 'DateRange($from → $to)';
 }
 
-// "Tất cả" is gone on the web too: the trail API serves at most ~31 days at a time.
+// "Tất cả" is gone on the web too: the trail API serves at most ~31 days at a time. "30 ngày" is the web's, left
+// out here by the owner's choice (📅 still picks up to 31 days).
 enum Preset {
   today('Hôm nay'),
   yesterday('Hôm qua'),
-  d7('7 ngày'),
-  d30('30 ngày');
+  d7('7 ngày');
 
   Preset(this.label);
   final String label;
@@ -68,8 +68,6 @@ DateRange presetRange(Preset p, DateTime now) {
       return DateRange(from: isoMs(_localMidnight(now, 0)), to: to);
     case Preset.d7:
       return DateRange(from: isoMs(_localMidnight(now, 6)), to: to);
-    case Preset.d30:
-      return DateRange(from: isoMs(_localMidnight(now, 29)), to: to);
   }
 }
 

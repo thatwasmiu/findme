@@ -174,9 +174,10 @@ void main() {
       expect(find.text('👀 12 phút trước'), findsOneWidget);
       expect(find.text('🔗 Chia sẻ'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
-      for (final p in ['Hôm nay', 'Hôm qua', '7 ngày', '30 ngày']) {
+      for (final p in ['Hôm nay', 'Hôm qua', '7 ngày']) {
         expect(find.text(p), findsOneWidget);
       }
+      expect(find.text('30 ngày'), findsNothing);
       await t.tap(find.text('👀 12 phút trước'));
       expect(c.read(flyToProvider), (1.0, 2.0));
       await t.tap(find.text('7 ngày'));
