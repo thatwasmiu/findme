@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:findme/core/storage/secure.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart' as policy;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +12,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 typedef IngestToken = ({String token, String sub});
 
 /// The tracker's own settings: the ingest token (secret) and whether tracking is on (not secret).
+/// The Keychain could not be read (an iPhone locked since it was turned on). Not the same as "no token": nothing
+/// should ask the server for a new one because of it.
+class StorageUnreadable implements Exception {
+  const StorageUnreadable();
+}
+
 abstract interface class TrackerStore {
   Future<IngestToken?> token();
 
@@ -33,7 +42,13 @@ abstract interface class TrackerStore {
 
 class SecureTrackerStore implements TrackerStore {
   SecureTrackerStore([FlutterSecureStorage? storage])
-    : _secure = storage ?? const FlutterSecureStorage();
+    : _secure = storage ?? backgroundSafeStorage;
+
+  @visibleForTesting
+  FlutterSecureStorage get storage => _secure;
+
+  /// Read once, then kept: a locked phone's Keychain is never needed again while the app runs.
+  IngestToken? _cached;
 
   static const _tokenKey = 'findme.ingest';
 
@@ -42,19 +57,25 @@ class SecureTrackerStore implements TrackerStore {
   static const _onKey = 'findme.tracking';
   static const _ownerKey = 'findme.trackerOwner';
   static const _indicatorKey = 'findme.trackerIndicator';
-  static const _everyKey = 'findme.trackerUploadMinutes';
+  static const _everyKey = 'findme.trackerUploadSeconds';
 
   final FlutterSecureStorage _secure;
 
   @override
   Future<IngestToken?> token() async {
+    if (_cached != null) return _cached;
+    final String? raw;
     try {
-      final raw = await _secure.read(key: _tokenKey);
-      if (raw == null) return null;
+      raw = await _secure.read(key: _tokenKey);
+    } on PlatformException {
+      throw const StorageUnreadable();
+    }
+    if (raw == null) return null;
+    try {
       final j = jsonDecode(raw) as Map<String, dynamic>;
-      return (token: j['token'] as String, sub: j['sub'] as String);
+      return _cached = (token: j['token'] as String, sub: j['sub'] as String);
     } on Object {
-      return null; // unreadable (restored backup): paste it again
+      return null; // garbled (restored backup): a new one is fetched
     }
   }
 
@@ -66,6 +87,7 @@ class SecureTrackerStore implements TrackerStore {
       key: _tokenKey,
       value: jsonEncode({'token': t, 'sub': sub}),
     );
+    _cached = (token: t, sub: sub);
   }
 
   @override
@@ -79,6 +101,7 @@ class SecureTrackerStore implements TrackerStore {
 
   @override
   Future<void> forget() async {
+    _cached = null;
     await _secure.delete(key: _tokenKey);
     final p = await SharedPreferences.getInstance();
     await p.remove(_onKey);
@@ -102,14 +125,14 @@ class SecureTrackerStore implements TrackerStore {
   @override
   Future<Duration> uploadEvery() async {
     final m = (await SharedPreferences.getInstance()).getInt(_everyKey);
-    return m == null || m <= 0 ? policy.uploadEvery : Duration(minutes: m);
+    return m == null || m <= 0 ? policy.uploadEvery : Duration(seconds: m);
   }
 
   @override
   Future<void> setUploadEvery(Duration d) async {
     await (await SharedPreferences.getInstance()).setInt(
       _everyKey,
-      d.inMinutes,
+      d.inSeconds,
     );
   }
 

@@ -22,7 +22,7 @@ class MemoryTrackerStore implements TrackerStore {
   String? owned;
   bool on = false;
   bool indicatorOn = false;
-  Duration every = const Duration(minutes: 5);
+  Duration every = const Duration(minutes: 1);
 
   @override
   Future<Duration> uploadEvery() async => every;
@@ -41,7 +41,13 @@ class MemoryTrackerStore implements TrackerStore {
   Future<void> setOwner(String sub) async => owned = sub;
 
   @override
-  Future<IngestToken?> token() async => saved;
+  Future<IngestToken?> token() async {
+    if (locked) throw const StorageUnreadable();
+    return saved;
+  }
+
+  /// The iPhone's Keychain while locked: reading fails.
+  bool locked = false;
   @override
   Future<void> saveToken(String raw, String sub) async {
     if (raw.trim().isEmpty) throw ArgumentError.value(raw);
@@ -123,7 +129,7 @@ class FakeTracker extends TrackerController {
       calls.add('setIndicator:$on');
   @override
   Future<void> setUploadEvery(Duration d) async =>
-      calls.add('setUploadEvery:${d.inMinutes}');
+      calls.add('setUploadEvery:${d.inSeconds}s');
 }
 
 /// The iOS significant-change bridge, by hand: counts start/stop, [fire] a wake.

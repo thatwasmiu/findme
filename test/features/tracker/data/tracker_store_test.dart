@@ -1,6 +1,8 @@
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -68,10 +70,32 @@ void main() {
     },
   );
 
-  test('upload interval: 5 min by default, kept across forget', () async {
-    expect(await s.uploadEvery(), const Duration(minutes: 5));
-    await s.setUploadEvery(const Duration(minutes: 15));
+  test('upload interval: 1 min by default, kept across forget', () async {
+    expect(await s.uploadEvery(), const Duration(minutes: 1));
+    await s.setUploadEvery(const Duration(seconds: 10));
     await s.forget();
-    expect(await s.uploadEvery(), const Duration(minutes: 15));
+    expect(await s.uploadEvery(), const Duration(seconds: 10));
   });
+
+  test('a token that cannot be read is not "no token"', () async {
+    final locked = _LockedStorage();
+    expect(
+      () => SecureTrackerStore(locked).token(),
+      throwsA(isA<StorageUnreadable>()),
+    );
+  });
+}
+
+/// The Keychain while the iPhone is locked: every read fails.
+class _LockedStorage extends Mock implements FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => throw PlatformException(code: '-25308', message: 'locked');
 }

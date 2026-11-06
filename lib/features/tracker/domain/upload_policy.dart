@@ -2,15 +2,16 @@
 const uploadAt = 50;
 
 /// …or when this long has passed since the last successful upload (the default; the 🧭 sheet offers
-/// [uploadChoices]).
-const uploadEvery = Duration(minutes: 5);
+/// [uploadChoices]). One minute matches how often the map asks `/track`, so friends see you about as soon as
+/// they can.
+const uploadEvery = Duration(minutes: 1);
 
 const uploadChoices = [
+  Duration(seconds: 5),
+  Duration(seconds: 10),
+  Duration(seconds: 30),
   Duration(minutes: 1),
-  Duration(minutes: 5),
-  Duration(minutes: 15),
-  Duration(minutes: 30),
-  Duration(hours: 1),
+  Duration(minutes: 2),
 ];
 
 /// At most this many fixes per request.

@@ -122,6 +122,10 @@ class TrackerController extends Notifier<TrackerState> {
   Future<void> setUploadEvery(Duration d) async {
     await _store.setUploadEvery(d);
     state = state.copyWith(uploadEvery: d);
+    if (_tick != null) {
+      _tick!.cancel();
+      _tick = Timer.periodic(d, (_) => unawaited(_upload()));
+    }
     await _upload();
   }
 
@@ -209,16 +213,13 @@ class TrackerController extends Notifier<TrackerState> {
             problem: TrackerProblem.needAlways,
           ),
         );
-    // Standing still sends no fixes; this still uploads what waits once the 5 minutes are up.
-    _tick ??= Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => unawaited(_upload()),
-    );
+    // Standing still sends no fixes; this still uploads what waits once "Gửi mỗi" is up.
+    _tick ??= Timer.periodic(state.uploadEvery, (_) => unawaited(_upload()));
     await ref.read(wakeChannelProvider).start();
-    final token = await _store.token();
+    final token = await _readToken();
     state = state.copyWith(
       on: true,
-      problem: token != null
+      problem: token != null || _locked
           ? TrackerProblem.none
           : state.problem == TrackerProblem.noAccount
           ? null
@@ -272,6 +273,20 @@ class TrackerController extends Notifier<TrackerState> {
     _notBefore = _now().add(backoff(_failures));
   }
 
+  /// True after the last token read failed (locked iPhone): that is not "no token".
+  bool _locked = false;
+
+  Future<IngestToken?> _readToken() async {
+    try {
+      final t = await _store.token();
+      _locked = false;
+      return t;
+    } on StorageUnreadable {
+      _locked = true;
+      return null;
+    }
+  }
+
   /// Asks the server for this account's ingest token and keeps it (the old one stops working). null: none now,
   /// [TrackerState.problem] says why.
   Future<String?> _issue() async {
@@ -318,7 +333,8 @@ class TrackerController extends Notifier<TrackerState> {
   Future<void> _uploadRun({required bool force}) async {
     try {
       if (state.problem == TrackerProblem.noAccount && !force) return;
-      var token = (await _store.token())?.token;
+      var token = (await _readToken())?.token;
+      if (_locked) return; // Keychain locked: the token is there, just not readable yet; next tick tries again
       var fresh = false;
       if (token == null || state.problem == TrackerProblem.badToken) {
         if (!force && _notBefore != null && _now().isBefore(_notBefore!)) {

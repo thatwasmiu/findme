@@ -148,9 +148,9 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
               const Text('Gửi mỗi'),
               for (final d in uploadChoices)
                 Pill(
-                  label: d.inMinutes < 60
-                      ? '${d.inMinutes} phút'
-                      : '${d.inHours} giờ',
+                  label: d.inSeconds < 60
+                      ? '${d.inSeconds} giây'
+                      : '${d.inMinutes} phút',
                   selected: s.uploadEvery == d,
                   onTap: () => unawaited(ctl.setUploadEvery(d)),
                 ),

@@ -27,9 +27,9 @@ void main() {
     expect(go(50, sinceOk: const Duration(seconds: 5)), isTrue);
   });
 
-  test('few queued wait 5 min after the last ok', () {
-    expect(go(3, sinceOk: const Duration(minutes: 4)), isFalse);
-    expect(go(3, sinceOk: const Duration(minutes: 6)), isTrue);
+  test('few queued wait 1 min (the default) after the last ok', () {
+    expect(go(3, sinceOk: const Duration(seconds: 40)), isFalse);
+    expect(go(3, sinceOk: const Duration(seconds: 70)), isTrue);
   });
 
   test('never uploaded -> upload', () {
@@ -54,7 +54,7 @@ void main() {
   });
 
   test('the choices offered', () {
-    expect([for (final d in uploadChoices) d.inMinutes], [1, 5, 15, 30, 60]);
-    expect(uploadEvery, const Duration(minutes: 5));
+    expect([for (final d in uploadChoices) d.inSeconds], [5, 10, 30, 60, 120]);
+    expect(uploadEvery, const Duration(minutes: 1));
   });
 }

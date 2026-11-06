@@ -416,22 +416,51 @@ void main() {
     await emit(1); // first upload: lastOk = now
     await emit(3);
     verify(() => ingest.send(any(), any(), any())).called(1);
-    now = now.add(const Duration(minutes: 2));
-    await ctl().setUploadEvery(const Duration(minutes: 1));
+    now = now.add(const Duration(seconds: 10));
+    await ctl().setUploadEvery(const Duration(seconds: 5));
     await ctl().idle();
     verify(() => ingest.send(any(), any(that: hasLength(3)), any())).called(1);
-    expect(store.every, const Duration(minutes: 1));
-    expect(st().uploadEvery, const Duration(minutes: 1));
+    expect(store.every, const Duration(seconds: 5));
+    expect(st().uploadEvery, const Duration(seconds: 5));
   });
 
-  test('a longer interval holds fixes past 5 minutes', () async {
-    store.every = const Duration(minutes: 30);
+  test('a longer interval holds fixes past the default', () async {
+    store.every = const Duration(minutes: 2);
     await ctl().turnOn();
     await emit(1);
     verify(() => ingest.send(any(), any(), any())).called(1);
-    now = now.add(const Duration(minutes: 10));
+    now = now.add(const Duration(seconds: 90));
     await emit(3);
     verifyNever(() => ingest.send(any(), any(), any()));
-    expect(st().uploadEvery, const Duration(minutes: 30));
+    expect(st().uploadEvery, const Duration(minutes: 2));
+  });
+
+  test(
+    'token unreadable (locked iPhone): fixes wait, no new token asked',
+    () async {
+      await ctl().turnOn();
+      await emit(1);
+      clearInteractions(ingest);
+      store.locked = true;
+      now = now.add(const Duration(minutes: 5));
+      await emit(3);
+      verifyNever(() => ingest.newToken());
+      verifyNever(() => ingest.send(any(), any(), any()));
+      expect(st().problem, isNot(TrackerProblem.noToken));
+      expect(st().queued, 3);
+      store.locked = false;
+      await emit(1);
+      verify(() => ingest.send('tok', any(that: hasLength(4)), any()))
+          .called(1);
+    },
+  );
+
+  test('resume while locked does not say "no token"', () async {
+    store
+      ..on = true
+      ..locked = true;
+    await ctl().resume();
+    expect(st().on, isTrue);
+    expect(st().problem, TrackerProblem.none);
   });
 }

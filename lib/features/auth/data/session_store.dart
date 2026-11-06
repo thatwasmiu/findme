@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:findme/core/storage/secure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Access + refresh token. Lives in the phone's Keychain / Keystore, so closing the app does not sign you out.
@@ -48,7 +50,10 @@ abstract interface class SessionStore {
 
 class SecureSessionStore implements SessionStore {
   SecureSessionStore([FlutterSecureStorage? storage])
-    : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? backgroundSafeStorage;
+
+  @visibleForTesting
+  FlutterSecureStorage get storage => _storage;
 
   static const _key = 'findme.session';
   final FlutterSecureStorage _storage;

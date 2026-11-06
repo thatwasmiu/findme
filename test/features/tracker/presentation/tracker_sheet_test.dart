@@ -160,12 +160,12 @@ void main() {
     'upload interval: current one selected, tap calls setUploadEvery',
     (t) async {
       await pump(t, const TrackerState(on: true));
-      for (final l in ['1 phút', '5 phút', '15 phút', '30 phút', '1 giờ']) {
+      for (final l in ['5 giây', '10 giây', '30 giây', '1 phút', '2 phút']) {
         expect(find.text(l), findsOneWidget);
       }
-      await t.tap(find.text('15 phút'));
+      await t.tap(find.text('10 giây'));
       await t.pump();
-      expect(tracker.calls, ['setUploadEvery:15']);
+      expect(tracker.calls, ['setUploadEvery:10s']);
     },
   );
 }

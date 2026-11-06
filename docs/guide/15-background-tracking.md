@@ -56,8 +56,8 @@ Removing lines means rewriting the file. Writing over `queue.jsonl` directly cou
 died in the middle. So the new content goes to `queue.jsonl.tmp`, then a **rename** swaps it in. A rename is atomic:
 afterwards there is either the old file or the new one, never a mix.
 
-When does it upload? As soon as 50 fixes wait, or when the time picked under **Gửi mỗi** in the 🧭 sheet (1, 5,
-15, 30 minutes or 1 hour; default 5 minutes) has passed since the last successful upload, or when you press
+When does it upload? As soon as 50 fixes wait, or when the time picked under **Gửi mỗi** in the 🧭 sheet (5, 10 or 30
+seconds, 1 or 2 minutes; default 1 minute, how often the map asks for new points) has passed since the last successful upload, or when you press
 **Gửi ngay**. A longer wait means fewer requests and a little less battery, but friends see you later. A failure (no network, server error) waits 1, 2, 4, 8, 16, then 30 minutes before trying again.
 
 | Server answer | What the app does |
@@ -219,6 +219,7 @@ Play reviews apps that read location in the background. What it needs, and where
 | **Tài khoản này không ghi được hành trình** | `/me/ingest-token` said 403: an admin login or a switched-off account. |
 | Notification missing on Android 13+ | Notifications for Find Me are off; tracking still runs. Allow notifications to see it. |
 | Stops after a while (Android) | Battery optimisation: Settings → Apps → Find Me → Battery → Unrestricted. The 🧭 sheet has a shortcut. |
+| **Chưa có token** on the iPhone after a while in the pocket (fixed 2026-11-06) | The Keychain was only readable while unlocked, so a locked phone "lost" the token. Now it is readable after the first unlock since power-on, and the app keeps the token in memory once read. Only right after a reboot, before the first unlock, nothing can be read: fixes wait and go after you unlock. |
 | Stops after a while (iPhone) | You force-quit it, or Low Power Mode is on, or the sideload expired (reinstall). |
 | **Điểm bị từ chối** above 0 | A bug in the app's batch format. Keep `rejected.jsonl` (in the app's files) for debugging; report it. |
 | Points on the map late | Uploads wait for 50 fixes or 5 minutes. **Gửi ngay** sends at once. |
