@@ -61,6 +61,7 @@ class TileCache implements WidgetTiles {
           ..sort(
             (a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()),
           );
+    if (files.length <= maxFiles) return;
     for (final f in files.take(files.length - maxFiles)) {
       f.deleteSync();
     }
