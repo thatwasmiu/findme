@@ -1,5 +1,5 @@
-import 'package:findme/features/trail/domain/colors.dart';
 import 'package:findme/features/trail/domain/models.dart';
+import 'package:findme/features/trail/presentation/trail_painting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
@@ -43,8 +43,7 @@ TrackPoint? nearestPrint(
   return best;
 }
 
-/// Thousands of paw prints in one painter (no widget per print). Each print points toward the next one and steps
-/// alternately left/right. [color]: one colour for every print (a friend's trail); else coloured by time of day.
+/// Thousands of paw prints in one painter (no widget per print). [color]: one colour for every print (a friend's trail); else coloured by time of day.
 class PawLayer extends StatelessWidget {
   const PawLayer({required this.points, super.key, this.color});
 
@@ -71,63 +70,14 @@ class _PawPainter extends CustomPainter {
   final MapCamera camera;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final s = pawSize(camera.zoom);
-    final paint = Paint();
-    final glow = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    for (var i = 0; i < points.length; i++) {
-      final p = points[i];
-      final at = camera.latLngToScreenOffset(LatLng(p.lat, p.lon));
-      if (at.dx < -20 ||
-          at.dy < -20 ||
-          at.dx > size.width + 20 ||
-          at.dy > size.height + 20) {
-        continue;
-      }
-      final next = i + 1 < points.length ? points[i + 1] : p;
-      final prev = i > 0 ? points[i - 1] : p;
-      final angle = next != p
-          ? bearing(p, next)
-          : (prev != p ? bearing(prev, p) : 0.0);
-      final side = i.isOdd
-          ? 1
-          : -1; // left, right, left, … like real footprints
-      canvas
-        ..save()
-        ..translate(at.dx, at.dy)
-        ..rotate(angle)
-        ..translate(side * s * 0.35, 0);
-      _drawPaw(canvas, s, glow);
-      paint.color = (color ?? pawColor(p.t)).withValues(alpha: 0.85);
-      _drawPaw(canvas, s, paint);
-      canvas.restore();
-    }
-  }
-
-  /// One cat paw at (0,0), toes pointing up, about [s] px tall.
-  static void _drawPaw(Canvas c, double s, Paint paint) {
-    final path = Path()
-      ..addOval(
-        Rect.fromCenter(
-          center: Offset(0, s * 0.18),
-          width: s * 0.6,
-          height: s * 0.48,
-        ),
-      ); // main pad
-    for (final (x, y, r) in const [
-      (-0.3, -0.12, 0.11),
-      (-0.11, -0.3, 0.12),
-      (0.11, -0.3, 0.12),
-      (0.3, -0.12, 0.11),
-    ]) {
-      path.addOval(
-        Rect.fromCircle(center: Offset(x * s, y * s), radius: r * s),
-      ); // toe beans
-    }
-    c.drawPath(path, paint);
-  }
+  void paint(Canvas canvas, Size size) => paintPaws(
+    canvas,
+    points,
+    project: (p) => camera.latLngToScreenOffset(LatLng(p.lat, p.lon)),
+    area: size,
+    size: pawSize(camera.zoom),
+    color: color,
+  );
 
   @override
   bool shouldRepaint(_PawPainter old) =>

@@ -9,6 +9,7 @@ import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/domain/trail_math.dart';
 import 'package:findme/features/trail/presentation/hachiware.dart';
 import 'package:findme/features/trail/presentation/paw_layer.dart';
+import 'package:findme/features/trail/presentation/trail_painting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -232,7 +233,7 @@ class _MapViewState extends ConsumerState<MapView>
       children: [
         if (widget.showTiles)
           ColorFiltered(
-            colorFilter: const ColorFilter.matrix(_pastel),
+            colorFilter: const ColorFilter.matrix(pastelMatrix),
             child: TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'app.findme.mobile',
@@ -340,11 +341,3 @@ class _MapViewState extends ConsumerState<MapView>
     child: Hachiware(label: label),
   );
 }
-
-// Pastel tint like the web's `.osm-tiles` filter (approximation of saturate(0.6) sepia(0.15) brightness(1.05)).
-const _pastel = <double>[
-  0.78, 0.26, 0.04, 0, 6, //
-  0.12, 0.88, 0.04, 0, 6, //
-  0.10, 0.22, 0.70, 0, 6, //
-  0, 0, 0, 1, 0, //
-];
