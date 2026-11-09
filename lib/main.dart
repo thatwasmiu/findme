@@ -5,6 +5,8 @@ import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/features/tracker/boot.dart';
 import 'package:findme/features/tracker/data/geolocator_source.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/widget/data/live_trail_widget.dart';
+import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,6 +21,9 @@ void main() {
         overrides: [
           appConfigProvider.overrideWithValue(cfg),
           locationSourceProvider.overrideWithValue(GeolocatorSource()),
+          trailWidgetProvider.overrideWithValue(
+            liveTrailWidget(defaultTargetPlatform),
+          ),
         ],
         child: const FindMeApp(),
       ),
@@ -37,5 +42,8 @@ Future<void> trackerBoot() async {
   await startTrackerHeadless([
     appConfigProvider.overrideWithValue(AppConfig.fromEnvironment()),
     locationSourceProvider.overrideWithValue(GeolocatorSource()),
+    trailWidgetProvider.overrideWithValue(
+      liveTrailWidget(defaultTargetPlatform),
+    ),
   ]);
 }

@@ -4,6 +4,23 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Home-screen widget** on branch `feat/home-widget` (2026-11-09, not merged): **written but never compiled or run**,
+  because the PC it was written on has no Flutter. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-09-home-widget*`;
+  guide chapter 16 is still a draft. The owner chose to move every test run to the end. To finish, on a PC with Flutter:
+  1. `flutter pub get` (`home_widget` was added to `pubspec.yaml` by hand, so `pubspec.lock` is behind), `dart format .`,
+     `flutter analyze`, `flutter test`. Expect some errors to fix. The widget tests have never been seen failing or passing.
+  2. `flutter build apk --flavor dev --debug --dart-define-from-file=config/example.json` (Kotlin and resources unbuilt).
+  3. The plan's Task 2 question, now answered by the real code: with the app swiped away, does the widget still get a new
+     picture? If not, drawing has to move to Kotlin (a design change; ask the owner).
+  4. The plan's Task 9: the device checks, finish chapter 16, cheatsheet lines, this note, the iOS CI job. Then a
+     whole-branch code review, which has not happened.
+
+  Choices made while writing, differing from the plan: `WidgetUpdater` takes a function that loads its parts, so nothing
+  touches the platform until first use. `WidgetScene` lives in `domain/trail_widget.dart`, `WidgetTiles` in
+  `domain/widget_tiles.dart`. `TrackerController` keeps the `TrailWidget` from `build()`, since `_stop` also runs from
+  onDispose, where `ref` is unusable. Extra tests: a fix written after a half-written line, a damaged tile, a failed
+  publish not stopping a clear.
+
 - **Tracker (Find Me replaces Overland)** on branch `feat/tracker` (2026-11-04, not merged): 🧭 on the map →
   "Ghi hành trình". Background GPS (geolocator), crash-safe queue file, uploads to `/ingest` in Overland's format,
   iOS significant-location relaunch (Swift in `AppDelegate`), Android reboot restart (`BootReceiver.kt`), Play

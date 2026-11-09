@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's folder holds today's locations: never in a backup or a phone transfer. Android 12 and later. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="widget/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="widget/" />
+    </device-transfer>
+</data-extraction-rules>

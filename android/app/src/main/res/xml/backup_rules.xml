@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's folder holds today's locations: never in a cloud backup. Android up to 11. -->
+<full-backup-content>
+    <exclude domain="file" path="widget/" />
+</full-backup-content>
