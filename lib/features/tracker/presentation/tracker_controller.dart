@@ -14,6 +14,7 @@ import 'package:findme/features/tracker/domain/upload_policy.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart'
     as policy
     show uploadEvery;
+import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -94,8 +95,12 @@ class TrackerController extends Notifier<TrackerState> {
   Future<PointQueue> get _queue => ref.read(pointQueueProvider.future);
   DateTime _now() => ref.read(trackerClockProvider)();
 
+  /// Kept, not read each time: [_stop] also runs from onDispose, where ref can no longer be used.
+  late TrailWidget _widget;
+
   @override
   TrackerState build() {
+    _widget = ref.read(trailWidgetProvider);
     ref
       ..onDispose(_stop)
       ..read(wakeChannelProvider).onWake(() => unawaited(wake()));
@@ -131,6 +136,7 @@ class TrackerController extends Notifier<TrackerState> {
 
   /// At app start (also a background relaunch): carry on if tracking was left on.
   Future<void> resume() async {
+    unawaited(_widget.refresh());
     await _refresh();
     state = state.copyWith(
       indicator: await _store.indicator(),
@@ -183,6 +189,12 @@ class TrackerController extends Notifier<TrackerState> {
   /// This account's tracking ends on this phone: one last upload (best effort), then queue and token are gone.
   Future<void> forget() async {
     _stop();
+    // First: the upload below can take 10 s, and the location must leave the home screen now.
+    try {
+      await _widget.clear();
+    } on Object catch (e) {
+      debugPrint('widget clear failed: ${e.runtimeType}');
+    }
     await ref.read(wakeChannelProvider).stop();
     try {
       await () async {
@@ -215,6 +227,7 @@ class TrackerController extends Notifier<TrackerState> {
         );
     // Standing still sends no fixes; this still uploads what waits once "Gửi mỗi" is up.
     _tick ??= Timer.periodic(state.uploadEvery, (_) => unawaited(_upload()));
+    _widget.start();
     await ref.read(wakeChannelProvider).start();
     final token = await _readToken();
     state = state.copyWith(
@@ -232,6 +245,7 @@ class TrackerController extends Notifier<TrackerState> {
     _fixes = null;
     _tick?.cancel();
     _tick = null;
+    _widget.stop();
   }
 
   /// Fixes are written one after another, in order; the upload they may start runs beside them, so fixes keep
@@ -239,6 +253,11 @@ class TrackerController extends Notifier<TrackerState> {
   void _onFix(Fix f) {
     _work = _work.then((_) async {
       await (await _queue).append(f);
+      try {
+        _widget.onFix(f); // safely in the queue first: the widget can never cost a fix
+      } on Object catch (e) {
+        debugPrint('widget fix failed: ${e.runtimeType}');
+      }
       state = state.copyWith(lastFix: f.at);
       await _refresh();
       unawaited(_upload());

@@ -10,6 +10,7 @@ import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
+import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -31,6 +32,30 @@ Future<void> settle() async {
   }
 }
 
+class FakeTrailWidget implements TrailWidget {
+  int starts = 0;
+  int stops = 0;
+  int refreshes = 0;
+  int clears = 0;
+  bool throwOnFix = false;
+  void Function(Fix)? onFixHook;
+
+  @override
+  void onFix(Fix f) {
+    if (throwOnFix) throw StateError('widget broke');
+    onFixHook?.call(f);
+  }
+
+  @override
+  void start() => starts++;
+  @override
+  void stop() => stops++;
+  @override
+  Future<void> refresh() async => refreshes++;
+  @override
+  Future<void> clear() async => clears++;
+}
+
 void main() {
   setUpAll(() => registerFallbackValue(<Fix>[]));
 
@@ -42,6 +67,7 @@ void main() {
   late MockIngest ingest;
   late DateTime now;
   late ProviderContainer c;
+  late FakeTrailWidget trail;
 
   TrackerController ctl() => c.read(trackerControllerProvider.notifier);
   TrackerState st() => c.read(trackerControllerProvider);
@@ -65,6 +91,7 @@ void main() {
     now = DateTime.utc(2026, 11, 4, 12);
     answer(IngestResult.ok);
     when(() => ingest.newToken()).thenAnswer((_) async => 'issued');
+    trail = FakeTrailWidget();
     c = ProviderContainer(
       overrides: [
         ...baseOverrides(
@@ -77,6 +104,7 @@ void main() {
         wakeChannelProvider.overrideWithValue(wake),
         ingestClientProvider.overrideWithValue(ingest),
         trackerClockProvider.overrideWithValue(() => now),
+        trailWidgetProvider.overrideWithValue(trail),
       ],
     );
   });
@@ -322,6 +350,54 @@ void main() {
     expect(store.forgets, 1);
     expect(st().on, isFalse);
   });
+
+  test('each fix goes to the widget after it is in the queue', () async {
+    final counts = <Future<int>>[];
+    trail.onFixHook = (_) => counts.add(queue.count());
+    await ctl().turnOn();
+    await emit(2);
+    expect(await Future.wait(counts), [1, 2]);
+  });
+
+  test('turnOn starts the widget and turnOff stops it', () async {
+    await ctl().turnOn();
+    expect(trail.starts, 1);
+    await ctl().turnOff();
+    expect(trail.stops, 1);
+  });
+
+  test('resume refreshes the widget even with tracking off', () async {
+    await ctl().resume();
+    expect(trail.refreshes, 1);
+    expect(trail.starts, 0);
+  });
+
+  test('forget clears the widget before its upload wait', () async {
+    await ctl().turnOn();
+    await emit(3);
+    final sending = Completer<IngestResult>();
+    when(
+      () => ingest.send(any(), any(), any()),
+    ).thenAnswer((_) => sending.future);
+    final done = ctl().forget();
+    await settle();
+    expect(trail.clears, 1);
+    expect(await queue.count(), 3); // the last upload is still pending
+    sending.complete(IngestResult.ok);
+    await done;
+  });
+
+  test(
+    'a widget that throws on onFix does not stop the fix being queued',
+    () async {
+      trail.throwOnFix = true;
+      await ctl().turnOn();
+      await emit(2);
+      expect(await queue.count(), 2);
+      await ctl().sendNow();
+      expect(await queue.count(), 0); // and uploads still work
+    },
+  );
 
   test('significant-change monitoring follows the switch', () async {
     await ctl().turnOn();
