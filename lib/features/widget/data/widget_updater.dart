@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/trail/domain/models.dart';
@@ -112,7 +111,10 @@ class WidgetUpdater implements TrailWidget {
         if (bytes != null) tiles[key] = bytes;
       }
       final png = await parts.render(
-        WidgetScene(trail: trail.today.map(_point).toList(), here: _point(last)),
+        WidgetScene(
+          trail: trail.today.map(_point).toList(),
+          here: _point(last),
+        ),
         tiles,
       );
       if (generation != _generation) return;

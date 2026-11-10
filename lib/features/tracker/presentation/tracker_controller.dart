@@ -254,7 +254,9 @@ class TrackerController extends Notifier<TrackerState> {
     _work = _work.then((_) async {
       await (await _queue).append(f);
       try {
-        _widget.onFix(f); // safely in the queue first: the widget can never cost a fix
+        _widget.onFix(
+          f,
+        ); // safely in the queue first: the widget can never cost a fix
       } on Object catch (e) {
         debugPrint('widget fix failed: ${e.runtimeType}');
       }

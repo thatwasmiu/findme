@@ -30,13 +30,16 @@ void main() {
     expect(t.last, b);
   });
 
-  test("read the next day: today is empty, last is still yesterday's last fix", () async {
-    final b = fix(noon);
-    await log.append(b);
-    final t = await log.read(tomorrow);
-    expect(t.today, isEmpty);
-    expect(t.last, b);
-  });
+  test(
+    "read the next day: today is empty, last is still yesterday's last fix",
+    () async {
+      final b = fix(noon);
+      await log.append(b);
+      final t = await log.read(tomorrow);
+      expect(t.today, isEmpty);
+      expect(t.last, b);
+    },
+  );
 
   test("append on a new day drops the old day's lines from the file", () async {
     await log.append(fix(noon));
@@ -53,17 +56,15 @@ void main() {
   test('a half-written last line is skipped', () async {
     final a = fix(morning);
     await log.append(a);
-    File(
-      '${dir.path}/day.jsonl',
-    ).writeAsStringSync('{"t":"20', mode: FileMode.append);
+    File('${dir.path}/day.jsonl')
+        .writeAsStringSync('{"t":"20', mode: FileMode.append);
     expect((await log.read(noon)).today, [a]);
   });
 
   test('a fix written after a half-written line is kept', () async {
     await log.append(fix(morning));
-    File(
-      '${dir.path}/day.jsonl',
-    ).writeAsStringSync('{"t":"20', mode: FileMode.append);
+    File('${dir.path}/day.jsonl')
+        .writeAsStringSync('{"t":"20', mode: FileMode.append);
     final b = fix(noon);
     await log.append(b);
     expect((await log.read(noon)).today, contains(b));

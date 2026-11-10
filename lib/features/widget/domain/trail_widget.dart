@@ -49,11 +49,10 @@ abstract interface class WidgetHost {
   Future<void> clear();
 }
 
-typedef WidgetRender =
-    Future<Uint8List> Function(
-      WidgetScene scene,
-      Map<TileKey, Uint8List> tiles,
-    );
+typedef WidgetRender = Future<Uint8List> Function(
+  WidgetScene scene,
+  Map<TileKey, Uint8List> tiles,
+);
 
 @immutable
 class WidgetParts {

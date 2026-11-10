@@ -356,7 +356,8 @@ void main() {
     trail.onFixHook = (_) => counts.add(queue.count());
     await ctl().turnOn();
     await emit(2);
-    expect(await Future.wait(counts), [1, 2]);
+    // Never 0: the fix is queued first. 1 and 1: the first fix goes up at once, the second waits for its minute.
+    expect(await Future.wait(counts), [1, 1]);
   });
 
   test('turnOn starts the widget and turnOff stops it', () async {
@@ -376,13 +377,15 @@ void main() {
     await ctl().turnOn();
     await emit(3);
     final sending = Completer<IngestResult>();
-    when(
-      () => ingest.send(any(), any(), any()),
-    ).thenAnswer((_) => sending.future);
+    when(() => ingest.send(any(), any(), any()))
+        .thenAnswer((_) => sending.future);
     final done = ctl().forget();
     await settle();
     expect(trail.clears, 1);
-    expect(await queue.count(), 3); // the last upload is still pending
+    expect(
+      await queue.count(),
+      2,
+    ); // the first fix went up at once; the last upload is still pending
     sending.complete(IngestResult.ok);
     await done;
   });
@@ -393,7 +396,7 @@ void main() {
       trail.throwOnFix = true;
       await ctl().turnOn();
       await emit(2);
-      expect(await queue.count(), 2);
+      expect(await queue.count(), 1); // the first went up at once
       await ctl().sendNow();
       expect(await queue.count(), 0); // and uploads still work
     },

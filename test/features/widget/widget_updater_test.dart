@@ -96,7 +96,7 @@ void main() {
             failRender = false;
             throw StateError('no image');
           }
-          return hold?.future ?? Future.value(Uint8List(0));
+          return await hold?.future ?? Uint8List(0);
         },
       );
       final u = WidgetUpdater(

@@ -28,7 +28,7 @@ class TileCache implements WidgetTiles {
     final file = _file(key);
     final exists = file.existsSync();
     if (exists && _now().difference(file.lastModifiedSync()) < _freshFor) {
-      return file.readAsBytes();
+      return await file.readAsBytes();
     }
     final failed = _failedAt[key];
     if (failed == null || _now().difference(failed) >= _retryAfter) {
@@ -40,7 +40,9 @@ class TileCache implements WidgetTiles {
       }
       _failedAt[key] = _now();
     }
-    return exists ? file.readAsBytes() : null; // an old map beats a blank square
+    return exists
+        ? await file.readAsBytes()
+        : null; // an old map beats a blank square
   }
 
   Future<void> _store(File file, Uint8List bytes) async {
@@ -55,9 +57,11 @@ class TileCache implements WidgetTiles {
   /// ponytail: oldest-first by file time, at most [maxFiles] (about 4 MB); enough for a daily area, not a long trip.
   void _prune() {
     final files =
-        _dir.listSync().whereType<File>().where(
-            (f) => f.path.endsWith('.png'),
-          ).toList()
+        _dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.png'))
+            .toList()
           ..sort(
             (a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()),
           );
@@ -75,14 +79,9 @@ Future<Uint8List?> fetchOsmTile(TileKey key) async {
     ..userAgent = 'flutter_map (app.findme.mobile)';
   try {
     final request = await client.getUrl(
-      Uri.https(
-        'tile.openstreetmap.org',
-        '/${key.z}/${key.x}/${key.y}.png',
-      ),
+      Uri.https('tile.openstreetmap.org', '/${key.z}/${key.x}/${key.y}.png'),
     );
-    final response = await request.close().timeout(
-      const Duration(seconds: 20),
-    );
+    final response = await request.close().timeout(const Duration(seconds: 20));
     if (response.statusCode != HttpStatus.ok) {
       await response.drain<void>();
       return null;

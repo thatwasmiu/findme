@@ -6,7 +6,6 @@ import 'package:findme/features/widget/data/render.dart';
 import 'package:findme/features/widget/data/tile_cache.dart';
 import 'package:findme/features/widget/data/widget_updater.dart';
 import 'package:findme/features/widget/domain/trail_widget.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 

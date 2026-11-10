@@ -22,8 +22,7 @@ Future<Uint8List> renderWidgetPng(
   final area = Size.square(widgetSizePx.toDouble());
   canvas.drawRect(Offset.zero & area, Paint()..color = Palette.page);
 
-  final tint = Paint()
-    ..colorFilter = const ColorFilter.matrix(pastelMatrix);
+  final tint = Paint()..colorFilter = const ColorFilter.matrix(pastelMatrix);
   for (final MapEntry(:key, :value) in tiles.entries) {
     final image = await _decode(value);
     if (image == null) continue; // a damaged tile stays page colour
@@ -64,7 +63,8 @@ Future<Uint8List> renderWidgetPng(
       width,
       _hachiwareHeight,
     );
-    final from = Offset.zero & Size(cat.width.toDouble(), cat.height.toDouble());
+    final from =
+        Offset.zero & Size(cat.width.toDouble(), cat.height.toDouble());
     canvas.drawImageRect(
       cat,
       from,
@@ -93,10 +93,7 @@ void _paintCredit(Canvas canvas, Size area) {
     ),
     textDirection: TextDirection.ltr,
   )..layout();
-  final at = Offset(
-    area.width - text.width - 6,
-    area.height - text.height - 4,
-  );
+  final at = Offset(area.width - text.width - 6, area.height - text.height - 4);
   canvas.drawRect(
     (at & text.size).inflate(2),
     Paint()..color = Colors.white.withValues(alpha: 0.6),
