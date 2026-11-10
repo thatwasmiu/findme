@@ -29,7 +29,15 @@ class WelcomeScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('📍', style: TextStyle(fontSize: 48)),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 96,
+                      height: 96,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   const Text(
                     'Find Me',
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
