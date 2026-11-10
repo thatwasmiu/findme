@@ -1,6 +1,6 @@
 # Home-screen widget: where I am now
 
-Date: 2026-11-09. Status: waiting for the owner's approval. Nothing is built yet.
+Date: 2026-11-09. Status: built on branch `feat/home-widget`; see `docs/HANDOFF.md`.
 
 ## Why
 

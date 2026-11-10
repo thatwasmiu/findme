@@ -32,6 +32,7 @@ class TrailWidgetProvider : HomeWidgetProvider() {
             )
             views.setViewVisibility(R.id.trail_widget_map, if (shown) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.trail_widget_age, if (shown) View.VISIBLE else View.GONE)
+            views.setViewVisibility(R.id.trail_widget_credit, if (shown) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.trail_widget_empty, if (shown) View.GONE else View.VISIBLE)
             if (shown) {
                 views.setImageViewBitmap(R.id.trail_widget_map, bitmap)

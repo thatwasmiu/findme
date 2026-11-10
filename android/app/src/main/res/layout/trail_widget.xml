@@ -29,6 +29,21 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
+    <!-- The map's licence requires this. A view, not in the picture: centerCrop cuts the picture's edges. -->
+    <TextView
+        android:id="@+id/trail_widget_credit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/trail_widget_chip"
+        android:paddingHorizontal="4dp"
+        android:text="© OpenStreetMap"
+        android:textColor="#3F2A3A"
+        android:textSize="8sp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/trail_widget_empty"
         android:layout_width="match_parent"

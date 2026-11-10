@@ -1,20 +1,29 @@
 package app.findme.findme
 
+import android.content.Context
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 
 class MainActivity : FlutterActivity() {
     /**
-     * Runs before this screen's Dart starts. If [BootReceiver] started a screenless engine after a reboot, stop it:
-     * two engines would both write the tracker's queue file. This screen's engine resumes tracking itself.
-     * ponytail: a fix the boot engine was writing at this moment can be lost; hand that engine to this activity
-     * (provideFlutterEngine) if gaps show up.
+     * One engine for the life of the process, not one per screen. An engine the activity made itself dies with it,
+     * so swiping the app away from Recents would stop Dart, and with it geolocator's service: no more recording, and
+     * no more home-screen widget updates. An engine handed over here survives, and the next screen reattaches to it.
+     *
+     * If [BootReceiver] started a screenless engine after a reboot, stop it first: two engines would both write the
+     * tracker's queue file. This screen's engine resumes tracking itself.
+     * ponytail: a fix the boot engine was writing at this moment can be lost; run `main` in that engine if gaps show up.
      */
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+    override fun provideFlutterEngine(context: Context): FlutterEngine {
         val cache = FlutterEngineCache.getInstance()
         cache.get(BootReceiver.ENGINE)?.destroy()
         cache.remove(BootReceiver.ENGINE)
-        super.configureFlutterEngine(flutterEngine)
+        return cache.get(ENGINE)
+            ?: FlutterEngine(context.applicationContext).also { cache.put(ENGINE, it) }
+    }
+
+    companion object {
+        const val ENGINE = "findme.app"
     }
 }

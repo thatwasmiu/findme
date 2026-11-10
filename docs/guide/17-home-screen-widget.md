@@ -86,11 +86,69 @@ separate **widget extension** target in the Xcode project. The app and the exten
 **App Group**. iOS also controls when widgets refresh much more strictly. Adding an extension target is awkward
 without a Mac, so iPhone is left for later. On iPhone the widget code simply does nothing for now.
 
-## Status: draft, finished after the code
+## 2. The real files
 
-Written before the code, so you can read the concepts first. These sections come once it's built:
+| File | What it does |
+|---|---|
+| `lib/features/widget/domain/tile_math.dart` | Web Mercator maths: which map tiles cover the picture, and where a point lands in it |
+| `lib/features/widget/domain/trail_widget.dart` | `TrailWidget`, what the tracker calls. `NoTrailWidget` does nothing (tests, iPhone) |
+| `lib/features/widget/data/file_day_log.dart` | Today's points in `day.jsonl`, the latest point in `last.json`. Needed because the tracker's queue deletes points once uploaded |
+| `lib/features/widget/data/tile_cache.dart` | Map tiles on the phone, and the polite fetching described above |
+| `lib/features/widget/data/render.dart` | Draws the 400x400 PNG with `dart:ui` |
+| `lib/features/widget/data/widget_updater.dart` | The once-a-minute rule, and clearing without a late draw bringing the location back |
+| `lib/features/widget/data/home_widget_host.dart` | Saves the PNG, hands its path and the time to Kotlin through the `home_widget` package |
+| `android/.../TrailWidgetProvider.kt` | Reads those two values, builds `RemoteViews`, works out the age label |
+| `android/app/src/main/res/layout/trail_widget.xml` | The layout: picture, age chip, credit, empty state |
+| `android/app/src/main/res/xml/trail_widget_info.xml` | Size (2x2) and the 30-minute refresh |
+| `android/app/src/main/res/xml/backup_rules.xml`, `data_extraction_rules.xml` | Keep `files/widget/` (today's locations) out of backups |
 
-- the real files and what each one does,
-- how to add the widget on the emulator,
-- how to test it with a fake route, offline, after a reboot, and across midnight,
-- what the first test of drawing in the background taught us.
+The widget's files live in `files/widget/`, which `getApplicationSupportDirectory()` points to on Android.
+
+## 3. What the emulator taught us
+
+The plan's biggest worry was whether Dart can draw a picture with no screen. It can: `dart:ui`'s `Picture.toImage`
+worked with the app swiped away and after a reboot, when no activity exists at all.
+
+The surprise was elsewhere. **Swiping the app out of Recents stopped the tracker itself**, widget or no widget. A
+`FlutterActivity` normally creates its own Flutter engine and destroys it when the activity goes. No engine means no
+Dart, and geolocator stops its foreground service when its engine detaches. The fix is in `MainActivity.kt`: it hands
+Flutter one engine kept in `FlutterEngineCache` for the life of the process, so the engine outlives the screen, and
+the next screen attaches to it. Think of it as moving a long-running job out of a page and into a server process.
+
+The second finding: a "2x2" widget isn't square on every launcher. On the emulator it is much taller than wide, and
+`centerCrop` cut off the edges of the picture. Anything that must stay visible, like the **© OpenStreetMap** credit,
+has to be a real view in the layout rather than pixels in the image.
+
+## 4. Run and test
+
+**Testing with a signed-in real account?** Moving the emulator records fake points and uploads them. Build with a
+copy of `config/dev.json` whose `API_URL` and `WEB_ORIGIN` point at `https://blocked.invalid`, and afterwards turn
+the tracker off and delete `app_flutter/tracker/queue.jsonl`, or the fake points go up with the next real upload.
+
+Add the widget: long-press the home screen → **Widgets** → **Find Me Dev** → drag it out. Then turn on 🧭 **Ghi hành
+trình** and send moves, a different spot each time, at least 10 m apart:
+
+```powershell
+adb emu geo fix 105.8522 21.0285
+adb emu geo fix 105.8526 21.0289
+```
+
+| Check | Expected |
+|---|---|
+| Add the widget before recording | Hachiware and "Chưa ghi hành trình" |
+| Send moves | Map, paws and Hachiware within about a minute |
+| Stand still for 3 minutes | Label counts up, picture unchanged |
+| Swipe the app out of Recents, send moves | Tracker notification stays, picture still changes |
+| `adb shell svc wifi disable`, `adb shell svc data disable`, then move | Trail updates over the map tiles already on the phone; where there are none, plain pastel |
+| `adb reboot` with the tracker on, don't open the app | Keeps updating |
+| Clock just before midnight (emulator only: `adb root`, `adb shell settings put global auto_time 0`, `adb shell date MMDDhhmmYYYY.ss`, and set `auto_time` back to 1) | Paws gone, Hachiware stays |
+| Sign out | Empty state straight away |
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Stays on "Chưa ghi hành trình" | No fix yet, or the first minute hasn't passed. Check the tracker sheet's "Điểm cuối". |
+| Label moves but the picture doesn't | You're standing still (the tracker ignores moves under 10 m), or the app's process is gone. |
+| Plain pastel behind the paws | Those map tiles aren't on the phone and the server can't be reached. A failed tile is retried after 5 minutes, at the next redraw. |
+| Age only changes every 30 minutes | The tracker is off, so only Android's own refresh is left. |

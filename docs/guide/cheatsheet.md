@@ -107,6 +107,17 @@ another account signs in, never by an expired session.
 - Polling: every 5 s only while a file is `processing`.
 - App icon: `assets/images/logo.png` and the launcher files all come from the web's `web/public/icon-512.png`.
 
+## Home-screen widget (chapter 17)
+
+| Command / item | Does |
+|---|---|
+| `adb emu geo fix <lon> <lat>` | One fake position on the emulator (lon first; move 10 m or more each time) |
+| `adb shell run-as app.findme.mobile.dev ls -l files/widget` | The widget's files: `widget.png`, `day.jsonl`, `last.json`, `tiles/` |
+| `flutter test test/features/widget` | Widget unit tests |
+
+- Redraw at most once a minute while the tracker runs; label alone about every 30 min when it doesn't.
+- Zoom 16, picture 400x400 px, tiles kept 7 days, failed tile retried after 5 min.
+
 ## Git and CI
 
 | Command | Does |

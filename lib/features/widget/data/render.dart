@@ -10,7 +10,8 @@ import 'package:flutter/material.dart';
 
 const _hachiwareHeight = 56.0;
 
-/// The widget's picture: pastel map, paw trail, Hachiware on the latest spot, and OpenStreetMap's credit.
+/// The widget's picture: pastel map, paw trail, Hachiware on the latest spot. OpenStreetMap's credit is a view in
+/// `trail_widget.xml`, not part of the picture: the launcher crops the picture when its cells are not square.
 Future<Uint8List> renderWidgetPng(
   WidgetScene scene,
   Map<TileKey, Uint8List> tiles,
@@ -74,32 +75,12 @@ Future<Uint8List> renderWidgetPng(
     cat.dispose();
   }
 
-  _paintCredit(canvas, area);
-
   final picture = recorder.endRecording();
   final image = await picture.toImage(widgetSizePx, widgetSizePx);
   picture.dispose();
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   return bytes!.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
-}
-
-/// The map's licence requires this to stay visible.
-void _paintCredit(Canvas canvas, Size area) {
-  final text = TextPainter(
-    text: const TextSpan(
-      text: '© OpenStreetMap',
-      style: TextStyle(fontSize: 10, color: Palette.ink),
-    ),
-    textDirection: TextDirection.ltr,
-  )..layout();
-  final at = Offset(area.width - text.width - 6, area.height - text.height - 4);
-  canvas.drawRect(
-    (at & text.size).inflate(2),
-    Paint()..color = Colors.white.withValues(alpha: 0.6),
-  );
-  text.paint(canvas, at);
-  text.dispose();
 }
 
 Future<ui.Image?> _decode(Uint8List bytes) async {

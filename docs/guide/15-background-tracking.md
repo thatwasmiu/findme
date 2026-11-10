@@ -144,6 +144,9 @@ starts a Flutter engine without any screen and runs the Dart function `trackerBo
 service shows its notification again. When you then open the app, `MainActivity` stops that screenless engine before the
 screen's own Dart starts, so only one copy ever writes the queue (the iPhone does the same in `AppDelegate`).
 
+**`MainActivity.kt`, the other job:** it gives Flutter one engine kept for the life of the process. Otherwise the engine
+dies with the screen when you swipe the app out of Recents, and recording stops with it (chapter 17, section 3).
+
 ## 3. Run
 
 ```powershell

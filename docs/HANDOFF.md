@@ -4,22 +4,15 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
-- **Home-screen widget** on branch `feat/home-widget` (2026-11-09, not merged): **written but never compiled or run**,
-  because the PC it was written on has no Flutter. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-09-home-widget*`;
-  guide chapter 16 is still a draft. The owner chose to move every test run to the end. To finish, on a PC with Flutter:
-  1. `flutter pub get` (`home_widget` was added to `pubspec.yaml` by hand, so `pubspec.lock` is behind), `dart format .`,
-     `flutter analyze`, `flutter test`. Expect some errors to fix. The widget tests have never been seen failing or passing.
-  2. `flutter build apk --flavor dev --debug --dart-define-from-file=config/example.json` (Kotlin and resources unbuilt).
-  3. The plan's Task 2 question, now answered by the real code: with the app swiped away, does the widget still get a new
-     picture? If not, drawing has to move to Kotlin (a design change; ask the owner).
-  4. The plan's Task 9: the device checks, finish chapter 16, cheatsheet lines, this note, the iOS CI job. Then a
-     whole-branch code review, which has not happened.
-
-  Choices made while writing, differing from the plan: `WidgetUpdater` takes a function that loads its parts, so nothing
-  touches the platform until first use. `WidgetScene` lives in `domain/trail_widget.dart`, `WidgetTiles` in
-  `domain/widget_tiles.dart`. `TrackerController` keeps the `TrailWidget` from `build()`, since `_stop` also runs from
-  onDispose, where `ref` is unusable. Extra tests: a fix written after a half-written line, a damaged tile, a failed
-  publish not stopping a clear.
+- **Home-screen widget** on branch `feat/home-widget` (2026-11-10, not merged): Android 2x2 widget showing the tracker's
+  latest spot and today's paws on a pastel map, with an age label. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-09-home-widget*`,
+  guide chapter 17. Also changes the tracker on Android: `MainActivity` now keeps one engine per process, because swiping
+  the app from Recents used to stop recording. **Seen on the emulator** (Android 15, API blocked so nothing was uploaded):
+  empty state, picture from moves, label counting while still, swipe from Recents, offline over cached and missing tiles,
+  reboot with no screen, reopening on the kept engine, midnight, the credit, tapping the widget. **Not yet seen:** clearing on sign-out and on
+  another account signing in (unit tested only; the emulator holds a real account), a real phone.
+  **Not run:** the iOS CI job, so `home_widget` on iOS is unproven; it needs the branch pushed. The Kotlin age label has
+  no automated test. `WidgetUpdater` takes a function that loads its parts, so nothing touches the platform until first use.
 
 - **Tracker (Find Me replaces Overland)** on branch `feat/tracker` (2026-11-04, not merged): 🧭 on the map →
   "Ghi hành trình". Background GPS (geolocator), crash-safe queue file, uploads to `/ingest` in Overland's format,
@@ -32,7 +25,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   Play drafts in `docs/guide/play-store-location.md`. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-04-*`.
   A fresh whole-branch review's critical/important findings are fixed (two engines on one queue after an Android
   reboot; forget() racing uploads/appends; account switch with no token; sign-out surviving a tracker error; iOS
-  background engine now runs `trackerBoot`). **Unit/widget tested only.** Not yet seen on a device: recording with the emulator route, the reboot restart,
+  background engine now runs `trackerBoot`). Recording with fake positions and the reboot restart were seen on the emulator (2026-11-10, widget work). Not yet seen on a device:
   anything on iPhone. The Swift has never compiled (iOS CI runs only on main / by hand).
 - **Photo pins** (2026-11-10, follows `travel-heatmap` bcbbfdc, guide chapter 16): 📷 on the map, photo bubbles, add /
   reopen / share / delete, video by HLS. Files live on Look Back behind `<WEB_ORIGIN>/lb`; the cookie is kept by hand, in
