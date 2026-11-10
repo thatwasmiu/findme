@@ -38,7 +38,7 @@
 ### Task 1: Draft the guide chapter
 
 **Files:**
-- Create: `docs/guide/16-home-screen-widget.md`
+- Create: `docs/guide/17-home-screen-widget.md`
 - Modify: `docs/guide/README.md` (add row 16 after row 15)
 
 No code in this task. Match the tone of `docs/guide/15-background-tracking.md`: the reader is a web developer new to mobile.
@@ -51,7 +51,7 @@ Sections: what a home-screen widget is, and why Flutter cannot draw one (the lau
 
 - [ ] **Step 3: Add the README row**
 
-`| 16 | [Home-screen widget](16-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |`
+`| 17 | [Home-screen widget](17-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |`
 
 - [ ] **Step 4: Commit** `docs(guide): draft the home-screen widget chapter`
 
@@ -400,7 +400,7 @@ Expected: all tests pass, no analyzer issues, APK built.
 ### Task 9: Try it on the emulator and finish the docs
 
 **Files:**
-- Modify: `docs/guide/16-home-screen-widget.md`, `docs/guide/cheatsheet.md`, `docs/HANDOFF.md`
+- Modify: `docs/guide/17-home-screen-widget.md`, `docs/guide/cheatsheet.md`, `docs/HANDOFF.md`
 - Fix anything the device run finds, with a test where one is possible.
 
 - [ ] **Step 1: Run the device checks**

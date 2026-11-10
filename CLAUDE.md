@@ -27,7 +27,7 @@ flutter build apk --flavor dev --debug --dart-define-from-file=config/example.js
 
 ## Architecture
 
-Feature-first: `lib/features/<auth|trail|replay|shares|friends|tracker>/{data,domain,presentation}`, shared code in
+Feature-first: `lib/features/<auth|trail|replay|shares|friends|tracker|pins>/{data,domain,presentation}`, shared code in
 `lib/core/`. Pure logic is ported one-to-one from `travel-heatmap/web/src` (`trail.ts`, `dateRange.ts`, …) with its
 tests. Riverpod providers own state and polling; every account-scoped provider watches `sessionEpochProvider`, so
 signing out rebuilds them empty. Exception: the tracker (background GPS -> `/ingest`, replaces Overland) ignores

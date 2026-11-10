@@ -1,4 +1,4 @@
-# 16. Home-screen widget (where am I now)
+# 17. Home-screen widget (where am I now)
 
 A small square on the Android home screen shows the last spot the tracker recorded, today's paw trail and Hachiware,
 on the same pastel map as the app, without opening it.

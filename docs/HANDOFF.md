@@ -34,6 +34,12 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   reboot; forget() racing uploads/appends; account switch with no token; sign-out surviving a tracker error; iOS
   background engine now runs `trackerBoot`). **Unit/widget tested only.** Not yet seen on a device: recording with the emulator route, the reboot restart,
   anything on iPhone. The Swift has never compiled (iOS CI runs only on main / by hand).
+- **Photo pins** (2026-11-10, follows `travel-heatmap` bcbbfdc, guide chapter 16): 📷 on the map, photo bubbles, add /
+  reopen / share / delete, video by HLS. Files live on Look Back behind `<WEB_ORIGIN>/lb`; the cookie is kept by hand, in
+  memory. Seen working on the Android emulator against the live server (a real account, 2026-11-10): bubble, pin card,
+  full-size photo, the add sheet, Android back. **Not yet run on a device:** a real upload (camera, gallery), video
+  playback, sharing, deleting, anything on iPhone. The friend's page stays on the web. Hachiware logo: launcher icons (Android adaptive, iOS) and the welcome card; the 1024 px iOS icon is the web's
+  512 px file scaled up.
 - All features of the design are implemented for normal users: sign-in, map with paw prints / stops / Hachiware,
   date filter + live refresh with backoff, day diary / top places, replay alone and together, share links, friends.
   No admin screen (by design).
@@ -52,11 +58,11 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   a real account has not been tried yet.
 - **🐞 debug console** in dev builds (`lib/core/debug/`, guide chapter 02): HTTP calls (masked paths, status, ms,
   error code; a tap shows the URL and both bodies, secrets as •••), Flutter / uncaught / map tile errors,
-  environment. A second 🐞 tap closes it. In memory only, last 200; compiled out of prod.
+  environment. A second 🐞 tap closes it. In memory only, last 200; compiled out of prod. CI's `.ipa` has it too (`DEBUG_CONSOLE=true`, iOS has no flavors).
 - **Map tiles on the owner's office network:** TLS to every `openstreetmap.org` host is reset (curl on the PC too;
   other tile hosts and the API work), so the map stays mostly grey there. Not an app bug; works elsewhere. Open
   question: a dev-only tile server override if the office network is where testing happens.
-- 228 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+- 298 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Runs on an Android emulator** (2026-11-04): SDK, NDK and emulator from zip files on `D:\Android` (no Android
   Studio, no admin; guide chapter 01 Step 3b). User env vars `ANDROID_HOME`, `ANDROID_AVD_HOME`,

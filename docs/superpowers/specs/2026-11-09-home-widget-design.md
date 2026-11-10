@@ -93,7 +93,7 @@ points. That is more native code and more work, so it comes back to the owner be
 
 ## Guide chapter (for learning)
 
-The owner is new to mobile and wants a chapter for this feature: `docs/guide/16-home-screen-widget.md`, plus
+The owner is new to mobile and wants a chapter for this feature: `docs/guide/17-home-screen-widget.md`, plus
 cheatsheet lines and an entry in the guide's `README.md`.
 
 1. **Drafted before any widget code**, as the first step of the plan: what a home-screen widget is, why Flutter

@@ -74,7 +74,7 @@ jobs:
             echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
           fi
       # Release: an iOS debug build does not start without a debugger attached.
-      - run: flutter build ios --release --no-codesign --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - run: flutter build ios --release --no-codesign --dart-define=DEBUG_CONSOLE=true --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
       - name: Pack the unsigned .ipa (sign and install it with Sideloadly, guide chapter 14 A2)
         run: |
           mkdir -p Payload

@@ -21,6 +21,7 @@ A step-by-step guide to the Find Me Flutter app (Android + iOS), written for som
 | 13 | [Later: iOS without a Mac, signing, App Store and Play Store](13-later-ios-and-store-release.md) |
 | 14 | [Store accounts and app IDs](14-store-accounts-and-app-ids.md): free Apple ID, free 7-day iPhone install (Mac or Sideloadly), Apple Developer Program, APK, Google Play |
 | 15 | [Background tracking](15-background-tracking.md): Find Me replaces Overland; foreground service, significant location change, the upload queue, first Swift/Kotlin code, Google Play's location rules |
-| 16 | [Home-screen widget](16-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |
+| 16 | [Photo pins](16-photo-pins.md): pictures and videos on the map, kept by Look Back; a cookie by hand, tus uploads, HLS video |
+| 17 | [Home-screen widget](17-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |
 
 Every command and config key in one place: [cheatsheet.md](cheatsheet.md).

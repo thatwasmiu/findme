@@ -22,7 +22,15 @@ void main() {
     final auth = fakeAuth();
     when(auth.getAccessToken).thenAnswer((_) => gate.future);
     await t.pumpWidget(app(auth));
-    expect(find.text('📍'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName == 'assets/images/logo.png',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Find Me'), findsOneWidget);
     expect(find.text('Đang khởi động…'), findsOneWidget);
     gate.complete(null);

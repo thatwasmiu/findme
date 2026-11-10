@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// The real widget on Android. iPhone needs a WidgetKit extension first (guide chapter 16), so nothing happens there.
+/// The real widget on Android. iPhone needs a WidgetKit extension first (guide chapter 17), so nothing happens there.
 TrailWidget liveTrailWidget(TargetPlatform platform) =>
     platform == TargetPlatform.android
     ? WidgetUpdater(_load, DateTime.now)

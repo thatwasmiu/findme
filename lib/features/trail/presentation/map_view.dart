@@ -5,6 +5,8 @@ import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/time/format.dart';
+import 'package:findme/features/pins/domain/pin.dart';
+import 'package:findme/features/pins/presentation/pin_layer.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/domain/trail_math.dart';
 import 'package:findme/features/trail/presentation/hachiware.dart';
@@ -70,7 +72,16 @@ class MapView extends ConsumerStatefulWidget {
     this.flyTo,
     this.replay,
     this.showTiles = true,
+    this.pins = const [],
+    this.onPin,
+    this.center,
   });
+
+  final List<Pin> pins;
+  final void Function(Pin)? onPin;
+
+  /// Kept at the map's centre: a new pin goes there.
+  final ValueNotifier<Spot>? center;
 
   final List<TrackPoint> points;
   final List<Stop> stops;
@@ -224,6 +235,15 @@ class _MapViewState extends ConsumerState<MapView>
         // OSM has no tiles past 19: beyond it the map would be grey. Leaflet (the web) caps this by itself.
         maxZoom: 19,
         onTap: _onTap,
+        // A move can come from didUpdateWidget, in the middle of a build: tell the listeners right after it.
+        onPositionChanged: (camera, _) => scheduleMicrotask(() {
+          if (mounted) {
+            widget.center?.value = (
+              lat: camera.center.latitude,
+              lon: camera.center.longitude,
+            );
+          }
+        }),
         onMapReady: () {
           _ready = true;
           unawaited(_openWhereWeLeftOff());
@@ -246,9 +266,14 @@ class _MapViewState extends ConsumerState<MapView>
         PawLayer(points: widget.points),
         for (final f in widget.friends)
           PawLayer(points: f.points, color: f.color),
+        MarkerLayer(markers: [for (final s in widget.stops) _stopMarker(s)]),
+        PinBubbles(
+          pins: widget.pins,
+          onOpen: (p) => widget.onPin?.call(p),
+          onZoomIn: _fly,
+        ),
         MarkerLayer(
           markers: [
-            for (final s in widget.stops) _stopMarker(s),
             for (final f in widget.friends) ?_friendMarker(f, replay?.clock),
             if (replay == null && last != null)
               _hachiware(LatLng(last.lat, last.lon), 'Lần cuối thấy ở đây'),

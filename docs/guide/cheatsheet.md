@@ -99,6 +99,14 @@ another account signs in, never by an expired session.
 | `D:\Android\Sdk\platform-tools\adb.exe reboot` | Reboots the emulator or phone (tracking should come back on its own) |
 | Emulator ⋯ → Location → Routes → Play route | Fakes a walk |
 
+## Photo pins (chapter 16)
+
+- Look Back: `<WEB_ORIGIN>/lb/api/findme/…`, media `<WEB_ORIGIN>/lb/media/<key>`, link `<WEB_ORIGIN>/lb/m/<code>`.
+- Login: `POST /media-ticket` → `POST /lb/api/findme/session` → cookie `fm_user`, memory only, renewed after 6 h.
+- Uploads: tus 1.0.0, 8 MiB chunks. Limits on Look Back: 500 MiB a file, 5 GiB an account.
+- Polling: every 5 s only while a file is `processing`.
+- App icon: `assets/images/logo.png` and the launcher files all come from the web's `web/public/icon-512.png`.
+
 ## Git and CI
 
 | Command | Does |
