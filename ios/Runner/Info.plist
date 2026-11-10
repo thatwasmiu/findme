@@ -66,6 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Find Me dùng camera để chụp ảnh và quay video ghim lên bản đồ.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Find Me dùng micro để ghi tiếng khi bạn quay video ghim lên bản đồ.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Find Me mở thư viện ảnh để bạn chọn ảnh và video ghim lên bản đồ.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Find Me ghi lại vị trí của bạn để vẽ hành trình trên bản đồ.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

@@ -4,8 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// The 🐞 debug console exists only in dev builds (`--flavor dev`); prod builds compile it out.
-const debugConsoleEnabled = appFlavor == 'dev';
+/// The 🐞 debug console exists only in dev builds (`--flavor dev`); prod builds compile it out. iOS has no flavors
+/// yet, so CI's test .ipa asks for it with `--dart-define=DEBUG_CONSOLE=true`.
+const bool debugConsoleEnabled =
+    appFlavor == 'dev' || bool.fromEnvironment('DEBUG_CONSOLE');
 
 sealed class DebugEntry {
   DebugEntry() : at = DateTime.now();
@@ -118,6 +120,13 @@ const _routeWords = {
   'shares',
   'live',
   'today',
+  'media-ticket',
+  'lb',
+  'findme',
+  'session',
+  'pins',
+  'share',
+  'uploads',
 };
 
 /// A URL as the console may show it: route words kept, ids masked, query values dropped (they hold times and
@@ -132,14 +141,15 @@ String maskUrl(Uri u) {
 }
 
 final _secret = RegExp(
-  'password|token|secret|coordinates',
+  r'password|token|secret|coordinates|ticket|sharecode|^lat$|^lon$',
   caseSensitive: false,
 );
 
-/// A body as the console shows it: JSON indented, any value under a key with password / token / secret /
+/// A body as the console shows it: JSON indented, any value under a key with password / token / secret / ticket / shareCode / lat / lon /
 /// coordinates in its name replaced by •••, cut at [maxChars]. Null or empty: null.
 String? showBody(Object? data, {int maxChars = 20000}) {
   if (data == null || data == '') return null;
+  if (data is Uint8List) return '(${data.length} bytes)'; // an upload chunk
   Object? v = data;
   if (v is String) {
     try {

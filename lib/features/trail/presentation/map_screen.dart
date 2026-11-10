@@ -1,5 +1,12 @@
+import 'dart:async';
+
+import 'package:findme/core/theme/palette.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
 import 'package:findme/features/friends/presentation/friends_sheet.dart';
+import 'package:findme/features/pins/domain/pin.dart';
+import 'package:findme/features/pins/presentation/add_pin_sheet.dart';
+import 'package:findme/features/pins/presentation/pin_sheet.dart';
+import 'package:findme/features/pins/presentation/pins_controller.dart';
 import 'package:findme/features/replay/presentation/replay_bar.dart';
 import 'package:findme/features/replay/presentation/replay_controller.dart';
 import 'package:findme/features/shares/presentation/shares_sheet.dart';
@@ -32,10 +39,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       onHide: () {
         ref.read(trailControllerProvider.notifier).paused();
         ref.read(friendsControllerProvider.notifier).paused();
+        ref.read(pinsControllerProvider.notifier).paused();
       },
       onShow: () {
         ref.read(trailControllerProvider.notifier).resumed();
         ref.read(friendsControllerProvider.notifier).resumed();
+        ref.read(pinsControllerProvider.notifier).resumed();
       },
     );
   }
@@ -43,8 +52,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _life.dispose();
+    _center.dispose();
     super.dispose();
   }
+
+  final _center = ValueNotifier<Spot>((
+    lat: home.latitude,
+    lon: home.longitude,
+  ));
+  bool _adding = false;
+  String? _openPinId;
+
+  void _closeSheets() => setState(() {
+    _adding = false;
+    _openPinId = null;
+  });
 
   void _replay() {
     final replay = ref.read(replayControllerProvider.notifier);
@@ -65,49 +87,139 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final incoming = ref.watch(
       friendsControllerProvider.select((s) => s.relations.incoming.length),
     );
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: MapView(
-              points: trail.track.points,
-              stops: trail.track.stops,
-              last: trail.track.last,
-              friends: friends,
-              flyTo: ref.watch(flyToProvider),
-              showTiles: widget.showTiles,
-              replay: replay == null
-                  ? null
-                  : ReplayView(
-                      track: replay.track,
-                      pos: replay.pos,
-                      clock: replay.clock ? replay.clockAt : null,
-                      own: replay.own,
-                    ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: replay != null
-                  ? const ReplayBar()
-                  : TopBar(
-                      incomingCount: incoming,
-                      onShare: () => SharesSheet.open(context),
-                      onFriends: () => FriendsSheet.open(context),
-                      onTrack: () => TrackerSheet.open(context),
-                    ),
-            ),
-          ),
-          TrailSheet(
-            track: trail.track,
-            oneDay: isOneDay(trail.range),
-            replaying: replay != null,
-            onReplay: _replay,
-            onSelect: (lon, lat) =>
+    final pins = ref.watch(pinsControllerProvider);
+    final openPin = pins.where((p) => p.id == _openPinId).firstOrNull;
+    final last = trail.track.last;
+    final sheet = _adding
+        ? AddPinSheet(
+            stops: trail.track.stops,
+            last: last == null ? null : (lat: last.lat, lon: last.lon),
+            center: _center,
+            onStart: (lat, lon) =>
                 ref.read(flyToProvider.notifier).go(lon, lat),
-          ),
-        ],
+            onAdded: () {
+              setState(() => _adding = false);
+              unawaited(ref.read(pinsControllerProvider.notifier).refresh());
+            },
+            onClose: _closeSheets,
+          )
+        : openPin == null
+        ? null
+        : PinSheet(
+            key: ValueKey(openPin.id),
+            pin: openPin,
+            onClose: _closeSheets,
+          );
+    return PopScope(
+      canPop: sheet == null, // Android back closes the sheet, not the app
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closeSheets();
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: MapView(
+                pins: pins,
+                onPin: (p) => setState(() {
+                  _adding = false;
+                  _openPinId = p.id;
+                }),
+                center: _center,
+                points: trail.track.points,
+                stops: trail.track.stops,
+                last: trail.track.last,
+                friends: friends,
+                flyTo: ref.watch(flyToProvider),
+                showTiles: widget.showTiles,
+                replay: replay == null
+                    ? null
+                    : ReplayView(
+                        track: replay.track,
+                        pos: replay.pos,
+                        clock: replay.clock ? replay.clockAt : null,
+                        own: replay.own,
+                      ),
+              ),
+            ),
+            if (_adding)
+              const IgnorePointer(
+                child: Align(
+                  // The tip of the pin on the map's centre.
+                  child: FractionalTranslation(
+                    translation: Offset(0, -0.5),
+                    child: Text('📍', style: TextStyle(fontSize: 34)),
+                  ),
+                ),
+              ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: replay != null
+                    ? const ReplayBar()
+                    : TopBar(
+                        incomingCount: incoming,
+                        onShare: () => SharesSheet.open(context),
+                        onFriends: () => FriendsSheet.open(context),
+                        onTrack: () => TrackerSheet.open(context),
+                      ),
+              ),
+            ),
+            if (replay == null && sheet == null)
+              Align(
+                alignment: const FractionalOffset(1, 0.76),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Semantics(
+                    button: true,
+                    label: 'Thêm ảnh hoặc video vào nơi này',
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _openPinId = null;
+                        _adding = true;
+                      }),
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Palette.pink,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x80EC4899),
+                              blurRadius: 14,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Text('📷', style: TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            TrailSheet(
+              track: trail.track,
+              oneDay: isOneDay(trail.range),
+              replaying: replay != null,
+              onReplay: _replay,
+              onSelect: (lon, lat) =>
+                  ref.read(flyToProvider.notifier).go(lon, lat),
+            ),
+            if (sheet != null)
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: 14),
+                  child: sheet,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -84,7 +84,7 @@ The app never logs tokens, coordinates, share ids, friend codes, emails or passw
 
 ### The 🐞 debug console (dev builds only)
 
-Every `--flavor dev` build shows a small 🐞 button over the app (drag it out of the way). A tap opens a sheet; a
+Every `--flavor dev` build, and CI's iPhone `.ipa` (`--dart-define=DEBUG_CONSOLE=true`), shows a small 🐞 button over the app (drag it out of the way). A tap opens a sheet; a
 second tap closes it. The sheet has:
 
 | Tab | Shows |
@@ -95,7 +95,7 @@ second tap closes it. The sheet has:
 
 🗑 clears both lists. The console keeps the last 200 entries in memory only: nothing is sent anywhere or kept after
 the app closes, and prod builds compile it out (`debugConsoleEnabled` in `lib/core/debug/debug_log.dart` is
-`appFlavor == 'dev'`). The one-line rows mask ids in paths (`/api/friends/•`) and drop query values; the opened call
+`appFlavor == 'dev'` or that define). The one-line rows mask ids in paths (`/api/friends/•`) and drop query values; the opened call
 shows the real URL and bodies (your trail's coordinates included), with any value under a key containing
 `password`, `token` or `secret` shown as `•••`. The `Authorization` header is never read. Bodies longer than 20,000
 characters are cut.
