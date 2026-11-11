@@ -23,5 +23,6 @@ A step-by-step guide to the Find Me Flutter app (Android + iOS), written for som
 | 15 | [Background tracking](15-background-tracking.md): Find Me replaces Overland; foreground service, significant location change, the upload queue, first Swift/Kotlin code, Google Play's location rules |
 | 16 | [Photo pins](16-photo-pins.md): pictures and videos on the map, kept by Look Back; a cookie by hand, tus uploads, HLS video |
 | 17 | [Home-screen widget](17-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |
+| 18 | [The bag and your avatar](18-bag-and-avatar.md): 8 pockets friends open, pictures with Look Back receipts, cropping in `dart:ui` |
 
 Every command and config key in one place: [cheatsheet.md](cheatsheet.md).

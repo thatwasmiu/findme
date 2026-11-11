@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Me {
 
- String get name; String get friendCode;
+ String get name; String get friendCode;/// Look Back media id of your avatar, when you set one.
+ String? get avatar;
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $MeCopyWith<Me> get copyWith => _$MeCopyWithImpl<Me>(this as Me, _$identity);
 @override
 bool operator ==(Object other) {
   final _this = this as Me;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Me&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.friendCode, _this.friendCode) || other.friendCode == _this.friendCode));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Me&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.friendCode, _this.friendCode) || other.friendCode == _this.friendCode)&&(identical(other.avatar, _this.avatar) || other.avatar == _this.avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Me;
-  return Object.hash(runtimeType,_this.name,_this.friendCode);
+  return Object.hash(runtimeType,_this.name,_this.friendCode,_this.avatar);
 }
 
 @override
 String toString() {
   final _this = this as Me;
-  return 'Me(name: ${_this.name}, friendCode: ${_this.friendCode})';
+  return 'Me(name: ${_this.name}, friendCode: ${_this.friendCode}, avatar: ${_this.avatar})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $MeCopyWith<$Res>  {
   factory $MeCopyWith(Me value, $Res Function(Me) _then) = _$MeCopyWithImpl;
 @useResult
 $Res call({
- String name, String friendCode
+ String name, String friendCode, String? avatar
 });
 
 
@@ -71,11 +72,12 @@ class _$MeCopyWithImpl<$Res>
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? friendCode = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,}) {
   return _then(Me(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,friendCode: null == friendCode ? _self.friendCode : friendCode // ignore: cast_nullable_to_non_nullable
-as String,
+as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -160,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String friendCode)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Me() when $default != null:
-return $default(_that.name,_that.friendCode);case _:
+return $default(_that.name,_that.friendCode,_that.avatar);case _:
   return orElse();
 
 }
@@ -181,10 +183,10 @@ return $default(_that.name,_that.friendCode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String friendCode)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar)  $default,) {final _that = this;
 switch (_that) {
 case _Me():
-return $default(_that.name,_that.friendCode);case _:
+return $default(_that.name,_that.friendCode,_that.avatar);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +203,10 @@ return $default(_that.name,_that.friendCode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String friendCode)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String friendCode,  String? avatar)?  $default,) {final _that = this;
 switch (_that) {
 case _Me() when $default != null:
-return $default(_that.name,_that.friendCode);case _:
+return $default(_that.name,_that.friendCode,_that.avatar);case _:
   return null;
 
 }
@@ -216,11 +218,13 @@ return $default(_that.name,_that.friendCode);case _:
 @JsonSerializable()
 
 class _Me implements Me {
-  const _Me({required this.name, required this.friendCode});
+  const _Me({required this.name, required this.friendCode, this.avatar});
   factory _Me.fromJson(Map<String, dynamic> json) => _$MeFromJson(json);
 
 @override final  String name;
 @override final  String friendCode;
+/// Look Back media id of your avatar, when you set one.
+@override final  String? avatar;
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
@@ -235,18 +239,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Me&&(identical(other.name, name) || other.name == name)&&(identical(other.friendCode, friendCode) || other.friendCode == friendCode));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Me&&(identical(other.name, name) || other.name == name)&&(identical(other.friendCode, friendCode) || other.friendCode == friendCode)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,name,friendCode);
+    return Object.hash(runtimeType,name,friendCode,avatar);
 }
 
 @override
 String toString() {
-    return 'Me(name: $name, friendCode: $friendCode)';
+    return 'Me(name: $name, friendCode: $friendCode, avatar: $avatar)';
 }
 
 
@@ -257,7 +261,7 @@ abstract mixin class _$MeCopyWith<$Res> implements $MeCopyWith<$Res> {
   factory _$MeCopyWith(_Me value, $Res Function(_Me) _then) = __$MeCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String friendCode
+ String name, String friendCode, String? avatar
 });
 
 
@@ -274,11 +278,12 @@ class __$MeCopyWithImpl<$Res>
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? friendCode = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,}) {
   return _then(_Me(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,friendCode: null == friendCode ? _self.friendCode : friendCode // ignore: cast_nullable_to_non_nullable
-as String,
+as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -289,7 +294,7 @@ as String,
 /// @nodoc
 mixin _$Friend {
 
- String get id; String get name; String get since; String? get lastTs;
+ String get id; String get name; String get since; String? get lastTs; String? get avatar;
 /// Create a copy of Friend
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -303,20 +308,20 @@ $FriendCopyWith<Friend> get copyWith => _$FriendCopyWithImpl<Friend>(this as Fri
 @override
 bool operator ==(Object other) {
   final _this = this as Friend;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Friend&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.since, _this.since) || other.since == _this.since)&&(identical(other.lastTs, _this.lastTs) || other.lastTs == _this.lastTs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Friend&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.since, _this.since) || other.since == _this.since)&&(identical(other.lastTs, _this.lastTs) || other.lastTs == _this.lastTs)&&(identical(other.avatar, _this.avatar) || other.avatar == _this.avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Friend;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.since,_this.lastTs);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.since,_this.lastTs,_this.avatar);
 }
 
 @override
 String toString() {
   final _this = this as Friend;
-  return 'Friend(id: ${_this.id}, name: ${_this.name}, since: ${_this.since}, lastTs: ${_this.lastTs})';
+  return 'Friend(id: ${_this.id}, name: ${_this.name}, since: ${_this.since}, lastTs: ${_this.lastTs}, avatar: ${_this.avatar})';
 }
 
 
@@ -327,7 +332,7 @@ abstract mixin class $FriendCopyWith<$Res>  {
   factory $FriendCopyWith(Friend value, $Res Function(Friend) _then) = _$FriendCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String since, String? lastTs
+ String id, String name, String since, String? lastTs, String? avatar
 });
 
 
@@ -344,12 +349,13 @@ class _$FriendCopyWithImpl<$Res>
 
 /// Create a copy of Friend
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? since = null,Object? lastTs = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? since = null,Object? lastTs = freezed,Object? avatar = freezed,}) {
   return _then(Friend(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,since: null == since ? _self.since : since // ignore: cast_nullable_to_non_nullable
 as String,lastTs: freezed == lastTs ? _self.lastTs : lastTs // ignore: cast_nullable_to_non_nullable
+as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -435,10 +441,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String since,  String? lastTs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String since,  String? lastTs,  String? avatar)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Friend() when $default != null:
-return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
+return $default(_that.id,_that.name,_that.since,_that.lastTs,_that.avatar);case _:
   return orElse();
 
 }
@@ -456,10 +462,10 @@ return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String since,  String? lastTs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String since,  String? lastTs,  String? avatar)  $default,) {final _that = this;
 switch (_that) {
 case _Friend():
-return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
+return $default(_that.id,_that.name,_that.since,_that.lastTs,_that.avatar);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -476,10 +482,10 @@ return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String since,  String? lastTs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String since,  String? lastTs,  String? avatar)?  $default,) {final _that = this;
 switch (_that) {
 case _Friend() when $default != null:
-return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
+return $default(_that.id,_that.name,_that.since,_that.lastTs,_that.avatar);case _:
   return null;
 
 }
@@ -491,13 +497,14 @@ return $default(_that.id,_that.name,_that.since,_that.lastTs);case _:
 @JsonSerializable()
 
 class _Friend implements Friend {
-  const _Friend({required this.id, required this.name, required this.since, this.lastTs});
+  const _Friend({required this.id, required this.name, required this.since, this.lastTs, this.avatar});
   factory _Friend.fromJson(Map<String, dynamic> json) => _$FriendFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override final  String since;
 @override final  String? lastTs;
+@override final  String? avatar;
 
 /// Create a copy of Friend
 /// with the given fields replaced by the non-null parameter values.
@@ -512,18 +519,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Friend&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.since, since) || other.since == since)&&(identical(other.lastTs, lastTs) || other.lastTs == lastTs));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Friend&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.since, since) || other.since == since)&&(identical(other.lastTs, lastTs) || other.lastTs == lastTs)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,since,lastTs);
+    return Object.hash(runtimeType,id,name,since,lastTs,avatar);
 }
 
 @override
 String toString() {
-    return 'Friend(id: $id, name: $name, since: $since, lastTs: $lastTs)';
+    return 'Friend(id: $id, name: $name, since: $since, lastTs: $lastTs, avatar: $avatar)';
 }
 
 
@@ -534,7 +541,7 @@ abstract mixin class _$FriendCopyWith<$Res> implements $FriendCopyWith<$Res> {
   factory _$FriendCopyWith(_Friend value, $Res Function(_Friend) _then) = __$FriendCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String since, String? lastTs
+ String id, String name, String since, String? lastTs, String? avatar
 });
 
 
@@ -551,12 +558,13 @@ class __$FriendCopyWithImpl<$Res>
 
 /// Create a copy of Friend
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? since = null,Object? lastTs = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? since = null,Object? lastTs = freezed,Object? avatar = freezed,}) {
   return _then(_Friend(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,since: null == since ? _self.since : since // ignore: cast_nullable_to_non_nullable
 as String,lastTs: freezed == lastTs ? _self.lastTs : lastTs // ignore: cast_nullable_to_non_nullable
+as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

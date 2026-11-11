@@ -169,6 +169,12 @@ class FriendsController extends Notifier<FriendsState> {
     unawaited(refresh());
   }
 
+  /// Your avatar just changed (the cached `me` is otherwise never re-read).
+  void setAvatar(String? avatar) {
+    final m = state.me;
+    if (m != null) state = state.copyWith(me: m.copyWith(avatar: avatar));
+  }
+
   void paused() => _paused = true;
 
   void resumed() {
@@ -192,6 +198,7 @@ final friendsOnMapProvider = Provider<List<MapFriend>>((ref) {
           color: friendColor(id),
           points: s.today[id]?.points ?? const [],
           last: s.today[id]?.last,
+          avatar: f.avatar,
         ),
   ];
 });

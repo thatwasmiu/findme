@@ -5,7 +5,13 @@ part 'friend_models.g.dart';
 
 @freezed
 abstract class Me with _$Me {
-  const factory Me({required String name, required String friendCode}) = _Me;
+  const factory Me({
+    required String name,
+    required String friendCode,
+
+    /// Look Back media id of your avatar, when you set one.
+    String? avatar,
+  }) = _Me;
   factory Me.fromJson(Map<String, dynamic> json) => _$MeFromJson(json);
 }
 
@@ -16,6 +22,7 @@ abstract class Friend with _$Friend {
     required String name,
     required String since,
     String? lastTs,
+    String? avatar,
   }) = _Friend;
   factory Friend.fromJson(Map<String, dynamic> json) => _$FriendFromJson(json);
 }

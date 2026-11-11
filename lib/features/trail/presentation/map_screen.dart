@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:findme/core/theme/palette.dart';
+import 'package:findme/features/bag/presentation/bag_sheet.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
 import 'package:findme/features/friends/presentation/friends_sheet.dart';
 import 'package:findme/features/pins/domain/pin.dart';
@@ -126,6 +127,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   _openPinId = p.id;
                 }),
                 center: _center,
+                myAvatar: ref.watch(
+                  friendsControllerProvider.select((s) => s.me?.avatar),
+                ),
+                onFriend: (f) => openFriendBag(
+                  context,
+                  ref,
+                  id: f.id,
+                  name: f.name,
+                  avatar: f.avatar,
+                ),
                 points: trail.track.points,
                 stops: trail.track.stops,
                 last: trail.track.last,

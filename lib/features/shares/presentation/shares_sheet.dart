@@ -64,6 +64,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
   DateTime? _custom;
   bool _route = false; // opt-in: off for every new link
   late String _routeFrom = _today();
+  bool _bag = false; // opt-in: the bag (phone, QR…) for anyone holding the link
   String _extending = ''; // id of the link whose "Gia hạn" choices are open
   String _err = '';
   String _note = '';
@@ -134,6 +135,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
         expiresAt: isoMs(expires),
         route: _route,
         routeFrom: _routeFrom,
+        bag: _bag,
       ),
       (e) => _why(e, 'Chưa tạo được link'),
     );
@@ -144,6 +146,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
     setState(() {
       _route = false;
       _routeFrom = _today();
+      _bag = false;
       _shares = [s, ..._shares];
     });
     _say(note: 'Đã tạo link ✨ — bấm Sao chép để gửi.');
@@ -167,6 +170,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
     String? expiresAt,
     bool? route,
     String? routeFrom,
+    bool? bag,
   }) async {
     _say();
     final n = await _run(
@@ -175,6 +179,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
         expiresAt: expiresAt,
         route: route,
         routeFrom: routeFrom,
+        bag: bag,
       ),
       (e) => _why(e, 'Chưa sửa được'),
     );
@@ -185,6 +190,28 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
     });
     _say(note: done);
   }
+
+  /// Turning the bag on for a link: anyone holding it sees everything in the bag, and links get passed on.
+  Future<bool> _bagOk() async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          content: const Text(
+            'Ai có link này đều thấy số điện thoại, mã QR và mọi thứ trong túi của bạn, và link có thể bị chuyển tiếp cho người khác. Bật nhé?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Thôi'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Bật'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
   Future<void> _revoke(Share s) async {
     final expired = s.expiredAt(_now());
@@ -336,6 +363,16 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
               const Text(' đến hôm nay'),
             ],
           ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _bag,
+          onChanged: (v) async {
+            final on = v == true && await _bagOk();
+            if (mounted) setState(() => _bag = on);
+          },
+          title: const Text('Cho mở túi đồ 🎒'),
+        ),
         const SizedBox(height: 8),
         Pill(
           label: 'Tạo link 💖',
@@ -367,7 +404,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${s.label}${s.route ? ' · 🐾 ${s.routeFrom != null ? 'từ ${dm(s.routeFrom!)}' : 'hôm nay'}' : ''}',
+                '${s.label}${s.route ? ' · 🐾 ${s.routeFrom != null ? 'từ ${dm(s.routeFrom!)}' : 'hôm nay'}' : ''}${s.bag ? ' · 🎒' : ''}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               Text(
@@ -405,6 +442,28 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
                           ? 'Đã tắt đường đi cho "${s.label}".'
                           : 'Đã bật đường đi cho "${s.label}" 🐾',
                     ),
+                  ),
+                  Pill(
+                    label: '🎒',
+                    style: PillStyle.lav,
+                    selected: s.bag,
+                    semanticLabel: 'Cho mở túi đồ',
+                    onTap: () async {
+                      if (s.bag) {
+                        return await _edit(
+                          s,
+                          bag: false,
+                          done: 'Đã đóng túi với "${s.label}".',
+                        );
+                      }
+                      if (await _bagOk()) {
+                        await _edit(
+                          s,
+                          bag: true,
+                          done: '"${s.label}" mở được túi đồ 🎒',
+                        );
+                      }
+                    },
                   ),
                   Pill(
                     label: expired ? 'Xoá' : 'Thu hồi',

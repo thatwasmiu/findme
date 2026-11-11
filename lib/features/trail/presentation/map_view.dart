@@ -5,6 +5,7 @@ import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/core/storage/prefs.dart';
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/time/format.dart';
+import 'package:findme/features/bag/presentation/bag_widgets.dart';
 import 'package:findme/features/pins/domain/pin.dart';
 import 'package:findme/features/pins/presentation/pin_layer.dart';
 import 'package:findme/features/trail/domain/models.dart';
@@ -28,6 +29,7 @@ class MapFriend {
     required this.color,
     required this.points,
     this.last,
+    this.avatar,
   });
 
   final String id;
@@ -35,6 +37,9 @@ class MapFriend {
   final Color color;
   final List<TrackPoint> points;
   final LastPoint? last;
+
+  /// Look Back media id of their avatar.
+  final String? avatar;
 }
 
 /// What the replay shows: print by print (`at(track, pos)`), or by the clock when [clock] is set (everyone where
@@ -75,7 +80,15 @@ class MapView extends ConsumerStatefulWidget {
     this.pins = const [],
     this.onPin,
     this.center,
+    this.myAvatar,
+    this.onFriend,
   });
+
+  /// Your avatar (Look Back media id): replaces Hachiware, live and in replay, once it has loaded.
+  final String? myAvatar;
+
+  /// Tapping a friend's marker (opens their bag) instead of showing their name.
+  final void Function(MapFriend)? onFriend;
 
   final List<Pin> pins;
   final void Function(Pin)? onPin;
@@ -321,48 +334,77 @@ class _MapViewState extends ConsumerState<MapView>
         ? atTime(f.points, clock)
         : (f.last == null ? null : (f.last!.lon, f.last!.lat));
     if (here == null) return null;
-    final initial = f.name.trim().isEmpty
-        ? '?'
-        : f.name.trim().characters.first.toUpperCase();
+    // With a picture the marker is the web's 44 px avatar; until it loads (or without one), the 34 px initial.
+    final size = f.avatar == null ? 34.0 : 44.0;
     return Marker(
       point: LatLng(here.$2, here.$1),
-      width: 34,
-      height: 34,
-      child: GestureDetector(
-        onTap: () => _say(f.name),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: f.color, width: 3),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initial,
-            style: TextStyle(
-              color: f.color,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
-            ),
+      width: size,
+      height: size,
+      child: Semantics(
+        button: true,
+        label: f.name,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () =>
+              widget.onFriend != null ? widget.onFriend!(f) : _say(f.name),
+          child: AvatarCircle(
+            media: f.avatar,
+            size: size,
+            border: f.color,
+            fallback: Initial(f.name, f.color),
           ),
         ),
       ),
     );
   }
 
-  /// Hachiware stands with her feet on the point (bottom centre).
-  Marker _hachiware(LatLng at, String label) => Marker(
-    point: at,
-    width: 56,
-    height: 66,
-    alignment: Alignment.topCenter,
-    child: Hachiware(label: label),
-  );
+  /// Hachiware stands with her feet on the point (bottom centre); your avatar, when you set one and it has
+  /// loaded, is a circle centred on it.
+  Marker _hachiware(LatLng at, String label) {
+    final hachiware = Hachiware(label: label);
+    final avatar = widget.myAvatar;
+    if (avatar == null) {
+      return Marker(
+        point: at,
+        width: 56,
+        height: 66,
+        alignment: Alignment.topCenter,
+        child: hachiware,
+      );
+    }
+    return Marker(
+      point: at,
+      width: 66,
+      height: 66,
+      child: Center(
+        child: Semantics(
+          label: label,
+          child: Container(
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Palette.pink, spreadRadius: 3),
+                BoxShadow(
+                  color: Color(0x73EC4899),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: AvatarCircle(
+              media: avatar,
+              size: 56,
+              border: Colors.white,
+              borderWidth: 4,
+              // until the picture loads: Hachiware's face
+              fallback: Image.asset(
+                'assets/images/hachiware.webp',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

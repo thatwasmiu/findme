@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:findme/core/network/api_client.dart';
+import 'package:findme/features/bag/data/bag_repository.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -307,6 +308,52 @@ void main() {
       expect(m.s.bodies.last, 'hello');
       expect(seen.last, 1);
     });
+
+    test(
+      'bag pictures: an album, the role, a receipt; too big says 20 MB',
+      () async {
+        final m = make({
+          ...ticketOk(),
+          'POST $_lb/card-album': [
+            () => reply(201, {'album': 'A'}),
+          ],
+          'POST $_upload': [created],
+          'PATCH $_uploadUrl': [moved(5)],
+          'GET $_lb/card-media/u1/receipt': [
+            () => reply(200, {'receipt': 'R'}),
+          ],
+        });
+        final bag = BagRepository(
+          ApiClient(testConfig, () async => 't'),
+          m.repo,
+        );
+        final r = await bag.uploadCard(file, 'bag', (_) {});
+        expect((r.media, r.receipt), ('u1', 'R'));
+        final meta =
+            (m.s.first('POST $_upload').headers['Upload-Metadata'] as String)
+                .split(',')
+                .map((kv) => utf8.decode(base64.decode(kv.split(' ')[1])))
+                .toList();
+        expect(meta.take(2), ['A', 'bag']);
+
+        final big = make({
+          ...ticketOk(),
+          'POST $_lb/card-album': [
+            () => reply(201, {'album': 'A'}),
+          ],
+          'POST $_upload': [
+            () => reply(413, {'error': 'too-big'}),
+          ],
+        });
+        await expectLater(
+          BagRepository(
+            ApiClient(testConfig, () async => 't'),
+            big.repo,
+          ).uploadCard(file, 'bag', (_) {}),
+          throwsA(const CardError('Ảnh này lớn quá, tối đa 20 MB nhé.')),
+        );
+      },
+    );
 
     test('a dropped chunk asks how far it got and sends the rest', () async {
       final m = make({

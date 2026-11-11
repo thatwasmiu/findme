@@ -45,6 +45,8 @@ class FakePicker implements PinPicker {
   Future<List<PinFile>> video() async => next;
   @override
   Future<List<PinFile>> gallery() async => next;
+  @override
+  Future<PinFile?> image({double? maxSide}) async => next.firstOrNull;
 }
 
 class FakeSignedIn extends AuthController {

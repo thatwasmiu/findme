@@ -118,6 +118,14 @@ another account signs in, never by an expired session.
 - Redraw at most once a minute while the tracker runs; label alone about every 30 min when it doesn't.
 - Zoom 16, picture 400x400 px, tiles kept 7 days, failed tile retried after 5 min.
 
+## Bag and avatar (chapter 18)
+
+- 👥 → "🎒 Túi của tôi & ảnh đại diện": edit your bag; the round picture on top changes your avatar.
+- A friend's bag: tap their marker, or "🎒 Túi" in 👥. A share link opens it only with 🎒 on.
+- 8 pockets; phone, Zalo, email, YouTube, Spotify, TikTok, Instagram once each; links, QR, photos, notes repeat.
+- Pictures: Look Back upload → receipt (10 min) → `PUT /me/bag`; old pictures deleted only after a save.
+- `flutter test test/features/bag` runs its tests.
+
 ## Git and CI
 
 | Command | Does |

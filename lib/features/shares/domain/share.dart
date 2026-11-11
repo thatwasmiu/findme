@@ -15,6 +15,9 @@ abstract class Share with _$Share {
 
     /// First local day of the shared route ("YYYY-MM-DD"); null = today only.
     String? routeFrom,
+
+    /// Anyone holding the link can open the bag.
+    @Default(false) bool bag,
   }) = _Share;
   const Share._();
 

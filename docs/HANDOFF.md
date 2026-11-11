@@ -4,6 +4,12 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Bag and avatar** (2026-11-11, follows `travel-heatmap` 233087b, guide chapter 18, not committed): 8-pocket bag
+  (edit yours from 👥, open a friend's from their marker or row), avatar cropped on the phone replaces Hachiware /
+  the initial, share links get the 🎒 option behind a warning. Pictures go to Look Back with receipts. New
+  dependencies: `flutter_svg` (pocket icons), `url_launcher` (tel:, mailto:, links). Unit + widget tested only:
+  **the Find Me side of the bag is not deployed yet** (`travel-heatmap` HANDOFF, 2026-11-11), so nothing has run
+  against a server, an emulator or a phone. Not ported: the web's public share page (links open in the browser).
 - **Home-screen widget** on branch `feat/home-widget` (2026-11-10, not merged): Android 2x2 widget showing the tracker's
   latest spot and today's paws on a pastel map, with an age label. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-09-home-widget*`,
   guide chapter 17. Also changes the tracker on Android: `MainActivity` now keeps one engine per process, because swiping
@@ -55,7 +61,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - **Map tiles on the owner's office network:** TLS to every `openstreetmap.org` host is reset (curl on the PC too;
   other tile hosts and the API work), so the map stays mostly grey there. Not an app bug; works elsewhere. Open
   question: a dev-only tile server override if the office network is where testing happens.
-- 298 unit + widget tests pass; `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
+- 366 unit + widget tests pass (2026-11-11); `flutter analyze` is clean. Flutter 3.47.9 is installed at `C:\src\flutter`
   (not on PATH yet).
 - **Runs on an Android emulator** (2026-11-04): SDK, NDK and emulator from zip files on `D:\Android` (no Android
   Studio, no admin; guide chapter 01 Step 3b). User env vars `ANDROID_HOME`, `ANDROID_AVD_HOME`,

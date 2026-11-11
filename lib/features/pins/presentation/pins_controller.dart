@@ -98,6 +98,16 @@ class PinPicker {
 
   Future<List<PinFile>> gallery() async =>
       _files(await ImagePicker().pickMultipleMedia());
+
+  /// One picture from the gallery (the bag and the avatar), at most [maxSide] pixels across.
+  Future<PinFile?> image({double? maxSide}) async {
+    final f = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: maxSide,
+      maxHeight: maxSide,
+    );
+    return f == null ? null : PinFile(f.path, f.name);
+  }
 }
 
 final pinPickerProvider = Provider<PinPicker>((_) => const PinPicker());

@@ -6,12 +6,16 @@ part of 'friend_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_Me _$MeFromJson(Map<String, dynamic> json) =>
-    _Me(name: json['name'] as String, friendCode: json['friendCode'] as String);
+_Me _$MeFromJson(Map<String, dynamic> json) => _Me(
+  name: json['name'] as String,
+  friendCode: json['friendCode'] as String,
+  avatar: json['avatar'] as String?,
+);
 
 Map<String, dynamic> _$MeToJson(_Me instance) => <String, dynamic>{
   'name': instance.name,
   'friendCode': instance.friendCode,
+  'avatar': instance.avatar,
 };
 
 _Friend _$FriendFromJson(Map<String, dynamic> json) => _Friend(
@@ -19,6 +23,7 @@ _Friend _$FriendFromJson(Map<String, dynamic> json) => _Friend(
   name: json['name'] as String,
   since: json['since'] as String,
   lastTs: json['lastTs'] as String?,
+  avatar: json['avatar'] as String?,
 );
 
 Map<String, dynamic> _$FriendToJson(_Friend instance) => <String, dynamic>{
@@ -26,6 +31,7 @@ Map<String, dynamic> _$FriendToJson(_Friend instance) => <String, dynamic>{
   'name': instance.name,
   'since': instance.since,
   'lastTs': instance.lastTs,
+  'avatar': instance.avatar,
 };
 
 _Pending _$PendingFromJson(Map<String, dynamic> json) => _Pending(

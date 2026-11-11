@@ -34,8 +34,11 @@ String uploadMessage(int? status, String? error) =>
         : 'Chưa tải lên được, thử lại sau chút nhé ✨');
 
 class PinUploadFailed implements Exception {
-  const PinUploadFailed(this.message);
+  const PinUploadFailed(this.message, [this.word]);
   final String message;
+
+  /// Look Back's machine word (`too-big`, `quota`…), if it gave one.
+  final String? word;
 }
 
 /// A file from the camera or the gallery. Look Back decides by [type]; one it does not take answers "type".
@@ -251,31 +254,44 @@ class PinsRepository {
 
   static PinUploadFailed _failure(Response<dynamic>? r) {
     final body = r?.data;
-    return PinUploadFailed(
-      uploadMessage(
-        r?.statusCode,
-        body is Map ? body['error'] as String? : null,
-      ),
-    );
+    final word = body is Map ? body['error'] as String? : null;
+    return PinUploadFailed(uploadMessage(r?.statusCode, word), word);
   }
 
   static int? _offsetOf(Response<dynamic>? r) =>
       int.tryParse(r?.headers.value('upload-offset') ?? '');
 
-  /// Resumable upload (tus 1.0.0) in 8 MiB chunks. A dropped connection asks the server how far it got and goes on.
-  // ponytail: runs only while the app is open and is not resumed after a restart, same as the web.
+  /// Any other Look Back call (the bag's pictures), with the cookie and one re-exchange. null = no answer at all.
+  Future<Response<dynamic>?> lookBack(String method, String path) async {
+    if (_sessionIsOld && !await ensureSession()) return null;
+    try {
+      return await _call(method, '$_lb$path');
+    } on DioException {
+      return null;
+    }
+  }
+
   Future<void> uploadFile(
     String pinId,
+    PinFile file,
+    void Function(double fraction) onProgress,
+  ) => uploadTus({'pinId': pinId}, file, onProgress);
+
+  /// Resumable upload (tus 1.0.0) in 8 MiB chunks. A dropped connection asks the server how far it got and goes on.
+  /// Returns the upload id, which is also the media id.
+  // ponytail: runs only while the app is open and is not resumed after a restart, same as the web.
+  Future<String> uploadTus(
+    Map<String, String> metadata,
     PinFile file,
     void Function(double fraction) onProgress,
   ) async {
     final raf = await File(file.path).open();
     try {
       final size = await raf.length();
-      final meta =
-          {'pinId': pinId, 'filename': file.name, 'filetype': file.type}.entries
-              .map((e) => '${e.key} ${base64.encode(utf8.encode(e.value))}')
-              .join(',');
+      final meta = {...metadata, 'filename': file.name, 'filetype': file.type}
+          .entries
+          .map((e) => '${e.key} ${base64.encode(utf8.encode(e.value))}')
+          .join(',');
       String? location;
       for (var i = 0; location == null; i++) {
         final r = await _try(
@@ -322,6 +338,7 @@ class PinsRepository {
         final head = await _try('HEAD', url);
         if (head?.statusCode == 200) offset = _offsetOf(head) ?? offset;
       }
+      return Uri.parse(url).pathSegments.last;
     } finally {
       await raf.close();
     }

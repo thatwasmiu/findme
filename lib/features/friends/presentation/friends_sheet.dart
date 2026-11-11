@@ -6,7 +6,11 @@ import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/bag/presentation/bag_editor.dart';
+import 'package:findme/features/bag/presentation/bag_sheet.dart';
+import 'package:findme/features/bag/presentation/bag_widgets.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
+import 'package:findme/features/trail/domain/colors.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +152,15 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
                 ),
               ],
             ),
+          if (s.me != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Pill(
+                label: '🎒 Túi của tôi & ảnh đại diện',
+                style: PillStyle.lav,
+                onTap: () => BagEditor.open(context),
+              ),
+            ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -226,6 +239,12 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
           Text('Bạn bè (${rel.friends.length})', style: bold),
           for (final f in rel.friends)
             _Row(
+              lead: AvatarCircle(
+                media: f.avatar,
+                size: 34,
+                border: friendColor(f.id),
+                fallback: Initial(f.name, friendColor(f.id)),
+              ),
               title: f.name,
               subtitle: f.lastTs != null
                   ? 'thấy ${ago(f.lastTs!, now: now())}'
@@ -240,6 +259,17 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
                     ),
                     const Text('Hiện trên bản đồ'),
                   ],
+                ),
+                Pill(
+                  label: '🎒 Túi',
+                  semanticLabel: 'Mở túi của ${f.name}',
+                  onTap: () => openFriendBag(
+                    context,
+                    ref,
+                    id: f.id,
+                    name: f.name,
+                    avatar: f.avatar,
+                  ),
                 ),
                 Pill(
                   label: 'Xoá bạn',
@@ -292,8 +322,10 @@ class _Row extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.actions,
+    this.lead,
   });
 
+  final Widget? lead;
   final String title;
   final String subtitle;
   final List<Widget> actions;
@@ -305,8 +337,23 @@ class _Row extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          Notice(subtitle),
+          Row(
+            children: [
+              if (lead != null) ...[lead!, const SizedBox(width: 8)],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Notice(subtitle),
+                  ],
+                ),
+              ),
+            ],
+          ),
           Wrap(
             spacing: 6,
             runSpacing: 6,
