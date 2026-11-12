@@ -53,19 +53,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _life.dispose();
-    _center.dispose();
     super.dispose();
   }
 
-  final _center = ValueNotifier<Spot>((
-    lat: home.latitude,
-    lon: home.longitude,
-  ));
   bool _adding = false;
+  Spot? _spot; // where a new pin will go, while adding
   String? _openPinId;
 
   void _closeSheets() => setState(() {
     _adding = false;
+    _spot = null;
     _openPinId = null;
   });
 
@@ -90,16 +87,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
     final pins = ref.watch(pinsControllerProvider);
     final openPin = pins.where((p) => p.id == _openPinId).firstOrNull;
-    final last = trail.track.last;
     final sheet = _adding
         ? AddPinSheet(
             stops: trail.track.stops,
-            last: last == null ? null : (lat: last.lat, lon: last.lon),
-            center: _center,
-            onStart: (lat, lon) =>
-                ref.read(flyToProvider.notifier).go(lon, lat),
+            onSpot: (lat, lon) {
+              setState(() => _spot = (lat: lat, lon: lon));
+              ref.read(flyToProvider.notifier).go(lon, lat);
+            },
             onAdded: () {
-              setState(() => _adding = false);
+              setState(() {
+                _adding = false;
+                _spot = null;
+              });
               unawaited(ref.read(pinsControllerProvider.notifier).refresh());
             },
             onClose: _closeSheets,
@@ -124,9 +123,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 pins: pins,
                 onPin: (p) => setState(() {
                   _adding = false;
+                  _spot = null;
                   _openPinId = p.id;
                 }),
-                center: _center,
+                pickAt: _adding ? _spot : null,
                 myAvatar: ref.watch(
                   friendsControllerProvider.select((s) => s.me?.avatar),
                 ),
@@ -153,16 +153,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       ),
               ),
             ),
-            if (_adding)
-              const IgnorePointer(
-                child: Align(
-                  // The tip of the pin on the map's centre.
-                  child: FractionalTranslation(
-                    translation: Offset(0, -0.5),
-                    child: Text('📍', style: TextStyle(fontSize: 34)),
-                  ),
-                ),
-              ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(10),
@@ -183,7 +173,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   padding: const EdgeInsets.only(right: 12),
                   child: Semantics(
                     button: true,
-                    label: 'Thêm ảnh hoặc video vào nơi này',
+                    label: 'Chụp ảnh ở đây',
                     child: GestureDetector(
                       onTap: () => setState(() {
                         _openPinId = null;

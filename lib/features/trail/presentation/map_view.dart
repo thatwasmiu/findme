@@ -79,7 +79,7 @@ class MapView extends ConsumerStatefulWidget {
     this.showTiles = true,
     this.pins = const [],
     this.onPin,
-    this.center,
+    this.pickAt,
     this.myAvatar,
     this.onFriend,
   });
@@ -93,8 +93,8 @@ class MapView extends ConsumerStatefulWidget {
   final List<Pin> pins;
   final void Function(Pin)? onPin;
 
-  /// Kept at the map's centre: a new pin goes there.
-  final ValueNotifier<Spot>? center;
+  /// Where a new pin will go (your fix): a 📍 there, not draggable.
+  final Spot? pickAt;
 
   final List<TrackPoint> points;
   final List<Stop> stops;
@@ -249,14 +249,6 @@ class _MapViewState extends ConsumerState<MapView>
         maxZoom: 19,
         onTap: _onTap,
         // A move can come from didUpdateWidget, in the middle of a build: tell the listeners right after it.
-        onPositionChanged: (camera, _) => scheduleMicrotask(() {
-          if (mounted) {
-            widget.center?.value = (
-              lat: camera.center.latitude,
-              lon: camera.center.longitude,
-            );
-          }
-        }),
         onMapReady: () {
           _ready = true;
           unawaited(_openWhereWeLeftOff());
@@ -292,6 +284,16 @@ class _MapViewState extends ConsumerState<MapView>
               _hachiware(LatLng(last.lat, last.lon), 'Lần cuối thấy ở đây'),
             if (replay != null && here != null)
               _hachiware(LatLng(here.$2, here.$1), 'Phát lại'),
+            if (widget.pickAt case final at?)
+              Marker(
+                point: LatLng(at.lat, at.lon),
+                width: 40,
+                height: 40,
+                alignment: Alignment.topCenter, // the tip on the spot
+                child: const IgnorePointer(
+                  child: Text('📍', style: TextStyle(fontSize: 34)),
+                ),
+              ),
           ],
         ),
         const RichAttributionWidget(

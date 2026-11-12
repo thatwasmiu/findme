@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart' show LocationPermission;
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/fakes.dart';
@@ -45,6 +46,39 @@ class FakePicker implements PinPicker {
   Future<List<PinFile>> gallery() async => next;
   @override
   Future<PinFile?> image({double? maxSide}) async => next.firstOrNull;
+}
+
+class FakeGeo implements GeoApi {
+  FakeGeo({
+    this.service = true,
+    this.permission = LocationPermission.whileInUse,
+    this.at,
+    this.error = false,
+  });
+
+  final bool service;
+  final LocationPermission permission;
+
+  /// null and no error: never answers.
+  final Spot? at;
+  final bool error;
+  int asked = 0;
+
+  @override
+  Future<bool> serviceOn() async => service;
+  @override
+  Future<LocationPermission> permissionNow() async => permission;
+  @override
+  Future<LocationPermission> askPermission() async {
+    asked++;
+    return permission;
+  }
+
+  @override
+  Future<Spot> position() {
+    if (error) return Future.error(Exception('gps'));
+    return at == null ? Completer<Spot>().future : Future.value(at);
+  }
 }
 
 class FakeSignedIn extends AuthController {
@@ -149,7 +183,6 @@ void main() {
   });
 
   group('AddPinSheet', () {
-    late ValueNotifier<Spot> center;
     late FakePicker picker;
     const stop = Stop(
       name: 'Hồ Gươm',
@@ -159,81 +192,124 @@ void main() {
       end: 'E',
       seconds: 60,
     );
+    const atStop = FixOk(21.03, 105.78);
+    const farAway = FixOk(10.77, 106.70);
 
-    setUp(() {
-      center = ValueNotifier((lat: 21.03, lon: 105.78));
-      picker = FakePicker();
-    });
+    setUp(() => picker = FakePicker());
 
     Widget sheet(
       MockPins pins, {
+      required List<Fix> fixes,
       VoidCallback? onAdded,
-      void Function(double, double)? onStart,
-      Spot? gps,
+      void Function(double, double)? onSpot,
     }) => host(
       AddPinSheet(
         stops: const [stop],
-        last: null,
-        center: center,
-        onStart: onStart ?? (_, _) {},
+        onSpot: onSpot ?? (_, _) {},
         onAdded: onAdded ?? () {},
         onClose: () {},
       ),
       pins,
       more: [
         pinPickerProvider.overrideWithValue(picker),
-        pinGpsProvider.overrideWithValue(() async => gps),
+        pinFixProvider.overrideWithValue(() async => fixes.removeAt(0)),
       ],
     );
 
-    testWidgets('starts at GPS, names itself from a stop near the map centre', (
-      t,
-    ) async {
-      (double, double)? started;
+    String nameText(WidgetTester t) =>
+        t.widget<TextField>(find.byKey(const Key('pinName'))).controller!.text;
+
+    testWidgets('denied: says why, no camera, no pin', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      await t.pumpWidget(sheet(pins, fixes: [const FixDenied()]));
+      await t.pump();
+      expect(find.textContaining('Cần quyền vị trí'), findsOneWidget);
+      expect(find.text('📷 Chụp ảnh'), findsNothing);
+      verifyNever(() => pins.addFiles(any(), any(), any()));
+    });
+
+    testWidgets('failed: retry asks again', (t) async {
+      tallView(t);
+      final spots = <(double, double)>[];
       await t.pumpWidget(
         sheet(
           quietPins(),
-          gps: (lat: 1, lon: 2),
-          onStart: (lat, lon) => started = (lat, lon),
+          fixes: [const FixFailed('silent'), atStop],
+          onSpot: (lat, lon) => spots.add((lat, lon)),
         ),
       );
       await t.pump();
-      expect(started, (1.0, 2.0));
-      final name = t.widget<TextField>(find.byKey(const Key('pinName')));
-      expect(name.controller!.text, 'Hồ Gươm');
-      center.value = (lat: 22, lon: 106);
-      expect(name.controller!.text, '');
+      expect(
+        find.text('Chưa lấy được vị trí, thử lại nhé (silent)'),
+        findsOneWidget,
+      );
+      expect(find.text('📷 Chụp ảnh'), findsNothing);
+      await t.tap(find.text('Thử lại'));
+      await t.pump();
+      expect(spots, [(21.03, 105.78)]);
+      expect(find.text('📷 Chụp ảnh'), findsOneWidget);
     });
 
-    testWidgets('a typed name stays when the map moves, and is what is sent', (
-      t,
-    ) async {
+    testWidgets('near a stop: named from it, no /place-name', (t) async {
+      tallView(t);
       final pins = quietPins();
+      await t.pumpWidget(sheet(pins, fixes: [atStop]));
+      await t.pump();
+      expect(nameText(t), 'Hồ Gươm');
+      verifyNever(() => pins.placeName(any(), any()));
+    });
+
+    testWidgets('no stop near: named from /place-name', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      when(() => pins.placeName(10.77, 106.70))
+          .thenAnswer((_) async => 'Chợ Bến Thành');
+      await t.pumpWidget(sheet(pins, fixes: [farAway]));
+      await t.pump();
+      await t.pump();
+      expect(nameText(t), 'Chợ Bến Thành');
+    });
+
+    testWidgets('a typed name beats a late place name and is sent', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      final late = Completer<String>();
+      when(() => pins.placeName(any(), any())).thenAnswer((_) => late.future);
       when(() => pins.addFiles(any(), any(), any()))
           .thenAnswer((_) async => (pin: pin(), failed: 0, message: ''));
-      var added = 0;
-      await t.pumpWidget(sheet(pins, onAdded: () => added++));
+      await t.pumpWidget(sheet(pins, fixes: [farAway]));
       await t.pump();
       await t.enterText(find.byKey(const Key('pinName')), 'Nhà');
-      center.value = (lat: 22, lon: 106);
+      late.complete('Chợ Bến Thành');
+      await t.pump();
+      expect(nameText(t), 'Nhà');
       await t.tap(find.text('📷 Chụp ảnh'));
       await t.pump();
-      expect(added, 1);
       final sent =
           verify(() => pins.addFiles(captureAny(), any(), any()))
                   .captured
                   .single
               as PinInput;
-      expect((sent.name, sent.lat, sent.lon), ('Nhà', 22.0, 106.0));
+      expect((sent.name, sent.lat, sent.lon), ('Nhà', 10.77, 106.70));
+    });
+
+    testWidgets('camera only: no video, no gallery', (t) async {
+      tallView(t);
+      await t.pumpWidget(sheet(quietPins(), fixes: [atStop]));
+      await t.pump();
+      expect(find.text('Chụp ảnh ở đây'), findsOneWidget);
+      expect(find.text('🎥 Quay video'), findsNothing);
+      expect(find.text('🖼️ Chọn từ máy'), findsNothing);
     });
 
     testWidgets('picking nothing uploads nothing', (t) async {
       tallView(t);
       final pins = quietPins();
       picker.next = const [];
-      await t.pumpWidget(sheet(pins));
+      await t.pumpWidget(sheet(pins, fixes: [atStop]));
       await t.pump();
-      await t.tap(find.text('🖼️ Chọn từ máy'));
+      await t.tap(find.text('📷 Chụp ảnh'));
       await t.pump();
       verifyNever(() => pins.addFiles(any(), any(), any()));
     });
@@ -244,13 +320,55 @@ void main() {
       when(() => pins.addFiles(any(), any(), any()))
           .thenAnswer((_) async => (pin: null, failed: 1, message: 'Đầy rồi'));
       var added = 0;
-      await t.pumpWidget(sheet(pins, onAdded: () => added++));
+      await t.pumpWidget(sheet(pins, fixes: [atStop], onAdded: () => added++));
       await t.pump();
-      await t.tap(find.text('🎥 Quay video'));
+      await t.tap(find.text('📷 Chụp ảnh'));
       await t.pump();
       await t.pump();
       expect(find.text('Đầy rồi'), findsOneWidget);
       expect(added, 0);
+    });
+  });
+
+  group('where you are', () {
+    test('geoMessage says why', () {
+      expect(
+        geoMessage(const FixDenied()),
+        'Cần quyền vị trí để ghim ảnh ở đây. Bật trong Cài đặt › Find Me › Vị trí nhé.',
+      );
+      expect(
+        geoMessage(const FixFailed('off')),
+        'Chưa lấy được vị trí, thử lại nhé (off)',
+      );
+      expect(geoMessage(const FixOk(1, 2)), isNull);
+    });
+
+    test('location service off is a failure, not a denial', () async {
+      final f = await currentFix(FakeGeo(service: false));
+      expect(f, isA<FixFailed>().having((f) => f.reason, 'reason', 'off'));
+    });
+
+    test('refused after asking is denied', () async {
+      final geo = FakeGeo(permission: LocationPermission.denied);
+      expect(await currentFix(geo), isA<FixDenied>());
+      expect(geo.asked, 1);
+      expect(
+        await currentFix(FakeGeo(permission: LocationPermission.deniedForever)),
+        isA<FixDenied>(),
+      );
+    });
+
+    test('a position is ok; an error or silence fails', () async {
+      final ok = await currentFix(FakeGeo(at: (lat: 1, lon: 2)));
+      expect(ok, isA<FixOk>().having((f) => (f.lat, f.lon), 'at', (1.0, 2.0)));
+      expect(
+        await currentFix(FakeGeo(error: true)),
+        isA<FixFailed>().having((f) => f.reason, 'reason', 'error'),
+      );
+      expect(
+        await currentFix(FakeGeo(), deadline: Duration.zero),
+        isA<FixFailed>().having((f) => f.reason, 'reason', 'silent'),
+      );
     });
   });
 

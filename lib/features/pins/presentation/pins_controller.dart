@@ -52,28 +52,56 @@ final pinsControllerProvider = NotifierProvider<PinsController, List<Pin>>(
   PinsController.new,
 );
 
-/// Where the phone is now; null when refused or unavailable (the sheet still works). Replaceable in tests.
-final pinGpsProvider = Provider<Future<Spot?> Function()>(
-  (_) => () async {
+/// The few geolocator calls a pin needs; replaceable in tests.
+class GeoApi {
+  const GeoApi();
+
+  Future<bool> serviceOn() => Geolocator.isLocationServiceEnabled();
+  Future<LocationPermission> permissionNow() => Geolocator.checkPermission();
+  Future<LocationPermission> askPermission() => Geolocator.requestPermission();
+  Future<Spot> position() async {
+    final g = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 15),
+      ),
+    );
+    return (lat: g.latitude, lon: g.longitude);
+  }
+}
+
+/// One fresh, precise reading. Always settles: the permission prompt or a silent GPS cannot hold the sheet for
+/// longer than [deadline].
+Future<Fix> currentFix(
+  GeoApi geo, {
+  Duration deadline = const Duration(seconds: 20),
+}) async {
+  Future<Fix> ask() async {
     try {
-      var p = await Geolocator.checkPermission();
-      if (p == LocationPermission.denied) {
-        p = await Geolocator.requestPermission();
-      }
+      if (!await geo.serviceOn()) return const FixFailed('off');
+      var p = await geo.permissionNow();
+      if (p == LocationPermission.denied) p = await geo.askPermission();
       if (p == LocationPermission.denied ||
           p == LocationPermission.deniedForever) {
-        return null;
+        return const FixDenied();
       }
-      final g = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-      return (lat: g.latitude, lon: g.longitude);
+      final at = await geo.position();
+      return FixOk(at.lat, at.lon);
     } on Object {
-      return null;
+      return const FixFailed('error');
     }
-  },
+  }
+
+  return await ask().timeout(
+    deadline,
+    onTimeout: () => const FixFailed('silent'),
+  );
+}
+
+/// Where the phone is now; replaceable in tests.
+final pinFixProvider = Provider<Future<Fix> Function()>(
+  (_) =>
+      () => currentFix(const GeoApi()),
 );
 
 /// Camera and gallery; replaceable in tests.

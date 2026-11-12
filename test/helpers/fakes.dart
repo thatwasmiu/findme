@@ -85,6 +85,7 @@ MockPins quietPins() {
     (i) => 'https://findme.test/lb/media/${i.positionalArguments.single}',
   );
   when(() => p.mediaHeaders).thenReturn(const {});
+  when(() => p.placeName(any(), any())).thenAnswer((_) async => '');
   return p;
 }
 

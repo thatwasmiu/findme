@@ -9,24 +9,20 @@ import 'package:findme/features/trail/domain/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// 📷: choose what, confirm where. The map stays draggable behind the sheet; the pin is its centre (AddPinSheet.tsx).
+/// 📷: a photo where you stand (AddPinSheet.tsx). Location first; refused or unknown means no pin.
 class AddPinSheet extends ConsumerStatefulWidget {
   const AddPinSheet({
     required this.stops,
-    required this.last,
-    required this.center,
-    required this.onStart,
+    required this.onSpot,
     required this.onAdded,
     required this.onClose,
     super.key,
   });
 
   final List<Stop> stops;
-  final Spot? last;
 
-  /// The map's centre: where the pin goes.
-  final ValueNotifier<Spot> center;
-  final void Function(double lat, double lon) onStart;
+  /// Where you are: the map goes there.
+  final void Function(double lat, double lon) onSpot;
   final VoidCallback onAdded;
   final VoidCallback onClose;
 
@@ -37,43 +33,55 @@ class AddPinSheet extends ConsumerStatefulWidget {
 class _AddPinSheetState extends ConsumerState<AddPinSheet> {
   final _name = TextEditingController();
   final _note = TextEditingController();
-  bool _typed = false; // once typed, the map no longer renames it
+  Fix? _fix; // null = still looking
+  bool _typed = false; // typing first wins over a late place name
+  bool _naming = false; // asking Find Me for a name
   double? _progress;
   String _err = '';
 
   @override
   void initState() {
     super.initState();
-    _nameFromMap();
-    widget.center.addListener(_nameFromMap);
-    unawaited(_goToStart());
+    unawaited(_locate());
   }
 
   @override
   void dispose() {
-    widget.center.removeListener(_nameFromMap);
     _name.dispose();
     _note.dispose();
     super.dispose();
   }
 
-  void _nameFromMap() {
-    if (_typed) return;
-    final c = widget.center.value;
-    _name.text = nameNear(widget.stops, c.lat, c.lon);
-  }
-
-  Future<void> _goToStart() async {
-    final geo = await ref.read(pinGpsProvider)();
+  Future<void> _locate() async {
+    setState(() => _fix = null);
+    final f = await ref.read(pinFixProvider)();
     if (!mounted) return;
-    final s = geo ?? widget.last ?? widget.center.value; // replaced in Task 2
-    widget.onStart(s.lat, s.lon);
+    setState(() => _fix = f);
+    if (f is! FixOk) return;
+    widget.onSpot(f.lat, f.lon);
+    final near = nameNear(widget.stops, f.lat, f.lon);
+    if (near.isNotEmpty) {
+      if (!_typed) _name.text = near;
+      return;
+    }
+    // No stop with a name close by (e.g. tracking off): ask Find Me.
+    setState(() => _naming = true);
+    final found = await ref
+        .read(pinsRepositoryProvider)
+        .placeName(f.lat, f.lon);
+    if (!mounted) return;
+    setState(() {
+      _naming = false;
+      if (!_typed) _name.text = found;
+    });
   }
 
-  Future<void> _pick(Future<List<PinFile>> Function() pick) async {
+  Future<void> _pick() async {
+    final here = _fix;
+    if (here is! FixOk) return;
     final List<PinFile> files;
     try {
-      files = await pick();
+      files = await ref.read(pinPickerProvider).photo();
     } on Object {
       if (mounted) setState(() => _err = uploadMessage(null, null));
       return;
@@ -83,12 +91,11 @@ class _AddPinSheetState extends ConsumerState<AddPinSheet> {
       _err = '';
       _progress = 0;
     });
-    final c = widget.center.value;
     try {
       final r = await ref.read(pinsRepositoryProvider).addFiles(
         (
-          lat: c.lat,
-          lon: c.lon,
+          lat: here.lat,
+          lon: here.lon,
           name: _name.text.trim().isEmpty ? null : _name.text.trim(),
           note: _note.text.trim().isEmpty ? null : _note.text.trim(),
         ),
@@ -118,7 +125,8 @@ class _AddPinSheetState extends ConsumerState<AddPinSheet> {
   @override
   Widget build(BuildContext context) {
     final busy = _progress != null;
-    final picker = ref.read(pinPickerProvider);
+    final fix = _fix;
+    final problem = fix == null ? null : geoMessage(fix);
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.42,
@@ -135,7 +143,7 @@ class _AddPinSheetState extends ConsumerState<AddPinSheet> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Thêm vào nơi này',
+                      'Chụp ảnh ở đây',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
@@ -147,44 +155,41 @@ class _AddPinSheetState extends ConsumerState<AddPinSheet> {
                   ),
                 ],
               ),
-              const Notice('Kéo bản đồ để chỉnh vị trí 📍'),
-              TextField(
-                key: const Key('pinName'),
-                controller: _name,
-                enabled: !busy,
-                maxLength: 80,
-                onChanged: (_) => _typed = true,
-                decoration: const InputDecoration(
-                  hintText: 'Tên nơi này',
-                  counterText: '',
+              if (fix == null) const Notice('Đang tìm vị trí của bạn… 📍'),
+              if (problem != null) Notice(problem, error: true),
+              if (fix is FixFailed)
+                Pill(label: 'Thử lại', style: PillStyle.on, onTap: _locate),
+              if (fix is FixOk) ...[
+                TextField(
+                  key: const Key('pinName'),
+                  controller: _name,
+                  enabled: !busy,
+                  maxLength: 80,
+                  onChanged: (_) => _typed = true,
+                  decoration: InputDecoration(
+                    hintText: _naming
+                        ? 'Đang tìm tên nơi này…'
+                        : 'Tên nơi này (không bắt buộc)',
+                    counterText: '',
+                  ),
                 ),
-              ),
-              TextField(
-                key: const Key('pinNote'),
-                controller: _note,
-                enabled: !busy,
-                maxLength: 500,
-                decoration: const InputDecoration(
-                  hintText: 'Ghi chú (không bắt buộc)',
-                  counterText: '',
+                TextField(
+                  key: const Key('pinNote'),
+                  controller: _note,
+                  enabled: !busy,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    hintText: 'Ghi chú (không bắt buộc)',
+                    counterText: '',
+                  ),
                 ),
-              ),
-              if (busy)
-                Semantics(
-                  label: 'Đang tải lên',
-                  child: LinearProgressIndicator(value: _progress),
-                )
-              else ...[
-                Pill(
-                  label: '📷 Chụp ảnh',
-                  style: PillStyle.on,
-                  onTap: () => _pick(picker.photo),
-                ),
-                Pill(label: '🎥 Quay video', onTap: () => _pick(picker.video)),
-                Pill(
-                  label: '🖼️ Chọn từ máy',
-                  onTap: () => _pick(picker.gallery),
-                ),
+                if (busy)
+                  Semantics(
+                    label: 'Đang tải lên',
+                    child: LinearProgressIndicator(value: _progress),
+                  )
+                else
+                  Pill(label: '📷 Chụp ảnh', style: PillStyle.on, onTap: _pick),
               ],
               if (_err.isNotEmpty) Notice(_err, error: true),
             ],

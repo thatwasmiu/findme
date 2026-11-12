@@ -86,6 +86,34 @@ String pinDate(String iso) {
 
 typedef Spot = ({double lat, double lon});
 
+/// Where the phone is now, for a new pin (the web's `geo.ts`). A pin only ever goes where you are: no fix, no pin.
+sealed class Fix {
+  const Fix();
+}
+
+class FixOk extends Fix {
+  const FixOk(this.lat, this.lon);
+  final double lat;
+  final double lon;
+}
+
+class FixDenied extends Fix {
+  const FixDenied();
+}
+
+class FixFailed extends Fix {
+  const FixFailed(this.reason);
+
+  /// `off` (location service), `silent` (no answer in time), `error`.
+  final String reason;
+}
+
+String? geoMessage(Fix f) => switch (f) {
+  FixDenied() => 'Cần quyền vị trí để ghim ảnh ở đây. Bật trong Cài đặt › Find Me › Vị trí nhé.',
+  FixFailed(:final reason) => 'Chưa lấy được vị trí, thử lại nhé ($reason)',
+  FixOk() => null,
+};
+
 const _nameNearM = 100.0;
 
 /// The nearest named stop within 100 m: a starting name for a pin.
