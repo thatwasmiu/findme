@@ -38,12 +38,13 @@ Pin pin({String id = 'a', String? sub, List<PinMedia>? media}) => Pin(
 
 class FakePicker implements PinPicker {
   List<PinFile> next = const [PinFile('p', 'a.jpg')];
+  final used = <String>[];
   @override
-  Future<List<PinFile>> photo() async => next;
-  @override
-  Future<List<PinFile>> video() async => next;
-  @override
-  Future<List<PinFile>> gallery() async => next;
+  Future<List<PinFile>> photo() async {
+    used.add('photo');
+    return next;
+  }
+
   @override
   Future<PinFile?> image({double? maxSide}) async => next.firstOrNull;
 }
@@ -376,13 +377,86 @@ void main() {
     Widget sheet(
       Pin p,
       MockPins pins, {
+      String? by,
       VoidCallback? onClose,
       List<Override> more = const [],
     }) => host(
-      PinSheet(pin: p, onClose: onClose ?? () {}),
+      PinSheet(pin: p, by: by, onClose: onClose ?? () {}),
       pins,
       more: more,
     );
+
+    testWidgets('own photo: the switch flips and calls setShared', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      when(() => pins.setShared('m1', shared: true)).thenAnswer((_) async {});
+      await t.pumpWidget(sheet(pin(), pins));
+      await t.pump();
+      expect(
+        find.text('Ảnh bật Chia sẻ: bạn bè và link có “Ảnh” đều thấy.'),
+        findsOneWidget,
+      );
+      final sw = find.bySemanticsLabel('Chia sẻ');
+      expect(t.widget<Switch>(find.byType(Switch)).value, isFalse);
+      await t.tap(sw);
+      await t.pump();
+      verify(() => pins.setShared('m1', shared: true)).called(1);
+      expect(t.widget<Switch>(find.byType(Switch)).value, isTrue);
+    });
+
+    testWidgets('a refused flip goes back and says so', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      when(() => pins.setShared(any(), shared: any(named: 'shared')))
+          .thenThrow(Exception('x'));
+      await t.pumpWidget(sheet(pin(), pins));
+      await t.pump();
+      await t.tap(find.bySemanticsLabel('Chia sẻ'));
+      await t.pump();
+      expect(t.widget<Switch>(find.byType(Switch)).value, isFalse);
+      expect(
+        find.text('Chưa làm được, thử lại sau chút nhé ✨'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('videos get no switch', (t) async {
+      tallView(t);
+      const video = PinMedia(
+        id: 'v',
+        kind: 'video',
+        status: 'ready',
+        thumb: 't',
+      );
+      await t.pumpWidget(sheet(pin(media: [video]), quietPins()));
+      await t.pump();
+      expect(find.byType(Switch), findsNothing);
+    });
+
+    testWidgets("a friend's pin is look-only", (t) async {
+      tallView(t);
+      await t.pumpWidget(sheet(pin(sub: 'f1'), quietPins(), by: 'Mai'));
+      await t.pump();
+      expect(find.textContaining('Ảnh của Mai · '), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
+      expect(find.bySemanticsLabel('Chụp thêm ảnh'), findsNothing);
+      expect(find.text('🗑️ Xoá'), findsNothing);
+    });
+
+    testWidgets('add more uses the camera', (t) async {
+      tallView(t);
+      final pins = quietPins();
+      when(() => pins.uploadAll(any(), any(), any()))
+          .thenAnswer((_) async => (failed: 0, message: ''));
+      final picker = FakePicker();
+      await t.pumpWidget(
+        sheet(pin(), pins, more: [pinPickerProvider.overrideWithValue(picker)]),
+      );
+      await t.pump();
+      await t.tap(find.bySemanticsLabel('Chụp thêm ảnh'));
+      await t.pump();
+      expect(picker.used, ['photo']);
+    });
 
     testWidgets('shows the name, the date and a tile per file', (t) async {
       await t.pumpWidget(sheet(pin(media: [ready, waiting]), quietPins()));
@@ -391,10 +465,11 @@ void main() {
       expect(find.textContaining('2 ảnh/video'), findsOneWidget);
       expect(find.bySemanticsLabel('Xem ảnh'), findsOneWidget);
       expect(find.bySemanticsLabel('Xem video'), findsOneWidget);
-      expect(find.bySemanticsLabel('Thêm ảnh hoặc video'), findsOneWidget);
+      expect(find.bySemanticsLabel('Chụp thêm ảnh'), findsOneWidget);
     });
 
     testWidgets('delete asks first, then closes', (t) async {
+      tallView(t); // the switches make the sheet taller than the test screen
       final pins = quietPins();
       when(() => pins.deletePin('a')).thenAnswer((_) async {});
       var closed = 0;

@@ -12,12 +12,19 @@ import 'package:video_player/video_player.dart';
 
 const _oops = 'Chưa làm được, thử lại sau chút nhé ✨';
 
-/// One pin: its photos and videos, add more, send it to a friend, delete (PinSheet.tsx).
+/// One pin (PinSheet.tsx): its photos and videos, a "Chia sẻ" switch on each photo, more from the camera, delete.
+/// A friend's shared pin ([Pin.sub] set) is look-only; [by] says whose.
 class PinSheet extends ConsumerStatefulWidget {
-  const PinSheet({required this.pin, required this.onClose, super.key});
+  const PinSheet({
+    required this.pin,
+    required this.onClose,
+    this.by,
+    super.key,
+  });
 
   final Pin pin;
   final VoidCallback onClose;
+  final String? by;
 
   @override
   ConsumerState<PinSheet> createState() => _PinSheetState();
@@ -27,8 +34,32 @@ class _PinSheetState extends ConsumerState<PinSheet> {
   double? _progress;
   String _err = '';
 
+  /// The switch answers at once; a refused change goes back and says so.
+  final _shared = <String, bool>{};
+
   PinsRepository get _repo => ref.read(pinsRepositoryProvider);
   Pin get _pin => widget.pin;
+  bool get _mine => _pin.sub == null;
+  bool _isShared(PinMedia m) => _shared[m.id] ?? m.shared;
+
+  Future<void> _flip(PinMedia m) async {
+    final on = !_isShared(m);
+    setState(() {
+      _err = '';
+      _shared[m.id] = on;
+    });
+    try {
+      await _repo.setShared(m.id, shared: on);
+      if (mounted) _refresh();
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _shared[m.id] = !on;
+          _err = _oops;
+        });
+      }
+    }
+  }
 
   void _refresh() =>
       unawaited(ref.read(pinsControllerProvider.notifier).refresh());
@@ -46,7 +77,7 @@ class _PinSheetState extends ConsumerState<PinSheet> {
   Future<void> _more() async {
     final List<PinFile> files;
     try {
-      files = await ref.read(pinPickerProvider).gallery();
+      files = await ref.read(pinPickerProvider).photo();
     } on Object {
       if (mounted) setState(() => _err = _oops);
       return;
@@ -131,50 +162,65 @@ class _PinSheetState extends ConsumerState<PinSheet> {
                 ],
               ),
               Notice(
+                '${widget.by == null ? '' : 'Ảnh của ${widget.by} · '}'
                 '${pinDate(_pin.createdAt)} · ${_pin.media.length} ảnh/video',
               ),
               GridView.count(
                 crossAxisCount: 3,
                 mainAxisSpacing: 5,
                 crossAxisSpacing: 5,
+                childAspectRatio: _mine ? 0.72 : 1, // room for the switch
                 padding: EdgeInsets.zero, // or it adds the status bar's height
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   for (final m in _pin.media)
-                    _Tile(
-                      label: m.isVideo ? 'Xem video' : 'Xem ảnh',
-                      onTap: m.isReady ? () => _view(m) : null,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (m.thumb == null)
-                            const Center(child: Text('⏳'))
-                          else
-                            _Media(m.thumb!, fit: BoxFit.cover),
-                          if (m.isVideo && m.thumb != null)
-                            const Center(
-                              child: Text(
-                                '▶',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  shadows: [Shadow(blurRadius: 4)],
+                    _Cell(
+                      share: _mine && !m.isVideo
+                          ? _ShareSwitch(
+                              on: _isShared(m),
+                              onFlip: () => _flip(m),
+                            )
+                          : null,
+                      grow: _mine,
+                      tile: _Tile(
+                        label: m.isVideo ? 'Xem video' : 'Xem ảnh',
+                        onTap: m.isReady ? () => _view(m) : null,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (m.thumb == null)
+                              const Center(child: Text('⏳'))
+                            else
+                              _Media(m.thumb!, fit: BoxFit.cover),
+                            if (m.isVideo && m.thumb != null)
+                              const Center(
+                                child: Text(
+                                  '▶',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    shadows: [Shadow(blurRadius: 4)],
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  _Tile(
-                    label: 'Thêm ảnh hoặc video',
-                    onTap: _progress == null ? _more : null,
-                    child: const Center(
-                      child: Text(
-                        '＋',
-                        style: TextStyle(color: Palette.pink, fontSize: 22),
+                  if (_mine)
+                    _Cell(
+                      grow: true,
+                      tile: _Tile(
+                        label: 'Chụp thêm ảnh',
+                        onTap: _progress == null ? _more : null,
+                        child: const Center(
+                          child: Text(
+                            '＋',
+                            style: TextStyle(color: Palette.pink, fontSize: 22),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
               if (_progress != null)
@@ -183,7 +229,12 @@ class _PinSheetState extends ConsumerState<PinSheet> {
                   child: LinearProgressIndicator(value: _progress),
                 ),
               if (_pin.note != null) Text(_pin.note!),
-              Pill(label: '🗑️ Xoá', onTap: _remove),
+              if (_mine) ...[
+                const Notice(
+                  'Ảnh bật Chia sẻ: bạn bè và link có “Ảnh” đều thấy.',
+                ),
+                Pill(label: '🗑️ Xoá', onTap: _remove),
+              ],
               if (_err.isNotEmpty) Notice(_err, error: true),
             ],
           ),
@@ -191,6 +242,66 @@ class _PinSheetState extends ConsumerState<PinSheet> {
       ),
     );
   }
+}
+
+/// A tile, with the "Chia sẻ" switch under it on your own photos (empty space under videos and ＋).
+class _Cell extends StatelessWidget {
+  const _Cell({required this.tile, required this.grow, this.share});
+
+  final Widget tile;
+  final bool grow;
+  final Widget? share;
+
+  @override
+  Widget build(BuildContext context) => grow
+      ? Column(
+          children: [
+            AspectRatio(aspectRatio: 1, child: tile),
+            Expanded(child: share ?? const SizedBox()),
+          ],
+        )
+      : tile;
+}
+
+class _ShareSwitch extends StatelessWidget {
+  const _ShareSwitch({required this.on, required this.onFlip});
+
+  final bool on;
+  final VoidCallback onFlip;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    toggled: on,
+    label: 'Chia sẻ',
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onFlip,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 24,
+            child: FittedBox(
+              child: Switch(
+                value: on,
+                activeTrackColor: Palette.pink,
+                onChanged: (_) => onFlip(),
+              ),
+            ),
+          ),
+          const Flexible(
+            child: Text(
+              'Chia sẻ',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Tile extends StatelessWidget {
@@ -202,6 +313,7 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+    container: true,
     button: true,
     label: label,
     excludeSemantics: true,

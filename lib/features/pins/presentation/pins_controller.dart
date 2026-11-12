@@ -104,7 +104,7 @@ final pinFixProvider = Provider<Future<Fix> Function()>(
       () => currentFix(const GeoApi()),
 );
 
-/// Camera and gallery; replaceable in tests.
+/// A pin's photo from the camera, the bag's from the gallery; replaceable in tests.
 // ponytail: Android may kill the app behind the camera on low memory and that shot is lost; add
 // ImagePicker.retrieveLostData if it happens.
 class PinPicker {
@@ -118,14 +118,6 @@ class PinPicker {
     final f = await ImagePicker().pickImage(source: ImageSource.camera);
     return _files([?f]);
   }
-
-  Future<List<PinFile>> video() async {
-    final f = await ImagePicker().pickVideo(source: ImageSource.camera);
-    return _files([?f]);
-  }
-
-  Future<List<PinFile>> gallery() async =>
-      _files(await ImagePicker().pickMultipleMedia());
 
   /// One picture from the gallery (the bag and the avatar), at most [maxSide] pixels across.
   Future<PinFile?> image({double? maxSide}) async {
