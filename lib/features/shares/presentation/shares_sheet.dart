@@ -65,6 +65,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
   bool _route = false; // opt-in: off for every new link
   late String _routeFrom = _today();
   bool _bag = false; // opt-in: the bag (phone, QR…) for anyone holding the link
+  bool _pics = false; // opt-in: photos switched to "Chia sẻ"
   String _extending = ''; // id of the link whose "Gia hạn" choices are open
   String _err = '';
   String _note = '';
@@ -136,6 +137,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
         route: _route,
         routeFrom: _routeFrom,
         bag: _bag,
+        pics: _pics,
       ),
       (e) => _why(e, 'Chưa tạo được link'),
     );
@@ -147,6 +149,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
       _route = false;
       _routeFrom = _today();
       _bag = false;
+      _pics = false;
       _shares = [s, ..._shares];
     });
     _say(note: 'Đã tạo link ✨ — bấm Sao chép để gửi.');
@@ -171,6 +174,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
     bool? route,
     String? routeFrom,
     bool? bag,
+    bool? pics,
   }) async {
     _say();
     final n = await _run(
@@ -180,6 +184,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
         route: route,
         routeFrom: routeFrom,
         bag: bag,
+        pics: pics,
       ),
       (e) => _why(e, 'Chưa sửa được'),
     );
@@ -192,13 +197,19 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
   }
 
   /// Turning the bag on for a link: anyone holding it sees everything in the bag, and links get passed on.
-  Future<bool> _bagOk() async =>
+  Future<bool> _bagOk() => _ok(
+    'Ai có link này đều thấy số điện thoại, mã QR và mọi thứ trong túi của bạn, và link có thể bị chuyển tiếp cho người khác. Bật nhé?',
+  );
+
+  /// Turning "Ảnh" on: anyone holding the link sees every shared photo.
+  Future<bool> _picsOk() =>
+      _ok('Ai có link này đều thấy mọi ảnh bạn đã bật Chia sẻ. Bật nhé?');
+
+  Future<bool> _ok(String question) async =>
       await showDialog<bool>(
         context: context,
         builder: (c) => AlertDialog(
-          content: const Text(
-            'Ai có link này đều thấy số điện thoại, mã QR và mọi thứ trong túi của bạn, và link có thể bị chuyển tiếp cho người khác. Bật nhé?',
-          ),
+          content: Text(question),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -373,6 +384,16 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
           },
           title: const Text('Cho mở túi đồ 🎒'),
         ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _pics,
+          onChanged: (v) async {
+            final on = v == true && await _picsOk();
+            if (mounted) setState(() => _pics = on);
+          },
+          title: const Text('Cho xem ảnh đã chia sẻ 🖼️'),
+        ),
         const SizedBox(height: 8),
         Pill(
           label: 'Tạo link 💖',
@@ -404,7 +425,7 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${s.label}${s.route ? ' · 🐾 ${s.routeFrom != null ? 'từ ${dm(s.routeFrom!)}' : 'hôm nay'}' : ''}${s.bag ? ' · 🎒' : ''}',
+                '${s.label}${s.route ? ' · 🐾 ${s.routeFrom != null ? 'từ ${dm(s.routeFrom!)}' : 'hôm nay'}' : ''}${s.bag ? ' · 🎒' : ''}${s.pics ? ' · 🖼️' : ''}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               Text(
@@ -461,6 +482,28 @@ class _SharesSheetState extends ConsumerState<SharesSheet> {
                           s,
                           bag: true,
                           done: '"${s.label}" mở được túi đồ 🎒',
+                        );
+                      }
+                    },
+                  ),
+                  Pill(
+                    label: '🖼️',
+                    style: PillStyle.lav,
+                    selected: s.pics,
+                    semanticLabel: 'Ảnh: cho xem ảnh đã chia sẻ',
+                    onTap: () async {
+                      if (s.pics) {
+                        return await _edit(
+                          s,
+                          pics: false,
+                          done: 'Đã tắt ảnh với "${s.label}".',
+                        );
+                      }
+                      if (await _picsOk()) {
+                        await _edit(
+                          s,
+                          pics: true,
+                          done: '"${s.label}" xem được ảnh đã chia sẻ 🖼️',
                         );
                       }
                     },

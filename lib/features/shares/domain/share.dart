@@ -18,6 +18,9 @@ abstract class Share with _$Share {
 
     /// Anyone holding the link can open the bag.
     @Default(false) bool bag,
+
+    /// "Ảnh": anyone holding the link sees the photos switched to "Chia sẻ".
+    @Default(false) bool pics,
   }) = _Share;
   const Share._();
 

@@ -110,6 +110,23 @@ void main() {
     expect(sentBody(adapter.requests.last), {'bag': false});
   });
 
+  test('"Ảnh": sent only when on, read back from the link', () async {
+    adapter = FakeAdapter(
+      (_) => (status: 200, body: {...shareJson, 'pics': true}),
+    );
+    final s = await repo().create(label: 'Mẹ', expiresAt: 'x', pics: true);
+    expect(s.pics, isTrue);
+    expect((sentBody(adapter.requests.single)! as Map)['pics'], true);
+    adapter = FakeAdapter((_) => (status: 200, body: shareJson));
+    expect((await repo().create(label: 'Mẹ', expiresAt: 'x')).pics, isFalse);
+    expect(
+      (sentBody(adapter.requests.single)! as Map).containsKey('pics'),
+      isFalse,
+    );
+    await repo().edit('a', pics: false);
+    expect(sentBody(adapter.requests.last), {'pics': false});
+  });
+
   test('revoke sends DELETE', () async {
     adapter = FakeAdapter((_) => (status: 204, body: null));
     await repo().revoke('abc_-');

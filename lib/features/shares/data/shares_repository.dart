@@ -25,6 +25,7 @@ class SharesRepository {
     bool route = false,
     String? routeFrom,
     bool bag = false,
+    bool pics = false,
   }) async => Share.fromJson(
     await _send('POST', '/shares', {
       'label': label,
@@ -32,6 +33,7 @@ class SharesRepository {
       'route': route,
       if (route && routeFrom != null) 'routeFrom': routeFrom,
       if (bag) 'bag': true,
+      if (pics) 'pics': true,
     }) as Map<String, dynamic>,
   );
 
@@ -43,19 +45,21 @@ class SharesRepository {
     ];
   }
 
-  /// A new expiry, the route on/off, the day it starts, and/or the bag on/off (expired links too).
+  /// A new expiry, the route on/off, the day it starts, the bag and/or "Ảnh" on/off (expired links too).
   Future<Share> edit(
     String id, {
     String? expiresAt,
     bool? route,
     String? routeFrom,
     bool? bag,
+    bool? pics,
   }) async => Share.fromJson(
     await _send('PATCH', '/shares/${Uri.encodeComponent(id)}', {
       'expiresAt': ?expiresAt,
       'route': ?route,
       'routeFrom': ?routeFrom,
       'bag': ?bag,
+      'pics': ?pics,
     }) as Map<String, dynamic>,
   );
 

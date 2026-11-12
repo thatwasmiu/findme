@@ -14,6 +14,7 @@ _Share _$ShareFromJson(Map<String, dynamic> json) => _Share(
   route: json['route'] as bool? ?? false,
   routeFrom: json['routeFrom'] as String?,
   bag: json['bag'] as bool? ?? false,
+  pics: json['pics'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$ShareToJson(_Share instance) => <String, dynamic>{
@@ -24,4 +25,5 @@ Map<String, dynamic> _$ShareToJson(_Share instance) => <String, dynamic>{
   'route': instance.route,
   'routeFrom': instance.routeFrom,
   'bag': instance.bag,
+  'pics': instance.pics,
 };

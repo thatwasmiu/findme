@@ -96,6 +96,72 @@ void main() {
     expect(find.text('Mẹ'), findsOneWidget);
   });
 
+  testWidgets('"Ảnh" on a new link asks first; cancel keeps it off', (t) async {
+    tallView(t);
+    await pump(t, []);
+    await t.tap(find.text('Cho xem ảnh đã chia sẻ 🖼️'));
+    await t.pumpAndSettle();
+    expect(
+      find.text('Ai có link này đều thấy mọi ảnh bạn đã bật Chia sẻ. Bật nhé?'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Thôi'));
+    await t.pumpAndSettle();
+    bool picsBox() => t
+        .widget<CheckboxListTile>(
+          find.widgetWithText(CheckboxListTile, 'Cho xem ảnh đã chia sẻ 🖼️'),
+        )
+        .value!;
+    expect(picsBox(), isFalse);
+    await t.tap(find.text('Cho xem ảnh đã chia sẻ 🖼️'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Bật'));
+    await t.pumpAndSettle();
+    expect(picsBox(), isTrue);
+    when(
+      () => repo.create(
+        label: any(named: 'label'),
+        expiresAt: any(named: 'expiresAt'),
+        route: any(named: 'route'),
+        routeFrom: any(named: 'routeFrom'),
+        bag: any(named: 'bag'),
+        pics: any(named: 'pics'),
+      ),
+    ).thenAnswer((_) async => live.copyWith(pics: true));
+    await t.enterText(find.byKey(const Key('label')), 'Mẹ');
+    await t.tap(find.text('Tạo link 💖'));
+    await t.pumpAndSettle();
+    verify(
+      () => repo.create(
+        label: 'Mẹ',
+        expiresAt: any(named: 'expiresAt'),
+        route: any(named: 'route'),
+        routeFrom: any(named: 'routeFrom'),
+        bag: any(named: 'bag'),
+        pics: true,
+      ),
+    ).called(1);
+    expect(find.text('Mẹ · 🖼️'), findsOneWidget);
+  });
+
+  testWidgets('🖼️ on a link: on asks first, off does not', (t) async {
+    tallView(t);
+    await pump(t, [live]);
+    when(() => repo.edit(live.id, pics: true))
+        .thenAnswer((_) async => live.copyWith(pics: true));
+    when(() => repo.edit(live.id, pics: false)).thenAnswer((_) async => live);
+    await t.tap(find.bySemanticsLabel('Ảnh: cho xem ảnh đã chia sẻ'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Bật'));
+    await t.pumpAndSettle();
+    verify(() => repo.edit(live.id, pics: true)).called(1);
+    expect(find.text('"Mẹ" xem được ảnh đã chia sẻ 🖼️'), findsOneWidget);
+    await t.tap(find.bySemanticsLabel('Ảnh: cho xem ảnh đã chia sẻ'));
+    await t.pumpAndSettle();
+    verify(() => repo.edit(live.id, pics: false)).called(1);
+    expect(find.text('Đã tắt ảnh với "Mẹ".'), findsOneWidget);
+  });
+
   testWidgets('a refused label shows the web wording', (t) async {
     await pump(t, []);
     when(
