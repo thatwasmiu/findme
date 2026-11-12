@@ -103,7 +103,8 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   `run build_runner`, `analyze`, and `… flutter_tools.snapshot test` for tests.
 - Viewing a past range, shown friends are not refreshed (same as the web); pick Hôm nay to follow them.
 - iOS has no dev/prod schemes (needs a Mac) and has never been built; CI's macOS job is the first check.
-- iOS privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` added (chapter 13); not yet seen in an Xcode privacy
+- iOS privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` added (chapter 13; `feda214`, `271e535`, pushed 2026-11-12, so the
+  iOS CI job on main is its first build); not yet seen in an Xcode privacy
   report. Privacy policy link under the welcome card opens `<WEB_ORIGIN>/privacy.html` (page lives in travel-heatmap
   `web/public/`, not deployed yet; only on the signed-out screen). App Store still lacks: in-app account deletion,
   signed CI upload.
