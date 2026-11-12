@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/network/api_client.dart';
 import 'package:findme/features/bag/data/bag_repository.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
@@ -221,22 +222,15 @@ void main() {
     );
   });
 
-  test('create, share, unshare, delete: method, URL and body', () async {
+  test('create, delete: method, URL and body', () async {
     final m = make({
       'POST $_pins': [() => reply(201, _onePin)],
-      'POST $_pins/a/share': [
-        () => reply(200, {'shareCode': 'code'}),
-      ],
-      'DELETE $_pins/a/share': [() => reply(204)],
       'DELETE $_pins/a': [() => reply(204)],
     });
     final p = await m.repo.createPin((lat: 1, lon: 2, name: 'x', note: null));
     expect(p.id, 'a');
-    expect(await m.repo.sharePin('a'), 'code');
-    await m.repo.unsharePin('a');
     await m.repo.deletePin('a');
     expect(jsonDecode(m.s.bodies.first), {'lat': 1, 'lon': 2, 'name': 'x'});
-    expect(m.repo.shareLink('code'), 'https://findme.test/lb/m/code');
     expect(
       m.repo.mediaUrl('i/t.webp'),
       'https://findme.test/lb/media/i/t.webp',
@@ -448,6 +442,128 @@ void main() {
       expect(r.pin?.id, 'a');
       expect(r.failed, 1);
       expect(m.s.count('DELETE $_pins/a'), 0);
+    });
+  });
+
+  group('setShared', () {
+    test('sends PUT with {"shared":true}', () async {
+      final m = make({
+        'PUT $_lb/media/m1/shared': [() => reply(204)],
+      });
+      await m.repo.setShared('m1', shared: true);
+      expect(jsonDecode(m.s.bodies.single), {'shared': true});
+    });
+
+    test('a 404 throws', () async {
+      final m = make({
+        'PUT $_lb/media/m1/shared': [() => reply(404)],
+      });
+      await expectLater(
+        m.repo.setShared('m1', shared: false),
+        throwsA(isA<HttpError>()),
+      );
+    });
+  });
+
+  group('placeName', () {
+    const url = 'https://api.test/place-name?lat=10.5&lon=106.25';
+
+    test('asks again while pending', () async {
+      final waits = <Duration>[];
+      final m = make({
+        'GET $url': [
+          () => reply(200, {'name': null, 'pending': true}),
+          () => reply(200, {'name': null, 'pending': true}),
+          () => reply(200, {'name': 'Hồ Gươm', 'pending': false}),
+        ],
+      });
+      final name = await m.repo.placeName(
+        10.5,
+        106.25,
+        wait: (d) async => waits.add(d),
+      );
+      expect(name, 'Hồ Gươm');
+      expect(m.s.count('GET $url'), 3);
+      expect(waits, [const Duration(seconds: 3), const Duration(seconds: 3)]);
+    });
+
+    test('stops after 4 tries', () async {
+      final m = make({
+        'GET $url': [
+          () => reply(200, {'name': null, 'pending': true}),
+        ],
+      });
+      expect(await m.repo.placeName(10.5, 106.25, wait: (_) async {}), '');
+      expect(m.s.count('GET $url'), 4);
+    });
+
+    test('gives up quietly', () async {
+      final bad = make({
+        'GET $url': [() => reply(500)],
+      });
+      expect(await bad.repo.placeName(10.5, 106.25, wait: (_) async {}), '');
+      final off = make({
+        'GET $url': [down],
+      });
+      expect(await off.repo.placeName(10.5, 106.25, wait: (_) async {}), '');
+    });
+  });
+
+  group('shared pins of friends', () {
+    const grant = 'https://api.test/pin-grant';
+    const shared = '$_lb/shared/session';
+
+    test('pinGrant: no friends is null', () async {
+      final none = make({
+        'POST $grant': [
+          () => reply(200, {'grant': null, 'exp': null}),
+        ],
+      });
+      expect(await none.repo.pinGrant(), isNull);
+      final some = make({
+        'POST $grant': [
+          () => reply(200, {'grant': 'g', 'exp': 9}),
+        ],
+      });
+      expect(await some.repo.pinGrant(), (grant: 'g', exp: 9));
+      final off = make({
+        'POST $grant': [down],
+      });
+      expect(await off.repo.pinGrant(), isNull);
+    });
+
+    test('loadSharedPins keeps the friends cookie beside your own', () async {
+      final m = make({
+        ...ticketOk(),
+        'GET $_pins': [() => reply(200, <Object>[])],
+        'POST $shared': [
+          () => reply(
+            200,
+            [
+              {..._onePin, 'sub': 'f1'},
+            ],
+            {'set-cookie': 'fm_shared_friends=g1; Max-Age=900; Path=/lb'},
+          ),
+        ],
+      });
+      await m.repo.openPins();
+      final got = await m.repo.loadSharedPins('g');
+      expect(got.single.sub, 'f1');
+      expect(jsonDecode(m.s.bodies.last), {'grant': 'g'});
+      final cookie = m.repo.mediaHeaders['Cookie']!;
+      expect(cookie, contains('fm_user=abc.def'));
+      expect(cookie, contains('fm_shared_friends=g1'));
+    });
+
+    test('loadSharedPins: a failure is empty', () async {
+      final refused = make({
+        'POST $shared': [() => reply(403)],
+      });
+      expect(await refused.repo.loadSharedPins('g'), isEmpty);
+      final off = make({
+        'POST $shared': [down],
+      });
+      expect(await off.repo.loadSharedPins('g'), isEmpty);
     });
   });
 }

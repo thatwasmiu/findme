@@ -12,6 +12,7 @@ class PinMedia {
     this.thumb,
     this.display,
     this.hls,
+    this.shared = false,
   });
 
   factory PinMedia.fromJson(Map<String, dynamic> j) => PinMedia(
@@ -21,6 +22,7 @@ class PinMedia {
     thumb: j['thumb'] as String?,
     display: j['display'] as String?,
     hls: j['hls'] as String?,
+    shared: j['shared'] == true,
   );
 
   final String id;
@@ -29,6 +31,9 @@ class PinMedia {
   final String? thumb;
   final String? display;
   final String? hls;
+
+  /// "Chia sẻ" on: friends and links with "Ảnh" see it.
+  final bool shared;
 
   bool get isVideo => kind == 'video';
   bool get isReady => status == 'ready';
@@ -44,7 +49,7 @@ class Pin {
     required this.media,
     this.name,
     this.note,
-    this.shareCode,
+    this.sub,
   });
 
   factory Pin.fromJson(Map<String, dynamic> j) => Pin(
@@ -54,7 +59,7 @@ class Pin {
     name: j['name'] as String?,
     note: j['note'] as String?,
     createdAt: j['createdAt'] as String,
-    shareCode: j['shareCode'] as String?,
+    sub: j['sub'] as String?,
     media: [
       for (final m in j['media'] as List<dynamic>? ?? const <dynamic>[])
         PinMedia.fromJson(m as Map<String, dynamic>),
@@ -67,7 +72,9 @@ class Pin {
   final String? name;
   final String? note;
   final String createdAt;
-  final String? shareCode;
+
+  /// Whose pin, when it is a friend's shared one; null = yours.
+  final String? sub;
   final List<PinMedia> media;
 }
 
@@ -78,9 +85,6 @@ String pinDate(String iso) {
 }
 
 typedef Spot = ({double lat, double lon});
-
-/// Where a new pin starts: GPS, else the latest recorded point, else wherever the map is.
-Spot startPosition(Spot? geo, Spot? last, Spot center) => geo ?? last ?? center;
 
 const _nameNearM = 100.0;
 

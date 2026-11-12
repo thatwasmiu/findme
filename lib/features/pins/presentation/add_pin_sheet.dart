@@ -66,7 +66,7 @@ class _AddPinSheetState extends ConsumerState<AddPinSheet> {
   Future<void> _goToStart() async {
     final geo = await ref.read(pinGpsProvider)();
     if (!mounted) return;
-    final s = startPosition(geo, widget.last, widget.center.value);
+    final s = geo ?? widget.last ?? widget.center.value; // replaced in Task 2
     widget.onStart(s.lat, s.lon);
   }
 

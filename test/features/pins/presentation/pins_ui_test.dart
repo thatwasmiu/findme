@@ -6,11 +6,9 @@ import 'package:findme/features/pins/domain/pin.dart';
 import 'package:findme/features/pins/presentation/add_pin_sheet.dart';
 import 'package:findme/features/pins/presentation/pin_sheet.dart';
 import 'package:findme/features/pins/presentation/pins_controller.dart';
-import 'package:findme/features/shares/presentation/shares_sheet.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,13 +25,13 @@ const ready = PinMedia(
 );
 const waiting = PinMedia(id: 'm2', kind: 'video', status: 'processing');
 
-Pin pin({String id = 'a', String? shareCode, List<PinMedia>? media}) => Pin(
+Pin pin({String id = 'a', String? sub, List<PinMedia>? media}) => Pin(
   id: id,
   lat: 21.0285, // where the map opens
   lon: 105.8542,
   name: 'Hồ Gươm',
   createdAt: '2026-11-10T05:00:00.000Z',
-  shareCode: shareCode,
+  sub: sub,
   media: media ?? const [ready],
 );
 
@@ -278,61 +276,6 @@ void main() {
       expect(find.bySemanticsLabel('Thêm ảnh hoặc video'), findsOneWidget);
     });
 
-    testWidgets('no link yet: 🔗 Gửi cho bạn creates one', (t) async {
-      final pins = quietPins();
-      when(() => pins.sharePin('a')).thenAnswer((_) async => 'code');
-      await t.pumpWidget(sheet(pin(), pins));
-      await t.pump();
-      await t.tap(find.text('🔗 Gửi cho bạn'));
-      await t.pump();
-      verify(() => pins.sharePin('a')).called(1);
-    });
-
-    testWidgets('with a link: copy, send, turn off', (t) async {
-      final pins = quietPins();
-      when(() => pins.shareLink('code')).thenReturn('https://x/lb/m/code');
-      when(() => pins.unsharePin('a')).thenAnswer((_) async {});
-      final copied = <String>[];
-      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (c) async {
-          if (c.method == 'Clipboard.setData') {
-            copied.add((c.arguments as Map)['text'] as String);
-          }
-          return null;
-        },
-      );
-      addTearDown(
-        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
-      final sent = <String>[];
-      await t.pumpWidget(
-        sheet(
-          pin(shareCode: 'code'),
-          pins,
-          more: [
-            shareLauncherProvider.overrideWithValue((text, url) async {
-              sent.add(url);
-            }),
-          ],
-        ),
-      );
-      await t.pump();
-      await t.tap(find.text('Sao chép link'));
-      await t.pump();
-      expect(copied, ['https://x/lb/m/code']);
-      expect(find.text('Đã sao chép link 💖'), findsOneWidget);
-      await t.tap(find.text('Gửi'));
-      await t.pump();
-      expect(sent, ['https://x/lb/m/code']);
-      await t.tap(find.text('Tắt link'));
-      await t.pump();
-      verify(() => pins.unsharePin('a')).called(1);
-    });
-
     testWidgets('delete asks first, then closes', (t) async {
       final pins = quietPins();
       when(() => pins.deletePin('a')).thenAnswer((_) async {});
@@ -350,19 +293,6 @@ void main() {
       await t.pumpAndSettle();
       verify(() => pins.deletePin('a')).called(1);
       expect(closed, 1);
-    });
-
-    testWidgets('a refused action says so', (t) async {
-      final pins = quietPins();
-      when(() => pins.sharePin('a')).thenThrow(Exception('x'));
-      await t.pumpWidget(sheet(pin(), pins));
-      await t.pump();
-      await t.tap(find.text('🔗 Gửi cho bạn'));
-      await t.pump();
-      expect(
-        find.text('Chưa làm được, thử lại sau chút nhé ✨'),
-        findsOneWidget,
-      );
     });
 
     testWidgets('a photo opens full screen and closes', (t) async {

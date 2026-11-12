@@ -6,9 +6,7 @@ import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:findme/features/pins/domain/pin.dart';
 import 'package:findme/features/pins/presentation/pins_controller.dart';
-import 'package:findme/features/shares/presentation/shares_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -28,12 +26,9 @@ class PinSheet extends ConsumerStatefulWidget {
 class _PinSheetState extends ConsumerState<PinSheet> {
   double? _progress;
   String _err = '';
-  String _note = '';
 
   PinsRepository get _repo => ref.read(pinsRepositoryProvider);
   Pin get _pin => widget.pin;
-  String get _link =>
-      _pin.shareCode == null ? '' : _repo.shareLink(_pin.shareCode!);
 
   void _refresh() =>
       unawaited(ref.read(pinsControllerProvider.notifier).refresh());
@@ -72,11 +67,6 @@ class _PinSheetState extends ConsumerState<PinSheet> {
     _refresh();
   }
 
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: _link));
-    if (mounted) setState(() => _note = 'Đã sao chép link 💖');
-  }
-
   Future<void> _remove() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -112,7 +102,6 @@ class _PinSheetState extends ConsumerState<PinSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final link = _link;
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * 0.72,
@@ -194,37 +183,6 @@ class _PinSheetState extends ConsumerState<PinSheet> {
                   child: LinearProgressIndicator(value: _progress),
                 ),
               if (_pin.note != null) Text(_pin.note!),
-              if (link.isNotEmpty)
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    Pill(
-                      label: 'Sao chép link',
-                      style: PillStyle.on,
-                      onTap: _copy,
-                    ),
-                    Pill(
-                      label: 'Gửi',
-                      onTap: () => ref.read(shareLauncherProvider)(
-                        _pin.name ?? 'Find Me',
-                        link,
-                      ),
-                    ),
-                    Pill(
-                      label: 'Tắt link',
-                      style: PillStyle.ghost,
-                      onTap: () => _act(() => _repo.unsharePin(_pin.id)),
-                    ),
-                  ],
-                )
-              else
-                Pill(
-                  label: '🔗 Gửi cho bạn',
-                  style: PillStyle.on,
-                  onTap: () => _act(() => _repo.sharePin(_pin.id)),
-                ),
-              if (_note.isNotEmpty) Notice(_note),
               Pill(label: '🗑️ Xoá', onTap: _remove),
               if (_err.isNotEmpty) Notice(_err, error: true),
             ],

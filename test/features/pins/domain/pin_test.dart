@@ -54,19 +54,24 @@ void main() {
     test('empty list', () => expect(mergePins([], 10), isEmpty));
   });
 
-  group('startPosition', () {
-    const geo = (lat: 1.0, lon: 1.0);
-    const last = (lat: 2.0, lon: 2.0);
-    const center = (lat: 3.0, lon: 3.0);
-    test('prefers GPS', () => expect(startPosition(geo, last, center), geo));
-    test(
-      'then the latest point',
-      () => expect(startPosition(null, last, center), last),
-    );
-    test(
-      'then the map centre',
-      () => expect(startPosition(null, null, center), center),
-    );
+  test('fromJson reads shared and sub; missing means false / null', () {
+    Pin read(Map<String, Object?> extra, Map<String, Object?> media) =>
+        Pin.fromJson({
+          'id': 'a',
+          'lat': 1,
+          'lon': 2,
+          'createdAt': 'T',
+          ...extra,
+          'media': [
+            {'id': 'm', 'kind': 'image', 'status': 'ready', ...media},
+          ],
+        });
+    final mine = read({}, {});
+    expect(mine.sub, isNull);
+    expect(mine.media.single.shared, isFalse);
+    final theirs = read({'sub': 'f1'}, {'shared': true});
+    expect(theirs.sub, 'f1');
+    expect(theirs.media.single.shared, isTrue);
   });
 
   group('nameNear', () {

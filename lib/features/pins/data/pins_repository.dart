@@ -18,6 +18,9 @@ const int _chunk =
     1024 *
     1024; // small enough for a phone's uplink and CloudFront's timeout
 const _cookieName = 'fm_user';
+const _friendsCookie = 'fm_shared_friends';
+const _nameTries = 4;
+const _nameRetry = Duration(seconds: 3);
 
 const _refused = <String, String>{
   'too-big': 'File này lớn quá, tối đa 500 MB nhé.',
@@ -91,6 +94,7 @@ class PinsRepository {
   final DateTime Function() _now;
   final List<Duration> _delays;
   String? _cookie;
+  String? _sharedCookie; // opens friends' shared pictures
   DateTime? _exchangedAt;
 
   String get _lb => '${_cfg.web}/lb/api/findme';
@@ -98,10 +102,16 @@ class PinsRepository {
   String mediaUrl(String key) => '${_cfg.web}/lb/media/$key';
 
   /// For images and video: they have no other way to prove who is asking.
-  Map<String, String> get mediaHeaders => {'Cookie': ?_cookie};
+  Map<String, String> get mediaHeaders {
+    final all = [?_cookie, ?_sharedCookie];
+    return all.isEmpty ? const {} : {'Cookie': all.join('; ')};
+  }
 
-  /// What you send a friend: a link-preview page that redirects to the web's `/p/<code>`.
-  String shareLink(String code) => '${_cfg.web}/lb/m/$code';
+  static String? _cookieFrom(Response<dynamic> r, String name) => r
+      .headers['set-cookie']
+      ?.map((c) => c.split(';').first)
+      .where((c) => c.startsWith('$name='))
+      .firstOrNull;
 
   bool get _sessionIsOld =>
       _exchangedAt == null ||
@@ -120,10 +130,7 @@ class PinsRepository {
           validateStatus: (_) => true,
         ),
       );
-      final cookie = s.headers['set-cookie']
-          ?.map((c) => c.split(';').first)
-          .where((c) => c.startsWith('$_cookieName='))
-          .firstOrNull;
+      final cookie = _cookieFrom(s, _cookieName);
       if (cookie == null || (s.statusCode ?? 0) >= 300) return false;
       _cookie = cookie;
       _exchangedAt = _now();
@@ -216,12 +223,68 @@ class PinsRepository {
 
   Future<void> deletePin(String id) => _must('DELETE', '/pins/$id');
 
-  Future<String> sharePin(String id) async =>
-      (await _must('POST', '/pins/$id/share')
-              as Map<String, dynamic>)['shareCode']
-          as String;
+  /// The "Chia sẻ" switch on one picture: all friends, and links with "Ảnh" on, see it.
+  Future<void> setShared(String mediaId, {required bool shared}) =>
+      _must('PUT', '/media/$mediaId/shared', {'shared': shared});
 
-  Future<void> unsharePin(String id) => _must('DELETE', '/pins/$id/share');
+  /// A name for where a new pin is taken, when no stop is near: Find Me's cache, else its naming queue looks it up,
+  /// so ask again every 3 s, 4 tries. '' when there is none or anything fails (the name is optional).
+  Future<String> placeName(
+    double lat,
+    double lon, {
+    Future<void> Function(Duration)? wait,
+  }) async {
+    final pause = wait ?? Future<void>.delayed;
+    try {
+      for (var i = 0; i < _nameTries; i++) {
+        if (i > 0) await pause(_nameRetry);
+        final r = await _api.send(
+          'GET',
+          '/place-name',
+          query: {'lat': '$lat', 'lon': '$lon'},
+        ) as Map<String, dynamic>;
+        final name = r['name'] as String?;
+        if (name != null || r['pending'] != true) return name ?? '';
+      }
+    } on Object {
+      // quietly
+    }
+    return '';
+  }
+
+  /// A 15-minute pass to friends' shared pictures. null: no friends, or the call failed.
+  Future<({String grant, int exp})?> pinGrant() async {
+    try {
+      final g = await _api.send('POST', '/pin-grant') as Map<String, dynamic>;
+      final grant = g['grant'] as String?;
+      final exp = (g['exp'] as num?)?.toInt();
+      return grant == null || exp == null ? null : (grant: grant, exp: exp);
+    } on Object {
+      return null;
+    }
+  }
+
+  /// The shared pins a grant opens, and the cookie for their files. Any failure: none, quietly.
+  Future<List<Pin>> loadSharedPins(String grant) async {
+    try {
+      final r = await _dio.post<dynamic>(
+        '$_lb/shared/session',
+        data: {'grant': grant},
+        options: Options(
+          contentType: Headers.jsonContentType,
+          validateStatus: (_) => true,
+        ),
+      );
+      if (r.statusCode != 200) return const [];
+      _sharedCookie = _cookieFrom(r, _friendsCookie) ?? _sharedCookie;
+      return [
+        for (final p in r.data as List<dynamic>)
+          Pin.fromJson(p as Map<String, dynamic>),
+      ];
+    } on Object {
+      return const [];
+    }
+  }
 
   /// null = no answer at all.
   Future<Response<dynamic>?> _try(
