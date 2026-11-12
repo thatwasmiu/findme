@@ -37,7 +37,10 @@ class FriendPinsController extends Notifier<List<Pin>> {
   List<Pin> build() {
     final signedIn = ref.watch(signedInProvider);
     final friends = ref.watch(friendCountProvider);
-    ref.onDispose(() => _timer?.cancel());
+    ref.onDispose(() {
+      _timer?.cancel();
+      _timer = null; // resumed() must not ask once signed out or friendless
+    });
     _seq++;
     _grant = null;
     if (signedIn && friends > 0) {

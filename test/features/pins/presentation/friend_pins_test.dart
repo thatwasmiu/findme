@@ -97,6 +97,18 @@ void main() {
       c.dispose();
     });
 
+    testWidgets('after signing out, coming back asks nothing', (t) async {
+      final c = container();
+      await t.pump();
+      (c.read(authControllerProvider.notifier) as FakeSignedIn).leave();
+      await t.pump();
+      clearInteractions(pins);
+      c.read(friendPinsControllerProvider.notifier).resumed();
+      await t.pump();
+      verifyNever(pins.pinGrant);
+      c.dispose();
+    });
+
     testWidgets('signing out empties them; a late answer cannot refill', (
       t,
     ) async {

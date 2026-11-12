@@ -393,7 +393,7 @@ void main() {
     test('geoMessage says why', () {
       expect(
         geoMessage(const FixDenied()),
-        'Cần quyền vị trí để ghim ảnh ở đây. Bật trong Cài đặt › Find Me › Vị trí nhé.',
+        'Cần quyền vị trí để ghim ảnh ở đây. Bật quyền Vị trí cho Find Me trong Cài đặt của máy nhé.',
       );
       expect(
         geoMessage(const FixFailed('off')),

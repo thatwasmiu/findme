@@ -109,7 +109,7 @@ class FixFailed extends Fix {
 }
 
 String? geoMessage(Fix f) => switch (f) {
-  FixDenied() => 'Cần quyền vị trí để ghim ảnh ở đây. Bật trong Cài đặt › Find Me › Vị trí nhé.',
+  FixDenied() => 'Cần quyền vị trí để ghim ảnh ở đây. Bật quyền Vị trí cho Find Me trong Cài đặt của máy nhé.',
   FixFailed(:final reason) => 'Chưa lấy được vị trí, thử lại nhé ($reason)',
   FixOk() => null,
 };
