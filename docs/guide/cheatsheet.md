@@ -33,6 +33,7 @@ Dev builds: the 🐞 button opens the debug console (HTTP calls with status and 
 |---|---|
 | `flutter test` | All unit + widget tests |
 | `flutter test test/features/trail` | One folder |
+| `flutter test test/features/auth` | Sign-in and sign-up (Đăng ký → mã 6 số → vào luôn) |
 | `flutter test --name "stale load"` | Tests whose name matches |
 | `flutter test --coverage` | Coverage in `coverage\lcov.info` |
 | `flutter test integration_test --flavor dev --dart-define-from-file=config/example.json` | Full app on the emulator |

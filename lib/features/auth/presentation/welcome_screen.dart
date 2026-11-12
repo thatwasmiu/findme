@@ -1,3 +1,4 @@
+import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
@@ -70,7 +71,11 @@ class WelcomeScreen extends ConsumerWidget {
   }
 }
 
-/// Email + password, sent straight to Cognito. AutofillGroup lets password managers save and fill it.
+enum _Mode { signin, register, verify }
+
+/// Email + password, sent straight to Cognito. AutofillGroup lets password managers save and fill it. Also self
+/// sign-up (the web's `SignIn register`): name + invite code, then the 6-digit code from the email, then signed in
+/// at once (the password is still in the form).
 class SignInForm extends ConsumerStatefulWidget {
   const SignInForm({super.key});
 
@@ -81,39 +86,122 @@ class SignInForm extends ConsumerStatefulWidget {
 class _SignInFormState extends ConsumerState<SignInForm> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _name = TextEditingController();
+  final _invite = TextEditingController();
+  final _code = TextEditingController();
+  _Mode _mode = _Mode.signin;
   bool _busy = false;
   String _err = '';
+  String _note = '';
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    for (final c in [_email, _password, _name, _invite, _code]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (_email.text.trim().isEmpty || _password.text.isEmpty) return;
+  void _go(_Mode m) => setState(() {
+    _mode = m;
+    _err = '';
+    _note = '';
+  });
+
+  Future<void> _run(Future<void> Function() f) async {
     setState(() {
       _busy = true;
       _err = '';
+      _note = '';
     });
     try {
-      await ref
-          .read(authControllerProvider.notifier)
-          .signIn(_email.text, _password.text);
-      TextInput.finishAutofillContext();
+      await f();
     } on Object catch (e) {
-      if (mounted) setState(() => _err = signInMessage(e));
+      if (!mounted) return;
+      setState(() {
+        if (e is AuthError && e.code == 'UserNotConfirmedException') {
+          _mode = _Mode.verify;
+        }
+        _err = signInMessage(e);
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  Future<void> _signIn() async {
+    await ref
+        .read(authControllerProvider.notifier)
+        .signIn(_email.text, _password.text);
+    TextInput.finishAutofillContext();
+  }
+
+  Future<void> _submit() {
+    // The web's `required` inputs: nothing goes out with an empty field.
+    final need = switch (_mode) {
+      _Mode.signin => [_email, _password],
+      _Mode.register => [_name, _email, _password, _invite],
+      _Mode.verify => [_email, _code],
+    };
+    if (need.any((c) => c.text.trim().isEmpty)) return Future.value();
+    final auth = ref.read(authRepositoryProvider);
+    return switch (_mode) {
+      _Mode.signin => _run(_signIn),
+      _Mode.register => _run(() async {
+        try {
+          await auth.signUp(
+            _email.text,
+            _password.text,
+            _name.text,
+            _invite.text,
+          );
+        } on AuthError catch (e) {
+          if (e.code == 'UsernameExistsException') _mode = _Mode.verify;
+          rethrow;
+        }
+        setState(() {
+          _mode = _Mode.verify;
+          _note = 'Đã gửi mã 6 số tới email của bạn 💌';
+        });
+      }),
+      _Mode.verify => _run(() async {
+        await auth.confirmSignUp(_email.text, _code.text);
+        if (_password.text.isNotEmpty) {
+          await _signIn(); // straight in
+          return;
+        }
+        setState(() {
+          _mode = _Mode.signin;
+          _note = 'Xác nhận xong! Đăng nhập nhé 💖';
+        });
+      }),
+    };
+  }
+
+  Future<void> _resend() => _run(() async {
+    await ref.read(authRepositoryProvider).resendCode(_email.text);
+    setState(() => _note = 'Đã gửi lại mã 💌');
+  });
 
   @override
   Widget build(BuildContext context) => AutofillGroup(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_mode == _Mode.register) ...[
+          TextField(
+            key: const Key('name'),
+            controller: _name,
+            maxLength: 40,
+            autofillHints: const [AutofillHints.nickname],
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              hintText: 'Tên của bạn',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         TextField(
           key: const Key('email'),
           controller: _email,
@@ -123,25 +211,80 @@ class _SignInFormState extends ConsumerState<SignInForm> {
           textInputAction: TextInputAction.next,
           decoration: const InputDecoration(hintText: 'Email'),
         ),
-        const SizedBox(height: 10),
-        TextField(
-          key: const Key('password'),
-          controller: _password,
-          obscureText: true,
-          autofillHints: const [AutofillHints.password],
-          onSubmitted: (_) => _submit(),
-          decoration: const InputDecoration(hintText: 'Mật khẩu'),
-        ),
+        if (_mode != _Mode.verify) ...[
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('password'),
+            controller: _password,
+            obscureText: true,
+            autofillHints: [
+              if (_mode == _Mode.register)
+                AutofillHints.newPassword
+              else
+                AutofillHints.password,
+            ],
+            textInputAction: _mode == _Mode.register
+                ? TextInputAction.next
+                : TextInputAction.done,
+            onSubmitted: _mode == _Mode.signin ? (_) => _submit() : null,
+            decoration: const InputDecoration(hintText: 'Mật khẩu'),
+          ),
+        ],
+        if (_mode == _Mode.register) ...[
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('invite'),
+            controller: _invite,
+            autocorrect: false,
+            onSubmitted: (_) => _submit(),
+            decoration: const InputDecoration(hintText: 'Mã mời'),
+          ),
+        ],
+        if (_mode == _Mode.verify) ...[
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('code'),
+            controller: _code,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            autofillHints: const [AutofillHints.oneTimeCode],
+            onSubmitted: (_) => _submit(),
+            decoration: const InputDecoration(
+              hintText: 'Mã 6 số trong email',
+              counterText: '',
+            ),
+          ),
+        ],
+        if (_note.isNotEmpty) ...[const SizedBox(height: 10), Notice(_note)],
         if (_err.isNotEmpty) ...[
           const SizedBox(height: 10),
           Notice(_err, error: true),
         ],
         const SizedBox(height: 10),
         Pill(
-          label: _busy ? 'Đang đăng nhập…' : 'Đăng nhập 💖',
+          label: _busy
+              ? 'Đợi chút…'
+              : switch (_mode) {
+                  _Mode.signin => 'Đăng nhập 💖',
+                  _Mode.register => 'Tạo tài khoản ✨',
+                  _Mode.verify => 'Xác nhận 💌',
+                },
           style: PillStyle.on,
           onTap: _busy ? null : _submit,
         ),
+        if (_mode == _Mode.verify) ...[
+          const SizedBox(height: 8),
+          Pill(label: 'Gửi lại mã', onTap: _busy ? null : _resend),
+        ],
+        const SizedBox(height: 8),
+        if (_mode == _Mode.signin)
+          Pill(
+            label: 'Chưa có tài khoản? Đăng ký',
+            onTap: () => _go(_Mode.register),
+          )
+        else
+          Pill(label: 'Quay lại đăng nhập', onTap: () => _go(_Mode.signin)),
       ],
     ),
   );

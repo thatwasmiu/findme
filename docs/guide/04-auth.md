@@ -38,10 +38,24 @@ The app has **no admin screen** on purpose: admin work stays on the web.
 The form is wrapped in an `AutofillGroup` with `AutofillHints.username` / `password`, so Google Password Manager (and
 the iPhone Keychain) offer to save and fill the password, like the web's `autocomplete` attributes.
 
+## Sign-up
+
+"Chưa có tài khoản? Đăng ký" under the form switches it to sign-up, like the web's `<SignIn register>`:
+
+1. Name, email, password, invite code → `SignUp`. Cognito's PreSignUp trigger checks the invite code and the name;
+   the user is created unconfirmed and gets a 6-digit code by email.
+2. The code → `ConfirmSignUp` (the PostConfirmation trigger makes the account), then the app signs in at once with
+   the password still in the form. "Gửi lại mã" calls `ResendConfirmationCode` (4 emails a day per address).
+
+A login with an unconfirmed email, or a sign-up with an email that already exists, jumps straight to the code step.
+All three calls are in `AuthRepository` (`signUp`, `confirmSignUp`, `resendCode`); the modes live in `SignInForm`.
+
 ## Error messages
 
 `signInMessage()` turns Cognito's error codes into the web's Vietnamese wording: `NotAuthorizedException` → "Sai
-email hoặc mật khẩu.", `NEW_PASSWORD_REQUIRED` → "Tài khoản cần mật khẩu mới: nhờ admin đặt lại giúp nhé.", etc.
+email hoặc mật khẩu.", `CodeMismatchException` → "Mã chưa đúng, xem lại email nhé.", etc. When our own trigger
+refuses (`UserLambdaValidationException`), its text is shown as is, without Cognito's "PreSignUp failed with error"
+prefix (`AuthError.detail`): "Mã mời không đúng.".
 
 ## Tests
 

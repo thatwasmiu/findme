@@ -194,13 +194,83 @@ void main() {
       signInMessage(const AuthError('NEW_PASSWORD_REQUIRED')),
       'Tài khoản cần mật khẩu mới: nhờ admin đặt lại giúp nhé.',
     );
-    expect(
-      signInMessage(const AuthError('Weird')),
-      'Chưa đăng nhập được (Weird).',
-    );
+    expect(signInMessage(const AuthError('Weird')), 'Chưa được (Weird).');
     expect(
       signInMessage(const NetworkError()),
       'Không kết nối được, thử lại sau chút nhé ✨',
     );
+  });
+
+  group('sign-up', () {
+    test(
+      'SignUp sends trimmed fields and the invite, stores nothing',
+      () async {
+        answer((_) => ok({'UserConfirmed': false}));
+        await repo.signUp(' me@x.vn ', 'pw', ' Bơ ', ' inv ');
+        expect(sent(), {
+          'target': 'AWSCognitoIdentityProviderService.SignUp',
+          'body': {
+            'ClientId': 'c',
+            'Username': 'me@x.vn',
+            'Password': 'pw',
+            'UserAttributes': [
+              {'Name': 'email', 'Value': 'me@x.vn'},
+              {'Name': 'name', 'Value': 'Bơ'},
+            ],
+            'ClientMetadata': {'invite': 'inv'},
+          },
+        });
+        expect(store.s, isNull);
+      },
+    );
+
+    test(
+      'ConfirmSignUp and ResendConfirmationCode take the email and code',
+      () async {
+        await repo.confirmSignUp('me@x.vn', ' 123456 ');
+        await repo.resendCode('me@x.vn');
+        expect(sent(), {
+          'target': 'AWSCognitoIdentityProviderService.ConfirmSignUp',
+          'body': {
+            'ClientId': 'c',
+            'Username': 'me@x.vn',
+            'ConfirmationCode': '123456',
+          },
+        });
+        expect(sent(1), {
+          'target': 'AWSCognitoIdentityProviderService.ResendConfirmationCode',
+          'body': {'ClientId': 'c', 'Username': 'me@x.vn'},
+        });
+      },
+    );
+
+    test("a trigger refusal keeps the trigger's own words, without Cognito's prefix", () async {
+      answer(
+        (_) => (
+          status: 400,
+          body: {
+            '__type': 'UserLambdaValidationException',
+            'message': 'PreSignUp failed with error Mã mời không đúng.',
+          },
+        ),
+      );
+      await expectLater(
+        repo.signUp('a@x.vn', 'pw', 'B', 'x'),
+        throwsA(
+          isA<AuthError>()
+              .having((e) => e.code, 'code', 'UserLambdaValidationException')
+              .having((e) => e.detail, 'detail', 'Mã mời không đúng.'),
+        ),
+      );
+      expect(
+        signInMessage(
+          const AuthError(
+            'UserLambdaValidationException',
+            'Mã mời không đúng.',
+          ),
+        ),
+        'Mã mời không đúng.',
+      );
+    });
   });
 }

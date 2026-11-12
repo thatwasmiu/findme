@@ -48,9 +48,17 @@ class CognitoApi {
         : <String, dynamic>{};
     final status = res.statusCode ?? 0;
     if (status < 200 || status >= 300) {
-      throw AuthError(
-        ((data['__type'] as String?) ?? 'HTTP $status').split('#').last,
-      );
+      final code = ((data['__type'] as String?) ?? 'HTTP $status')
+          .split('#')
+          .last;
+      // "PreSignUp failed with error Mã mời không đúng." -> "Mã mời không đúng."
+      final detail = code == 'UserLambdaValidationException'
+          ? ((data['message'] as String?) ?? '').replaceFirst(
+              RegExp('^.*? failed with error '),
+              '',
+            )
+          : '';
+      throw AuthError(code, detail);
     }
     return data;
   }

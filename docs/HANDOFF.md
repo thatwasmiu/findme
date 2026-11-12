@@ -4,6 +4,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Sign-up** (2026-11-12, from the web's `SignIn.tsx` / `auth.ts`, guide chapter 04): "Chưa có tài khoản? Đăng ký"
+  → name, email, password, invite code → 6-digit code from the email → signed in. Unit + widget tested only; not
+  tried against the real pool (it needs a real invite code and mailbox).
 - **Bag and avatar** (2026-11-11, follows `travel-heatmap` 233087b, guide chapter 18, on `main` and pushed 2026-11-12): 8-pocket bag
   (edit yours from 👥, open a friend's from their marker or row), avatar cropped on the phone replaces Hachiware /
   the initial, share links get the 🎒 option behind a warning. Pictures go to Look Back with receipts. New

@@ -39,6 +39,7 @@ class Pill extends StatelessWidget {
           };
     final text = Text(
       label,
+      textAlign: TextAlign.center,
       style: TextStyle(
         color: on ? Colors.white : Palette.ink,
         fontWeight: on ? FontWeight.w700 : FontWeight.w500,
@@ -67,27 +68,30 @@ class Pill extends StatelessWidget {
                   horizontal: 12,
                   vertical: 6,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    text,
-                    if (badge != null && badge! > 0) ...[
-                      const SizedBox(width: 4),
-                      CircleAvatar(
-                        radius: 9,
-                        backgroundColor: Palette.pink,
-                        child: Text(
-                          '$badge',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
+                // No badge: the bare text, so a long label wraps instead of overflowing a Row.
+                child: badge == null || badge! <= 0
+                    ? Center(widthFactor: 1, heightFactor: 1, child: text)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          text,
+                          if (badge != null && badge! > 0) ...[
+                            const SizedBox(width: 4),
+                            CircleAvatar(
+                              radius: 9,
+                              backgroundColor: Palette.pink,
+                              child: Text(
+                                '$badge',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ],
-                ),
               ),
             ),
           ),

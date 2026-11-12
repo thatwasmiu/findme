@@ -22,6 +22,38 @@ class AuthRepository {
         (a['ExpiresIn'] as num).toInt() * 1000,
   );
 
+  /// Self sign-up: Cognito checks the invite code and name (PreSignUp trigger), creates the user unconfirmed and
+  /// emails a 6-digit code. The person is not signed in until [confirmSignUp].
+  Future<void> signUp(
+    String email,
+    String password,
+    String name,
+    String invite,
+  ) => _api.call('SignUp', {
+    'ClientId': _cid,
+    'Username': email.trim(),
+    'Password': password,
+    'UserAttributes': [
+      {'Name': 'email', 'Value': email.trim()},
+      {'Name': 'name', 'Value': name.trim()},
+    ],
+    'ClientMetadata': {'invite': invite.trim()},
+  });
+
+  /// The emailed code; on success the PostConfirmation trigger makes the account.
+  Future<void> confirmSignUp(String email, String code) =>
+      _api.call('ConfirmSignUp', {
+        'ClientId': _cid,
+        'Username': email.trim(),
+        'ConfirmationCode': code.trim(),
+      });
+
+  /// A new code by email (counts toward the 4 emails a day per address).
+  Future<void> resendCode(String email) => _api.call('ResendConfirmationCode', {
+    'ClientId': _cid,
+    'Username': email.trim(),
+  });
+
   Future<void> login(String email, String password) async {
     final r = await _api.call('InitiateAuth', {
       'AuthFlow': 'USER_PASSWORD_AUTH',
@@ -85,16 +117,27 @@ class AuthRepository {
 const _why = {
   'NotAuthorizedException': 'Sai email hoặc mật khẩu.',
   'UserNotFoundException': 'Sai email hoặc mật khẩu.',
+  'UserNotConfirmedException':
+      'Email chưa xác nhận: nhập mã đã gửi tới email nhé.',
   'PasswordResetRequiredException': 'Cần đặt lại mật khẩu: nhờ admin giúp nhé.',
   'NEW_PASSWORD_REQUIRED':
       'Tài khoản cần mật khẩu mới: nhờ admin đặt lại giúp nhé.',
   'TooManyRequestsException': 'Thử nhiều quá rồi, đợi vài phút nhé.',
   'LimitExceededException': 'Thử nhiều quá rồi, đợi vài phút nhé.',
+  'UsernameExistsException':
+      'Email này đã đăng ký. Đăng nhập, hoặc nhập mã nếu chưa xác nhận.',
+  'InvalidPasswordException': 'Mật khẩu cần ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.',
+  'CodeMismatchException': 'Mã chưa đúng, xem lại email nhé.',
+  'ExpiredCodeException': 'Mã hết hạn rồi: bấm "Gửi lại mã".',
+  'CodeDeliveryFailureException': 'Không gửi được email, thử lại sau nhé.',
 };
 
-/// What the sign-in form says for a failed login (the web's `SignIn.tsx` wording).
+/// What the sign-in / sign-up form says for a failure (the web's `SignIn.tsx` `why`): our triggers' own words
+/// first, then the table, then the raw code.
 String signInMessage(Object error) => error is AuthError
-    ? (_why[error.code] ?? 'Chưa đăng nhập được (${error.code}).')
+    ? (error.detail.isNotEmpty
+          ? error.detail
+          : _why[error.code] ?? 'Chưa được (${error.code}).')
     : 'Không kết nối được, thử lại sau chút nhé ✨';
 
 final sessionStoreProvider = Provider<SessionStore>(

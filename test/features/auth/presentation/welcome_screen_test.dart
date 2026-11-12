@@ -56,7 +56,7 @@ void main() {
       await t.enterText(find.byKey(const Key('password')), 'pw');
       await t.tap(find.text('Đăng nhập 💖'));
       await t.pump();
-      expect(find.text('Đang đăng nhập…'), findsOneWidget);
+      expect(find.text('Đợi chút…'), findsOneWidget);
       gate.completeError(const AuthError('NotAuthorizedException'));
       await t.pumpAndSettle();
       expect(find.text('Sai email hoặc mật khẩu.'), findsOneWidget);
@@ -78,4 +78,69 @@ void main() {
     await t.pumpAndSettle();
     expect(c.read(authControllerProvider), AuthPhase.signedOut);
   });
+
+  testWidgets('sign-up: register, then the emailed code, then signed in', (
+    t,
+  ) async {
+    final auth = fakeAuth(token: null);
+    when(() => auth.signUp(any(), any(), any(), any()))
+        .thenAnswer((_) async {});
+    when(() => auth.confirmSignUp(any(), any())).thenAnswer((_) async {});
+    when(() => auth.resendCode(any())).thenAnswer((_) async {});
+    when(() => auth.login(any(), any())).thenAnswer((_) async {});
+    await t.pumpWidget(app(auth));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Chưa có tài khoản? Đăng ký'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('name')), 'Bơ');
+    await t.enterText(find.byKey(const Key('email')), 'me@x.vn');
+    await t.enterText(find.byKey(const Key('password')), 'pw');
+    await t.enterText(find.byKey(const Key('invite')), 'inv');
+    await t.tap(find.text('Tạo tài khoản ✨'));
+    await t.pumpAndSettle();
+    verify(() => auth.signUp('me@x.vn', 'pw', 'Bơ', 'inv')).called(1);
+    expect(find.text('Đã gửi mã 6 số tới email của bạn 💌'), findsOneWidget);
+    expect(find.byKey(const Key('password')), findsNothing);
+
+    await t.tap(find.text('Gửi lại mã'));
+    await t.pumpAndSettle();
+    verify(() => auth.resendCode('me@x.vn')).called(1);
+    expect(find.text('Đã gửi lại mã 💌'), findsOneWidget);
+
+    await t.enterText(find.byKey(const Key('code')), '123456');
+    await t.tap(find.text('Xác nhận 💌'));
+    await t.pumpAndSettle();
+    verify(() => auth.confirmSignUp('me@x.vn', '123456')).called(1);
+    verify(() => auth.login('me@x.vn', 'pw')).called(1);
+    final c = ProviderScope.containerOf(t.element(find.byType(WelcomeScreen)));
+    expect(c.read(authControllerProvider), AuthPhase.signedIn);
+  });
+
+  testWidgets(
+    'sign-up: an existing email goes to the code step with the web message',
+    (t) async {
+      final auth = fakeAuth(token: null);
+      when(() => auth.signUp(any(), any(), any(), any()))
+          .thenThrow(const AuthError('UsernameExistsException'));
+      await t.pumpWidget(app(auth));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Chưa có tài khoản? Đăng ký'));
+      await t.pumpAndSettle();
+      for (final k in ['name', 'email', 'password', 'invite']) {
+        await t.enterText(find.byKey(Key(k)), 'x');
+      }
+      await t.tap(find.text('Tạo tài khoản ✨'));
+      await t.pumpAndSettle();
+      expect(
+        find.text(
+          'Email này đã đăng ký. Đăng nhập, hoặc nhập mã nếu chưa xác nhận.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Xác nhận 💌'), findsOneWidget);
+      await t.tap(find.text('Quay lại đăng nhập'));
+      await t.pumpAndSettle();
+      expect(find.text('Đăng nhập 💖'), findsOneWidget);
+    },
+  );
 }

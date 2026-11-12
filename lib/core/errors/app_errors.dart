@@ -54,8 +54,11 @@ class FriendError extends AppError {
 
 /// Cognito said no; [code] is its error name (NotAuthorizedException…) or the challenge it asked for.
 class AuthError extends AppError {
-  const AuthError(this.code);
+  const AuthError(this.code, [this.detail = '']);
   final String code;
+
+  /// The text our own Cognito triggers threw (UserLambdaValidationException), already Vietnamese, no prefix.
+  final String detail;
 
   @override
   String toString() => code;
