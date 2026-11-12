@@ -59,6 +59,7 @@ Dev builds: the 🐞 button opens the debug console (HTTP calls with status and 
 | `prod` | Find Me | `app.findme.mobile` |
 
 iOS bundle id: `app.findme.mobile` (no flavors yet, chapter 13).
+Privacy manifest: `ios/Runner/PrivacyInfo.xcprivacy`; new data sent to the API = new entry there + App Privacy in App Store Connect.
 
 ## Stored on the phone
 

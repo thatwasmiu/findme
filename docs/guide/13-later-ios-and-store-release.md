@@ -22,6 +22,21 @@ Until then iOS builds take their config only from `--dart-define-from-file`. On 
 as `dev` and `prod`, add build configurations `Debug-dev`, `Release-prod`…, and set `PRODUCT_BUNDLE_IDENTIFIER`
 (`app.findme.mobile.dev` for dev). Flutter's docs: "Set up flavors for iOS".
 
+### Privacy manifest
+
+Apple rejects uploads without one. `ios/Runner/PrivacyInfo.xcprivacy` (an XML plist, listed in the Runner target's
+resources in `project.pbxproj`) says two things:
+
+- **Required-reason APIs** our own code touches, each with Apple's reason code: file timestamps (`C617.1`, files in
+  our container), `UserDefaults` (`CA92.1`, our own settings), system boot time (`35F9.1`, measuring elapsed time).
+  Plugins (geolocator, shared_preferences, …) ship their own manifests; Xcode merges them all.
+- **Collected data**: precise location, email, name, user id, photos/videos; all linked to the account, used for
+  app functionality, no tracking.
+
+When you fill in **App Privacy** in App Store Connect, give the same answers. A new kind of data sent to the API
+(phone number, analytics, crash reports) means a new entry here and there. Check: in Xcode, Product → Archive →
+right-click the archive → **Generate Privacy Report**.
+
 ## Google Play
 
 1. **Upload key:** `keytool -genkey -v -keystore $env:USERPROFILE\findme-upload.jks -keyalg RSA -keysize 2048
