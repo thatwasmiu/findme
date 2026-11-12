@@ -1,6 +1,7 @@
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:findme/features/pins/domain/pin.dart';
+import 'package:findme/features/trail/domain/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,6 +48,12 @@ class PinBubbles extends ConsumerWidget {
     final only = b.pins.length == 1 && b.pins.single.media.length == 1
         ? b.pins.single.media.single
         : null;
+    final shared = b.pins.any((p) => p.media.any((m) => m.shared));
+    // A friend's pin: a ring in their colour (only when the whole bubble is theirs).
+    final sub = b.pins.first.sub;
+    final ring = sub != null && b.pins.every((p) => p.sub == sub)
+        ? friendColor(sub)
+        : Colors.white;
     return Semantics(
       button: true,
       label: 'Xem ảnh',
@@ -58,7 +65,7 @@ class PinBubbles extends ConsumerWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               color: Palette.pinkSoft,
-              border: Border.all(color: Colors.white, width: 3),
+              border: Border.all(color: ring, width: 3),
               borderRadius: BorderRadius.circular(15),
               boxShadow: const [
                 BoxShadow(
@@ -89,6 +96,12 @@ class PinBubbles extends ConsumerWidget {
                   shadows: [Shadow(blurRadius: 4)],
                 ),
               ),
+            ),
+          if (shared)
+            const Positioned(
+              bottom: -8,
+              right: -8,
+              child: Text('💗', style: TextStyle(fontSize: 14)),
             ),
           if (b.count > 1)
             Positioned(

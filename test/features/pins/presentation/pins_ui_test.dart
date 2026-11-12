@@ -4,8 +4,10 @@ import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:findme/features/pins/domain/pin.dart';
 import 'package:findme/features/pins/presentation/add_pin_sheet.dart';
+import 'package:findme/features/pins/presentation/pin_layer.dart';
 import 'package:findme/features/pins/presentation/pin_sheet.dart';
 import 'package:findme/features/pins/presentation/pins_controller.dart';
+import 'package:findme/features/trail/domain/colors.dart';
 import 'package:findme/features/trail/domain/models.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
 import 'package:flutter/material.dart';
@@ -180,6 +182,62 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(find.text('2'), findsOneWidget);
+    });
+
+    Future<void> draw(WidgetTester t, List<Pin> pins) async {
+      await t.pumpWidget(
+        host(
+          MapView(
+            points: const [],
+            stops: const [],
+            showTiles: false,
+            pins: pins,
+          ),
+          quietPins(),
+        ),
+      );
+      await t.pumpAndSettle();
+    }
+
+    Color? ring(WidgetTester t) =>
+        ((t
+                            .widgetList<DecoratedBox>(
+                              find.descendant(
+                                of: find.byType(PinBubbles),
+                                matching: find.byType(DecoratedBox),
+                              ),
+                            )
+                            .first
+                            .decoration
+                        as BoxDecoration)
+                    .border!
+                as Border)
+            .top
+            .color;
+
+    testWidgets("a friend's bubble has their colour, yours stays white", (
+      t,
+    ) async {
+      await draw(t, [pin(sub: 'f1')]);
+      expect(ring(t), friendColor('f1'));
+      await draw(t, [pin()]);
+      expect(ring(t), Colors.white);
+    });
+
+    testWidgets('a bubble with a shared photo shows 💗', (t) async {
+      const shared = PinMedia(
+        id: 's',
+        kind: 'image',
+        status: 'ready',
+        thumb: 't',
+        shared: true,
+      );
+      await draw(t, [pin()]);
+      expect(find.text('💗'), findsNothing);
+      await draw(t, [
+        pin(media: [shared]),
+      ]);
+      expect(find.text('💗'), findsOneWidget);
     });
   });
 

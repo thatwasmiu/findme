@@ -6,6 +6,7 @@ import 'package:findme/features/friends/presentation/friends_controller.dart';
 import 'package:findme/features/friends/presentation/friends_sheet.dart';
 import 'package:findme/features/pins/domain/pin.dart';
 import 'package:findme/features/pins/presentation/add_pin_sheet.dart';
+import 'package:findme/features/pins/presentation/friend_pins_controller.dart';
 import 'package:findme/features/pins/presentation/pin_sheet.dart';
 import 'package:findme/features/pins/presentation/pins_controller.dart';
 import 'package:findme/features/replay/presentation/replay_bar.dart';
@@ -41,11 +42,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ref.read(trailControllerProvider.notifier).paused();
         ref.read(friendsControllerProvider.notifier).paused();
         ref.read(pinsControllerProvider.notifier).paused();
+        ref.read(friendPinsControllerProvider.notifier).paused();
       },
       onShow: () {
         ref.read(trailControllerProvider.notifier).resumed();
         ref.read(friendsControllerProvider.notifier).resumed();
         ref.read(pinsControllerProvider.notifier).resumed();
+        ref.read(friendPinsControllerProvider.notifier).resumed();
       },
     );
   }
@@ -85,8 +88,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final incoming = ref.watch(
       friendsControllerProvider.select((s) => s.relations.incoming.length),
     );
-    final pins = ref.watch(pinsControllerProvider);
+    // Friends' photos switched to "Chia sẻ", for the friends shown on the map. Yours first, so a bubble you share
+    // opens as yours.
+    final pins = [
+      ...ref.watch(pinsControllerProvider),
+      ...visibleFriendPins(
+        ref.watch(friendPinsControllerProvider),
+        ref.watch(friendsControllerProvider.select((s) => s.shown)),
+      ),
+    ];
     final openPin = pins.where((p) => p.id == _openPinId).firstOrNull;
+    final pinOwner = openPin?.sub == null
+        ? null
+        : ref
+              .read(friendsControllerProvider)
+              .relations
+              .friends
+              .where((f) => f.id == openPin!.sub)
+              .firstOrNull
+              ?.name;
     final sheet = _adding
         ? AddPinSheet(
             stops: trail.track.stops,
@@ -108,6 +128,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         : PinSheet(
             key: ValueKey(openPin.id),
             pin: openPin,
+            by: pinOwner,
             onClose: _closeSheets,
           );
     return PopScope(
