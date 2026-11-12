@@ -37,6 +37,13 @@ When you fill in **App Privacy** in App Store Connect, give the same answers. A 
 (phone number, analytics, crash reports) means a new entry here and there. Check: in Xcode, Product → Archive →
 right-click the archive → **Generate Privacy Report**.
 
+### Privacy policy page
+
+The policy itself is a plain HTML file in the web repo, `travel-heatmap/web/public/privacy.html`; Vite copies
+`public/` as-is, so it goes live with the web deploy at `<WEB_ORIGIN>/privacy.html`. The app has no copy: the
+welcome card's "Chính sách quyền riêng tư" opens that URL in the browser (`linkOpenerProvider`). The same URL goes
+into App Store Connect → App Privacy → Privacy Policy URL and Play Console → App content → Privacy policy.
+
 ## Google Play
 
 1. **Upload key:** `keytool -genkey -v -keystore $env:USERPROFILE\findme-upload.jks -keyalg RSA -keysize 2048

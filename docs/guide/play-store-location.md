@@ -40,26 +40,12 @@ Record on a phone or the emulator, in this order:
 Type **location**. Draft: "Continuous location tracking that the user started (travel trail). The user sees a
 notification the whole time and can stop it in the app."
 
-## 5. Privacy policy (draft, host it at a public URL)
+## 5. Privacy policy (done)
 
-> **Find Me — Privacy policy**
->
-> **What we collect.** Your email address (to sign in). When you turn on "Ghi hành trình": your device's position
-> (latitude, longitude, accuracy, time), including while the app is closed, until you turn it off or sign out.
->
-> **Why.** To draw your trail on your map, and to show your position and trail to people you choose: friends you
-> accept in the app, and people holding a share link you created.
->
-> **Where it goes.** Positions are sent over HTTPS to the Find Me server (Amazon Web Services, region
-> ap-southeast-1) and stored there. They are not sold, not used for advertising, and not shared with anyone else.
->
-> **On the phone.** Positions wait in a file on the phone until the server confirms them, then they are deleted
-> from the phone. Signing out deletes them and the upload token.
->
-> **Your choices.** Turn tracking off at any time in the app. Remove a friend or revoke a share link to stop them
-> seeing you. To have your account and all stored positions deleted, contact: `<your contact email>`.
->
-> **Changes.** This page shows the date of the latest version: `<date>`.
+Live page: `travel-heatmap/web/public/privacy.html`, served at `<WEB_ORIGIN>/privacy.html` with the web deploy
+(Vietnamese, covers location, account, pins/photos, bag, friends, share links). Linked from the web sign-in form and
+the app's welcome screen. Paste that URL into Play Console → App content → Privacy policy and into App Store Connect.
+When the app starts sending a new kind of data, update the page, `ios/Runner/PrivacyInfo.xcprivacy` and §6.
 
 ## 6. Data safety form (answers)
 

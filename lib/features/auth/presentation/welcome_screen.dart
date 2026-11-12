@@ -1,9 +1,12 @@
+import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/theme/palette.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/bag/presentation/bag_sheet.dart'
+    show linkOpenerProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,6 +64,19 @@ class WelcomeScreen extends ConsumerWidget {
                           ref.read(authControllerProvider.notifier).signOut(),
                     ),
                   ],
+                  // The web's SignIn.tsx link; the App Store and Play want the policy reachable in the app.
+                  // ponytail: only here (signed out); add it to a settings screen too once one exists.
+                  TextButton(
+                    onPressed: () => ref.read(linkOpenerProvider)(
+                      Uri.parse(
+                        '${ref.read(appConfigProvider).web}/privacy.html',
+                      ),
+                    ),
+                    child: const Text(
+                      'Chính sách quyền riêng tư',
+                      style: TextStyle(color: Palette.muted, fontSize: 13),
+                    ),
+                  ),
                 ],
               ),
             ),

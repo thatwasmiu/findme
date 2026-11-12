@@ -4,6 +4,8 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/theme/app_theme.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/auth/presentation/welcome_screen.dart';
+import 'package:findme/features/bag/presentation/bag_sheet.dart'
+    show linkOpenerProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,4 +145,23 @@ void main() {
       expect(find.text('Đăng nhập 💖'), findsOneWidget);
     },
   );
+
+  testWidgets('privacy policy link opens <web>/privacy.html', (t) async {
+    final opened = <Uri>[];
+    await t.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...baseOverrides(auth: fakeAuth(token: null)),
+          linkOpenerProvider.overrideWithValue((u) async {
+            opened.add(u);
+            return true;
+          }),
+        ],
+        child: MaterialApp(theme: buildTheme(), home: const WelcomeScreen()),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.text('Chính sách quyền riêng tư'));
+    expect(opened, [Uri.parse('https://findme.test/privacy.html')]);
+  });
 }

@@ -104,7 +104,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - Viewing a past range, shown friends are not refreshed (same as the web); pick Hôm nay to follow them.
 - iOS has no dev/prod schemes (needs a Mac) and has never been built; CI's macOS job is the first check.
 - iOS privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` added (chapter 13); not yet seen in an Xcode privacy
-  report. App Store still lacks: in-app account deletion, privacy policy URL/link, signed CI upload.
+  report. Privacy policy link under the welcome card opens `<WEB_ORIGIN>/privacy.html` (page lives in travel-heatmap
+  `web/public/`, not deployed yet; only on the signed-out screen). App Store still lacks: in-app account deletion,
+  signed CI upload.
 - System font instead of the web's Nunito (chapter 13 says how to add it).
 - Taps on stops / prints / friends show a SnackBar, not a map popup.
 - In a widget test, the share sheet's ✕ was not found by its screen-reader label "Đóng" (found by text instead);
