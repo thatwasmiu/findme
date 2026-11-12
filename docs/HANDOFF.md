@@ -4,7 +4,15 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
-- **Sign-up** (2026-11-12, from the web's `SignIn.tsx` / `auth.ts`, guide chapter 04): "Chưa có tài khoản? Đăng ký"
+- **Pins taken where you are, shared per photo** (2026-11-12, branch `feat/pins-here`, follows `travel-heatmap`
+  24f0c21, guide chapter 16, plan `docs/superpowers/plans/2026-11-12-pins-here-and-shared.md`): 📷 needs a fresh fix
+  (refused / off / silent → no pin, **Thử lại**), camera photos only, name from a stop or `GET /place-name`;
+  "Chia sẻ" switch per photo; friends' shared photos on the map (`/pin-grant` + Look Back `shared/session`, every
+  5 min, only for friends shown); share links get "Ảnh" (🖼️). Per-pin link removed. **Not ported (owner's call):**
+  the public share page; links open the web. Unit + widget tested only: the server side is merged in both repos but
+  **not deployed** (Look Back first, then Find Me), so nothing has run against a server or on a device. Not merged
+  to `main`, not pushed.
+- **Sign-up** (2026-11-12, from the web's `SignIn.tsx` / `auth.ts`, guide chapter 04, committed b6c1256 on `feat/pins-here`): "Chưa có tài khoản? Đăng ký"
   → name, email, password, invite code → 6-digit code from the email → signed in. Unit + widget tested only; not
   tried against the real pool (it needs a real invite code and mailbox).
 - **Bag and avatar** (2026-11-11, follows `travel-heatmap` 233087b, guide chapter 18, on `main` and pushed 2026-11-12): 8-pocket bag

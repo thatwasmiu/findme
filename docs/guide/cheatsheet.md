@@ -102,8 +102,14 @@ another account signs in, never by an expired session.
 
 ## Photo pins (chapter 16)
 
-- Look Back: `<WEB_ORIGIN>/lb/api/findme/…`, media `<WEB_ORIGIN>/lb/media/<key>`, link `<WEB_ORIGIN>/lb/m/<code>`.
+- Look Back: `<WEB_ORIGIN>/lb/api/findme/…`, media `<WEB_ORIGIN>/lb/media/<key>`.
 - Login: `POST /media-ticket` → `POST /lb/api/findme/session` → cookie `fm_user`, memory only, renewed after 6 h.
+- New pin: fresh fix (15 s, given up at 20 s) or no pin; name from a stop ≤ 100 m, else `GET /place-name?lat&lon`
+  (`{name, pending}`, 4 tries 3 s apart). Camera photos only.
+- Switch: `PUT /lb/api/findme/media/<id>/shared {"shared": true|false}` (images only).
+- Friends: `POST /pin-grant` → `{grant, exp}` (null with no friends) → `POST /lb/api/findme/shared/session {grant}` →
+  pins with `sub` + cookie `fm_shared_friends`. Every 5 min, new pass under 60 s left.
+- Links: `pics: true` on `POST /shares` / `PATCH /shares/<id>` ("Ảnh", 🖼️).
 - Uploads: tus 1.0.0, 8 MiB chunks. Limits on Look Back: 500 MiB a file, 5 GiB an account.
 - Polling: every 5 s only while a file is `processing`.
 - App icon: `assets/images/logo.png` and the launcher files all come from the web's `web/public/icon-512.png`.
