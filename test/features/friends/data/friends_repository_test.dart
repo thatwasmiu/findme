@@ -19,6 +19,35 @@ void main() {
   FriendsRepository repo() =>
       FriendsRepository(ApiClient(cfg, () async => 't', dio: fakeDio(adapter)));
 
+  test('sharing: GET /me and PUT /me/sharing, parsed; null before trip mode '
+      'is deployed', () async {
+    adapter = FakeAdapter(
+      (r) => (
+        status: 200,
+        body: r.method == 'GET'
+            ? {'name': 'A', 'friendCode': 'K'}
+            : {
+                'sharing': 'trip',
+                'trip': true,
+                'tripFrom': '2026-11-13T10:00:00.000Z',
+                'tripUntil': '2026-11-13T11:00:00.000Z',
+              },
+      ),
+    );
+    final r = repo();
+    expect(await r.sharing(), isNull);
+    expect(await r.setSharing({'start': '1h'}), (
+      tripMode: true,
+      on: true,
+      until: DateTime.utc(2026, 11, 13, 11),
+    ));
+    expect(adapter.calls, [
+      'GET https://api.test/me',
+      'PUT https://api.test/me/sharing',
+    ]);
+    expect(sentBody(adapter.requests.last), {'start': '1h'});
+  });
+
   test(
     'each call: method, URL and bearer; bodies and answers unwrapped',
     () async {

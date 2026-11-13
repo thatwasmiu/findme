@@ -2,6 +2,7 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/network/api_client.dart';
 import 'package:findme/core/network/api_client_provider.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The friends API (port of the web's `friendsApi.ts`).
@@ -25,6 +26,16 @@ class FriendsRepository {
 
   Future<Me> me() async =>
       Me.fromJson(await _send('GET', '/me') as Map<String, dynamic>);
+
+  /// Your trip-mode state (travel-heatmap chapter 22); null while the server has no trip mode.
+  Future<Sharing?> sharing() async =>
+      sharingFromJson(await _send('GET', '/me') as Map<String, dynamic>);
+
+  /// `PUT /me/sharing` with `{mode}`, `{start}` or `{end: true}`; answers the new state.
+  Future<Sharing?> setSharing(Map<String, Object> body) async =>
+      sharingFromJson(
+        await _send('PUT', '/me/sharing', body) as Map<String, dynamic>,
+      );
 
   /// Deletes your whole account for good (App Store 5.1.1(v)); FriendError('owner') for the original account.
   Future<void> deleteMe() => _send('DELETE', '/me');
