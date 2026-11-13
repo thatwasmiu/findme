@@ -35,24 +35,33 @@ struct SpikeProvider: TimelineProvider {
   }
 }
 
-/// The App Groups in this extension's signing profile, each marked "+" if iOS gives it a shared folder.
+/// Round 3: the signing profiles of both the widget and the app it sits in, with a distinct word for each way
+/// reading one can fail, so "no profile" no longer hides three different answers.
 private func grantedGroups() -> String {
-  guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
-    let data = try? Data(contentsOf: url),
-    // The profile is a signed blob with a plain XML plist inside it.
-    let text = String(data: data, encoding: .isoLatin1),
-    let start = text.range(of: "<?xml"),
-    let end = text.range(of: "</plist>"),
+  let widget = Bundle.main.bundleURL  // …/Runner.app/PlugIns/FindMeWidget.appex
+  let app = widget.deletingLastPathComponent().deletingLastPathComponent()  // …/Runner.app
+  return "widget: \(describe(widget))\napp: \(describe(app))"
+}
+
+private func describe(_ bundle: URL) -> String {
+  let url = bundle.appendingPathComponent("embedded.mobileprovision")
+  guard FileManager.default.fileExists(atPath: url.path) else { return "no file" }
+  guard let data = try? Data(contentsOf: url) else { return "unreadable" }
+  // The profile is a signed blob with a plain XML plist inside it.
+  guard let start = data.range(of: Data("<?xml".utf8)),
+    let end = data.range(of: Data("</plist>".utf8), in: start.upperBound..<data.endIndex)
+  else { return "no xml (\(data.count) B)" }
+  guard
     let plist = try? PropertyListSerialization.propertyList(
-      from: Data(text[start.lowerBound..<end.upperBound].utf8), format: nil) as? [String: Any],
-    let ents = plist["Entitlements"] as? [String: Any]
-  else { return "no profile" }
+      from: data.subdata(in: start.lowerBound..<end.upperBound), format: nil) as? [String: Any]
+  else { return "bad plist" }
+  let ents = plist["Entitlements"] as? [String: Any] ?? [:]
   let groups = ents["com.apple.security.application-groups"] as? [String] ?? []
-  if groups.isEmpty { return "none" }
+  if groups.isEmpty { return "no groups" }
   return groups.map { g in
     let ok = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) != nil
-    return "\(ok ? "+" : "-") \(g)"
-  }.joined(separator: "\n")
+    return "\(ok ? "+" : "-")\(g)"
+  }.joined(separator: " ")
 }
 
 struct SpikeView: View {
