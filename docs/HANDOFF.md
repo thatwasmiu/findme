@@ -7,8 +7,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - **iPhone widget spike** on branch `spike/ios-widget` (2026-11-13, throwaway, pushed, not merged): asks whether a
   widget plus App Group survives Sideloadly with a free Apple ID before building the real one. Guide chapter 17,
   "iPhone spike". The iOS CI job runs on `spike/` branches; run 43364468226 (e1a4a90) built it: target added, Swift
-  compiled, widget embedded and ad-hoc signed in `findme-unsigned-ipa`. **Not yet tried on the iPhone**, so the
-  question is still open.
+  compiled, widget embedded and ad-hoc signed in `findme-unsigned-ipa`. Round 1 on the owner's iPhone (2026-11-13):
+  the widget appears and runs, but "group: MISSING", "app wrote: nothing". Round 2 lists the groups the signing
+  profile granted, to tell "none" from "renamed by Sideloadly".
 - **Pins taken where you are, shared per photo** (2026-11-12, merged to `main` and pushed 2026-11-12, follows `travel-heatmap`
   24f0c21, guide chapter 16, plan `docs/superpowers/plans/2026-11-12-pins-here-and-shared.md`): 📷 needs a fresh fix
   (refused / off / silent → no pin, **Thử lại**), camera photos only, name from a stop or `GET /place-name`;
