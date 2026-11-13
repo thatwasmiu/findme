@@ -67,4 +67,19 @@
             android:textColor="#9B7B92"
             android:textSize="12sp" />
     </LinearLayout>
+
+    <!-- Trip mode: start / end a trip (TrailWidgetProvider.tripButton). Hidden for always-on accounts. -->
+    <TextView
+        android:id="@+id/trail_widget_trip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="8dp"
+        android:background="@drawable/trail_widget_chip"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:textColor="#3F2A3A"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
 </FrameLayout>

@@ -1,6 +1,9 @@
 package app.findme.findme
 
 import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.service.quicksettings.TileService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
@@ -20,7 +23,31 @@ class MainActivity : FlutterActivity() {
         cache.get(BootReceiver.ENGINE)?.destroy()
         cache.remove(BootReceiver.ENGINE)
         return cache.get(ENGINE)
-            ?: FlutterEngine(context.applicationContext).also { cache.put(ENGINE, it) }
+            ?: FlutterEngine(context.applicationContext).also {
+                TripBridge.attach(context, it)
+                cache.put(ENGINE, it)
+            }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        askPicker(intent)
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        askPicker(intent)
+    }
+
+    /** The tile's long-press (or a tap that needs a screen): open the trip presets. */
+    private fun askPicker(intent: Intent?) {
+        if (intent?.action != TileService.ACTION_QS_TILE_PREFERENCES &&
+            intent?.getBooleanExtra(TripBridge.EXTRA_PICKER, false) != true
+        ) {
+            return
+        }
+        val running = FlutterEngineCache.getInstance().get(ENGINE)
+        if (running != null) TripBridge.command(running, "picker") else TripBridge.pickerAsked = true
     }
 
     companion object {

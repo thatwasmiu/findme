@@ -299,8 +299,12 @@ class TrackerController extends Notifier<TrackerState> {
       until = localEnd(p, _now());
       await _store.setTripPending(p.key);
     }
-    await _setUntil(until);
+    await _store.setTripUntil(until);
+    state = state.copyWith(tripUntil: until);
     await turnOn();
+    await _trip.sync(
+      state.tripUntil,
+    ); // after turnOn: the tile and widget read "recording" from the prefs
   }
 
   /// "Kết thúc": GPS off at once, what is queued goes, then the server closes the window (retried at the next app

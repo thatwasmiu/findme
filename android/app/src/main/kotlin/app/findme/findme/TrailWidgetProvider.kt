@@ -1,7 +1,9 @@
 package app.findme.findme
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.view.View
@@ -34,6 +36,7 @@ class TrailWidgetProvider : HomeWidgetProvider() {
             views.setViewVisibility(R.id.trail_widget_age, if (shown) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.trail_widget_credit, if (shown) View.VISIBLE else View.GONE)
             views.setViewVisibility(R.id.trail_widget_empty, if (shown) View.GONE else View.VISIBLE)
+            tripButton(context, views)
             if (shown) {
                 views.setImageViewBitmap(R.id.trail_widget_map, bitmap)
                 views.setTextViewText(
@@ -43,6 +46,33 @@ class TrailWidgetProvider : HomeWidgetProvider() {
             }
             appWidgetManager.updateAppWidget(id, views)
         }
+    }
+
+    /** ⏺/⏹: the same as the Quick Settings tile. Only for trip-mode accounts. */
+    private fun tripButton(context: Context, views: RemoteViews) {
+        if (!TripBridge.tripMode(context)) {
+            views.setViewVisibility(R.id.trail_widget_trip, View.GONE)
+            return
+        }
+        val on = TripBridge.recording(context)
+        views.setViewVisibility(R.id.trail_widget_trip, View.VISIBLE)
+        views.setTextViewText(R.id.trail_widget_trip, if (on) "⏹ ${TripBridge.left(context)}" else "⏺ Đi")
+        val tap = if (on || TripBridge.ready(context)) {
+            PendingIntent.getBroadcast(
+                context,
+                2,
+                Intent(context, TripReceiver::class.java).setAction(TripBridge.ACTION_TOGGLE),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        } else {
+            PendingIntent.getActivity(
+                context,
+                3,
+                TripBridge.pickerIntent(context),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+        views.setOnClickPendingIntent(R.id.trail_widget_trip, tap)
     }
 
     companion object {

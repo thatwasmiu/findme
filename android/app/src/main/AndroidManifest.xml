@@ -37,7 +37,26 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Long-press on the "Chuyến đi" tile: the trip presets. -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES"/>
+            </intent-filter>
         </activity>
+        <!-- Trip mode: the Quick Settings record button. -->
+        <service
+            android:name=".TripTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_trip"
+            android:label="Chuyến đi"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- Trip mode: the widget's start/end button and the end-of-trip alarm. -->
+        <receiver
+            android:name=".TripReceiver"
+            android:exported="false" />
         <!-- Ghi hành trình: restart tracking after a reboot if it was on. -->
         <receiver
             android:name=".BootReceiver"
