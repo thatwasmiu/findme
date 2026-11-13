@@ -86,6 +86,32 @@ separate **widget extension** target in the Xcode project. The app and the exten
 **App Group**. iOS also controls when widgets refresh much more strictly. Adding an extension target is awkward
 without a Mac, so iPhone is left for later. On iPhone the widget code simply does nothing for now.
 
+### iPhone spike: does it work with a free Apple ID? (branch `spike/ios-widget`)
+
+A throwaway test before building the real iPhone widget. The open question is whether Sideloadly, signing with a free
+Apple ID, keeps the widget and its App Group working. The spike is deliberately tiny:
+
+| Piece | What it does |
+|---|---|
+| `ios/FindMeWidget/` | A SwiftUI widget that shows "group: OK/MISSING", the time the app last wrote, and the time the widget last read |
+| `ios/scripts/add_widget_target.rb` | Run by CI: adds the widget target to the Xcode project (no Mac to do it by hand) |
+| `.github/workflows/ci.yml`, iOS job | Embeds and ad-hoc signs the widget, so the App Group entitlement is inside the `.ipa` for Sideloadly |
+| `lib/features/widget/data/live_trail_widget.dart` | On iPhone, writes the time (HH:mm) to the App Group each time the app starts |
+
+Try it:
+
+1. GitHub → **Actions** → **CI** → **Run workflow** → branch `spike/ios-widget`. Download `findme-unsigned-ipa`.
+2. Sideload it as in chapter 14 A2. If Sideloadly has an option to remove app extensions, leave it **off**.
+3. Open Find Me once, then long-press the home screen → **+** → search **Find Me** → add the small widget.
+4. Close Find Me fully, wait a minute, open it again, go back to the home screen.
+
+| What the widget shows | Meaning |
+|---|---|
+| Find Me is not in the widget gallery | Sideloadly dropped the extension. Dead end on a free Apple ID |
+| "group: MISSING" | The widget runs but has no App Group. Dead end on a free Apple ID |
+| "group: OK", "app wrote: nothing" | Group exists but the app and widget got different group IDs (Sideloadly renamed one) |
+| "group: OK", "app wrote" changes after step 4 | It works: the real widget can be built |
+
 ## 2. The real files
 
 | File | What it does |

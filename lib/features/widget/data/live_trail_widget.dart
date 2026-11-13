@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:findme/features/widget/data/file_day_log.dart';
@@ -7,13 +8,30 @@ import 'package:findme/features/widget/data/tile_cache.dart';
 import 'package:findme/features/widget/data/widget_updater.dart';
 import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// The real widget on Android. iPhone needs a WidgetKit extension first (guide chapter 17), so nothing happens there.
-TrailWidget liveTrailWidget(TargetPlatform platform) =>
-    platform == TargetPlatform.android
-    ? WidgetUpdater(_load, DateTime.now)
-    : NoTrailWidget();
+TrailWidget liveTrailWidget(TargetPlatform platform) {
+  if (platform == TargetPlatform.android) {
+    return WidgetUpdater(_load, DateTime.now);
+  }
+  if (platform == TargetPlatform.iOS) unawaited(_iosSpike());
+  return NoTrailWidget();
+}
+
+/// SPIKE (branch spike/ios-widget, throwaway): writes the time to the App Group so `ios/FindMeWidget` can show it.
+/// Answers one question: does a widget work when Sideloadly signs the app with a free Apple ID? Delete with the spike.
+Future<void> _iosSpike() async {
+  try {
+    await HomeWidget.setAppGroupId('group.app.findme.mobile');
+    final now = DateTime.now();
+    final hm =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    await HomeWidget.saveWidgetData<String>('spike', hm);
+    await HomeWidget.updateWidget(iOSName: 'FindMeWidget');
+  } on Object catch (_) {} // a widget problem must never stop the app
+}
 
 Future<WidgetParts> _load() async {
   final root = await getApplicationSupportDirectory();

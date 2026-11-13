@@ -4,6 +4,10 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **iPhone widget spike** on branch `spike/ios-widget` (2026-11-13, throwaway, not merged, not pushed): asks whether a
+  widget plus App Group survives Sideloadly with a free Apple ID before building the real one. Guide chapter 17,
+  "iPhone spike". **Never compiled:** no Mac here; the iOS CI job (run by hand on the branch) is its first build, and the
+  Ruby script that adds the widget target, the Swift, and the ad-hoc signing are all unproven. Result not known yet.
 - **Pins taken where you are, shared per photo** (2026-11-12, merged to `main` and pushed 2026-11-12, follows `travel-heatmap`
   24f0c21, guide chapter 16, plan `docs/superpowers/plans/2026-11-12-pins-here-and-shared.md`): 📷 needs a fresh fix
   (refused / off / silent → no pin, **Thử lại**), camera photos only, name from a stop or `GET /place-name`;
