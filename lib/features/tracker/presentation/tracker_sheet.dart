@@ -5,6 +5,7 @@ import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
@@ -37,15 +38,38 @@ class TrackerSheet extends ConsumerStatefulWidget {
 }
 
 class _TrackerSheetState extends ConsumerState<TrackerSheet> {
+  /// Keeps "còn 42 phút" moving while the sheet is open.
+  Timer? _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => setState(() {}),
+    );
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
+
   Future<void> _switch({required bool on}) async {
     final ctl = ref.read(trackerControllerProvider.notifier);
     if (!on) {
       await ctl.turnOff();
       return;
     }
+    if (await _disclosed()) await ctl.turnOn();
+  }
+
+  /// Google Play's disclosure, once, before anything asks for location. False: declined.
+  Future<bool> _disclosed() async {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(_disclosureKey) ?? false)) {
-      if (!mounted) return;
+      if (!mounted) return false;
       final ok = await showDialog<bool>(
         context: context,
         builder: (c) => AlertDialog(
@@ -63,10 +87,16 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
           ],
         ),
       );
-      if (ok != true) return;
+      if (ok != true) return false;
       await prefs.setBool(_disclosureKey, true);
     }
-    await ctl.turnOn();
+    return true;
+  }
+
+  Future<void> _start(TripPreset p) async {
+    if (await _disclosed()) {
+      await ref.read(trackerControllerProvider.notifier).startTrip(p);
+    }
   }
 
   @override
@@ -85,7 +115,15 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
         'Tài khoản này không ghi được hành trình',
         true,
       ),
-      TrackerProblem.none => (s.on ? 'Đang ghi' : 'Đã tắt', false),
+      TrackerProblem.none =>
+        s.tripMode
+            ? (
+                s.on
+                    ? 'Đang đi · ${tripLeft(s.tripUntil, now)}'
+                    : 'Không trong chuyến đi',
+                false,
+              )
+            : (s.on ? 'Đang ghi' : 'Đã tắt', false),
     };
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -104,14 +142,41 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
                 ),
               ),
-              Switch(
-                value: s.on,
-                activeThumbColor: Palette.pink,
-                onChanged: (v) => unawaited(_switch(on: v)),
-              ),
+              if (!s.tripMode)
+                Switch(
+                  value: s.on,
+                  activeThumbColor: Palette.pink,
+                  onChanged: (v) => unawaited(_switch(on: v)),
+                ),
             ],
           ),
           Notice(status, error: bad),
+          // Trip mode: recording only during a trip, which ends by itself.
+          if (s.tripMode) ...[
+            const SizedBox(height: 8),
+            if (s.on)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Pill(
+                  label: 'Kết thúc',
+                  style: PillStyle.on,
+                  onTap: () => unawaited(ctl.endTrip()),
+                ),
+              ),
+            Text(
+              s.on ? 'Đi tiếp' : 'Bắt đầu chuyến đi',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final p in TripPreset.values)
+                  Pill(label: p.label, onTap: () => unawaited(_start(p))),
+              ],
+            ),
+          ],
           if (defaultTargetPlatform == TargetPlatform.iOS)
             Row(
               children: [

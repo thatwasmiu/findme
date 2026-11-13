@@ -168,4 +168,42 @@ void main() {
       expect(tracker.calls, ['setUploadEvery:10s']);
     },
   );
+
+  testWidgets('trip mode, no trip: no switch, presets after the disclosure', (
+    t,
+  ) async {
+    await pump(t, const TrackerState(sharing: 'trip'));
+    expect(find.byType(Switch), findsNothing);
+    expect(find.text('Không trong chuyến đi'), findsOneWidget);
+    expect(find.text('Bắt đầu chuyến đi'), findsOneWidget);
+    expect(find.text('Kết thúc'), findsNothing);
+    await t.tap(find.text('1 giờ'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Đồng ý'));
+    await t.pumpAndSettle();
+    expect(tracker.calls, ['startTrip:1h']);
+    await t.tap(find.text('đến khi tắt'));
+    await t.pumpAndSettle();
+    expect(tracker.calls, ['startTrip:1h', 'startTrip:open']);
+  });
+
+  testWidgets('on a trip: time left and Kết thúc', (t) async {
+    await pump(
+      t,
+      TrackerState(
+        sharing: 'trip',
+        on: true,
+        tripUntil: now.add(const Duration(minutes: 42)),
+      ),
+    );
+    expect(find.text('Đang đi · còn 42 phút'), findsOneWidget);
+    await t.tap(find.text('Kết thúc'));
+    await t.pump();
+    expect(tracker.calls, ['endTrip']);
+  });
+
+  testWidgets('an open trip says until switched off', (t) async {
+    await pump(t, const TrackerState(sharing: 'trip', on: true));
+    expect(find.text('Đang đi · đến khi tắt'), findsOneWidget);
+  });
 }

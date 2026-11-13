@@ -3,17 +3,25 @@ import 'package:findme/core/theme/app_theme.dart';
 import 'package:findme/features/auth/presentation/account_sheet.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/tracker_fakes.dart';
 
 void main() {
   late MockFriends repo;
+  late FakeTracker tracker;
 
-  Future<ProviderContainer> pump(WidgetTester t, {bool owner = false}) async {
+  Future<ProviderContainer> pump(
+    WidgetTester t, {
+    bool owner = false,
+    String? sharing,
+  }) async {
+    tracker = FakeTracker(TrackerState(sharing: sharing));
     tallView(t);
     repo = MockFriends();
     when(repo.me).thenAnswer(
@@ -23,7 +31,10 @@ void main() {
     when(repo.deleteMe).thenAnswer((_) async {});
     await t.pumpWidget(
       ProviderScope(
-        overrides: baseOverrides(auth: fakeAuth(), friends: repo),
+        overrides: [
+          ...baseOverrides(auth: fakeAuth(), friends: repo, fakeTracker: false),
+          trackerControllerProvider.overrideWith(() => tracker),
+        ],
         child: MaterialApp(
           theme: buildTheme(),
           home: const Scaffold(body: AccountSheet()),
@@ -46,6 +57,35 @@ void main() {
     await t.pump();
     await t.pump();
   }
+
+  testWidgets('no mode switch until the server says the mode', (t) async {
+    await pump(t);
+    expect(find.text('Luôn bật'), findsNothing);
+    expect(find.text('Chỉ khi đi'), findsNothing);
+  });
+
+  testWidgets('mode switch: always -> trip; a failure says so', (t) async {
+    await pump(t, sharing: 'always');
+    expect(find.text('Luôn ghi và chia sẻ vị trí.'), findsOneWidget);
+    await t.tap(find.text('Luôn bật')); // already on: nothing
+    await t.tap(find.text('Chỉ khi đi'));
+    await t.pump();
+    expect(tracker.calls, ['setMode:trip']);
+    tracker.failMode = const NetworkError();
+    await t.tap(find.text('Chỉ khi đi'));
+    await t.pump();
+    expect(find.text('Chưa đổi được, thử lại nhé.'), findsOneWidget);
+  });
+
+  testWidgets('trip mode says when it records', (t) async {
+    await pump(t, sharing: 'trip');
+    expect(
+      find.text(
+        'Chỉ ghi và chia sẻ khi bạn bắt đầu chuyến đi trong app Find Me.',
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('bag, sign out and delete in one place', (t) async {
     await pump(t);

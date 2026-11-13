@@ -157,6 +157,22 @@ class FakeTracker extends TrackerController {
   @override
   Future<void> setUploadEvery(Duration d) async =>
       calls.add('setUploadEvery:${d.inSeconds}s');
+  @override
+  Future<void> syncTrip() async => calls.add('syncTrip');
+  @override
+  Future<void> startTrip(TripPreset p) async => calls.add('startTrip:${p.key}');
+  @override
+  Future<void> endTrip() async => calls.add('endTrip');
+  @override
+  Future<void> toggleTrip() async => calls.add('toggleTrip');
+
+  /// Throws this instead when set.
+  Exception? failMode;
+  @override
+  Future<void> setMode({required bool trip}) async {
+    if (failMode != null) throw failMode!;
+    calls.add('setMode:${trip ? 'trip' : 'always'}');
+  }
 }
 
 /// The iOS significant-change bridge, by hand: counts start/stop, [fire] a wake.
