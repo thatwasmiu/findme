@@ -10,12 +10,14 @@ _Me _$MeFromJson(Map<String, dynamic> json) => _Me(
   name: json['name'] as String,
   friendCode: json['friendCode'] as String,
   avatar: json['avatar'] as String?,
+  owner: json['owner'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$MeToJson(_Me instance) => <String, dynamic>{
   'name': instance.name,
   'friendCode': instance.friendCode,
   'avatar': instance.avatar,
+  'owner': instance.owner,
 };
 
 _Friend _$FriendFromJson(Map<String, dynamic> json) => _Friend(

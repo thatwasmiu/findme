@@ -4,6 +4,11 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Account sheet + delete your account** (2026-11-13, follows `travel-heatmap` f17b5ea, guide chapter 04): 👋 on the top
+  bar became 👤 → `AccountSheet` with 🎒 bag & avatar (moved out of 👥), 👋 Đăng xuất, 🗑️ Xoá tài khoản (type your
+  name → `DELETE /me` → `signOut()`, which also stops the tracker); hidden for the owner (`Me.owner`). Needed for the
+  App Store (5.1.1(v)). Committed on `main`, not pushed. Unit + widget tested only: **`DELETE /me` is not deployed**
+  yet (travel-heatmap HANDOFF), so nothing has run against a server or on a device.
 - **Pins taken where you are, shared per photo** (2026-11-12, merged to `main` and pushed 2026-11-12, follows `travel-heatmap`
   24f0c21, guide chapter 16, plan `docs/superpowers/plans/2026-11-12-pins-here-and-shared.md`): 📷 needs a fresh fix
   (refused / off / silent → no pin, **Thử lại**), camera photos only, name from a stop or `GET /place-name`;

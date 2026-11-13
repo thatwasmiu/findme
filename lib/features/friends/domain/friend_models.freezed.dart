@@ -17,7 +17,8 @@ T _$identity<T>(T value) => value;
 mixin _$Me {
 
  String get name; String get friendCode;/// Look Back media id of your avatar, when you set one.
- String? get avatar;
+ String? get avatar;/// The original (legacy) account, which cannot be deleted.
+ bool get owner;
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,20 +32,20 @@ $MeCopyWith<Me> get copyWith => _$MeCopyWithImpl<Me>(this as Me, _$identity);
 @override
 bool operator ==(Object other) {
   final _this = this as Me;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Me&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.friendCode, _this.friendCode) || other.friendCode == _this.friendCode)&&(identical(other.avatar, _this.avatar) || other.avatar == _this.avatar));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Me&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.friendCode, _this.friendCode) || other.friendCode == _this.friendCode)&&(identical(other.avatar, _this.avatar) || other.avatar == _this.avatar)&&(identical(other.owner, _this.owner) || other.owner == _this.owner));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Me;
-  return Object.hash(runtimeType,_this.name,_this.friendCode,_this.avatar);
+  return Object.hash(runtimeType,_this.name,_this.friendCode,_this.avatar,_this.owner);
 }
 
 @override
 String toString() {
   final _this = this as Me;
-  return 'Me(name: ${_this.name}, friendCode: ${_this.friendCode}, avatar: ${_this.avatar})';
+  return 'Me(name: ${_this.name}, friendCode: ${_this.friendCode}, avatar: ${_this.avatar}, owner: ${_this.owner})';
 }
 
 
@@ -55,7 +56,7 @@ abstract mixin class $MeCopyWith<$Res>  {
   factory $MeCopyWith(Me value, $Res Function(Me) _then) = _$MeCopyWithImpl;
 @useResult
 $Res call({
- String name, String friendCode, String? avatar
+ String name, String friendCode, String? avatar, bool owner
 });
 
 
@@ -72,12 +73,13 @@ class _$MeCopyWithImpl<$Res>
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,Object? owner = null,}) {
   return _then(Me(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,friendCode: null == friendCode ? _self.friendCode : friendCode // ignore: cast_nullable_to_non_nullable
 as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,owner: null == owner ? _self.owner : owner // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -162,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar,  bool owner)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Me() when $default != null:
-return $default(_that.name,_that.friendCode,_that.avatar);case _:
+return $default(_that.name,_that.friendCode,_that.avatar,_that.owner);case _:
   return orElse();
 
 }
@@ -183,10 +185,10 @@ return $default(_that.name,_that.friendCode,_that.avatar);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String friendCode,  String? avatar,  bool owner)  $default,) {final _that = this;
 switch (_that) {
 case _Me():
-return $default(_that.name,_that.friendCode,_that.avatar);case _:
+return $default(_that.name,_that.friendCode,_that.avatar,_that.owner);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +205,10 @@ return $default(_that.name,_that.friendCode,_that.avatar);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String friendCode,  String? avatar)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String friendCode,  String? avatar,  bool owner)?  $default,) {final _that = this;
 switch (_that) {
 case _Me() when $default != null:
-return $default(_that.name,_that.friendCode,_that.avatar);case _:
+return $default(_that.name,_that.friendCode,_that.avatar,_that.owner);case _:
   return null;
 
 }
@@ -218,13 +220,15 @@ return $default(_that.name,_that.friendCode,_that.avatar);case _:
 @JsonSerializable()
 
 class _Me implements Me {
-  const _Me({required this.name, required this.friendCode, this.avatar});
+  const _Me({required this.name, required this.friendCode, this.avatar, this.owner = false});
   factory _Me.fromJson(Map<String, dynamic> json) => _$MeFromJson(json);
 
 @override final  String name;
 @override final  String friendCode;
 /// Look Back media id of your avatar, when you set one.
 @override final  String? avatar;
+/// The original (legacy) account, which cannot be deleted.
+@override@JsonKey() final  bool owner;
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Me&&(identical(other.name, name) || other.name == name)&&(identical(other.friendCode, friendCode) || other.friendCode == friendCode)&&(identical(other.avatar, avatar) || other.avatar == avatar));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Me&&(identical(other.name, name) || other.name == name)&&(identical(other.friendCode, friendCode) || other.friendCode == friendCode)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.owner, owner) || other.owner == owner));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,name,friendCode,avatar);
+    return Object.hash(runtimeType,name,friendCode,avatar,owner);
 }
 
 @override
 String toString() {
-    return 'Me(name: $name, friendCode: $friendCode, avatar: $avatar)';
+    return 'Me(name: $name, friendCode: $friendCode, avatar: $avatar, owner: $owner)';
 }
 
 
@@ -261,7 +265,7 @@ abstract mixin class _$MeCopyWith<$Res> implements $MeCopyWith<$Res> {
   factory _$MeCopyWith(_Me value, $Res Function(_Me) _then) = __$MeCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String friendCode, String? avatar
+ String name, String friendCode, String? avatar, bool owner
 });
 
 
@@ -278,12 +282,13 @@ class __$MeCopyWithImpl<$Res>
 
 /// Create a copy of Me
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? friendCode = null,Object? avatar = freezed,Object? owner = null,}) {
   return _then(_Me(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,friendCode: null == friendCode ? _self.friendCode : friendCode // ignore: cast_nullable_to_non_nullable
 as String,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,owner: null == owner ? _self.owner : owner // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:findme/core/theme/palette.dart';
+import 'package:findme/features/auth/presentation/account_sheet.dart';
 import 'package:findme/features/bag/presentation/bag_sheet.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
 import 'package:findme/features/friends/presentation/friends_sheet.dart';
@@ -184,6 +185,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         onShare: () => SharesSheet.open(context),
                         onFriends: () => FriendsSheet.open(context),
                         onTrack: () => TrackerSheet.open(context),
+                        onAccount: () => AccountSheet.open(context),
                       ),
               ),
             ),

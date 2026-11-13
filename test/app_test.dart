@@ -77,7 +77,10 @@ void main() {
     await t.tap(find.text('✕'));
     await t.pump(const Duration(milliseconds: 500));
 
-    await t.tap(find.bySemanticsLabel('Đăng xuất'));
+    await t.tap(find.bySemanticsLabel('Tài khoản'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 500));
+    await t.tap(find.text('👋 Đăng xuất'));
     await t.pump();
     await t.pump();
     expect(find.text('Đăng nhập 💖'), findsOneWidget);

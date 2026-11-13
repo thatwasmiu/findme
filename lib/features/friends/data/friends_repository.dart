@@ -26,6 +26,9 @@ class FriendsRepository {
   Future<Me> me() async =>
       Me.fromJson(await _send('GET', '/me') as Map<String, dynamic>);
 
+  /// Deletes your whole account for good (App Store 5.1.1(v)); FriendError('owner') for the original account.
+  Future<void> deleteMe() => _send('DELETE', '/me');
+
   Future<Relations> relations() async => Relations.fromJson(
     await _send('GET', '/friends') as Map<String, dynamic>,
   );

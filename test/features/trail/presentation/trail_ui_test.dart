@@ -1,5 +1,4 @@
 import 'package:findme/core/theme/app_theme.dart';
-import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/replay/presentation/replay_bar.dart';
 import 'package:findme/features/replay/presentation/replay_controller.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
@@ -122,6 +121,7 @@ void main() {
   group('top bar', () {
     late MockTrack track;
     var tracked = 0;
+    var account = 0;
     Future<ProviderContainer> pump(
       WidgetTester t, {
       int incoming = 0,
@@ -155,6 +155,7 @@ void main() {
                 onShare: () {},
                 onFriends: () {},
                 onTrack: () => tracked++,
+                onAccount: () => account++,
                 incomingCount: incoming,
               ),
             ),
@@ -166,7 +167,7 @@ void main() {
       return ProviderScope.containerOf(t.element(find.byType(TopBar)));
     }
 
-    testWidgets('brand, last seen, share, friends badge, sign out, presets', (
+    testWidgets('brand, last seen, share, friends badge, account, presets', (
       t,
     ) async {
       final c = await pump(t, incoming: 2);
@@ -187,9 +188,8 @@ void main() {
       );
       await t.tap(find.text('🧭'));
       expect(tracked, 1);
-      await t.tap(find.bySemanticsLabel('Đăng xuất'));
-      await t.pump();
-      expect(c.read(authControllerProvider), AuthPhase.signedOut);
+      await t.tap(find.bySemanticsLabel('Tài khoản'));
+      expect(account, 1);
     });
 
     testWidgets('loading line and the 31-day error', (t) async {

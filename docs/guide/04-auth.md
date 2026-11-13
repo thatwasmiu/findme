@@ -50,6 +50,16 @@ the iPhone Keychain) offer to save and fill the password, like the web's `autoco
 A login with an unconfirmed email, or a sign-up with an email that already exists, jumps straight to the code step.
 All three calls are in `AuthRepository` (`signUp`, `confirmSignUp`, `resendCode`); the modes live in `SignInForm`.
 
+## Account sheet and deleting your account
+
+The App Store requires in-app account deletion for an app that has sign-up (guideline 5.1.1(v)). 👤 on the top bar
+opens `AccountSheet` (the web's `AccountPanel.tsx`): 🎒 bag & avatar (moved out of 👥), 👋 Đăng xuất, and
+🗑️ Xoá tài khoản. Delete asks you to type your own name, calls `DELETE /me` (`FriendsRepository.deleteMe`), then runs
+the deliberate `signOut()`, so the tracker stops and forgets its token too. The server removes everything the admin
+page's remove does. `Me.owner` (from `GET /me`) hides the button on the original account (the server refuses it with
+400 `owner` anyway). A failed delete says to try again: the server switches the account off first, so a retry
+finishes it, and a 401/403 on the retry just signs out.
+
 ## Error messages
 
 `signInMessage()` turns Cognito's error codes into the web's Vietnamese wording: `NotAuthorizedException` → "Sai

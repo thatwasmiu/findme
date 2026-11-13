@@ -83,7 +83,7 @@ session (chapter 04), with the account's `sub`, never shown, never logged.
 
 It is only asked for while the account that owns the tracking is signed in, never for someone else's sign-in.
 
-Only a deliberate **sign-out (👋)** ends tracking on this phone: one last upload attempt, then the queue and the
+Only a deliberate **sign-out (👤 → 👋)** or account delete ends tracking on this phone: one last upload attempt, then the queue and the
 token are deleted. When the sign-in merely expires (30 days, or a 401 from the API), tracking carries on: the ingest
 token does not depend on the sign-in. If **another account** signs in on the same phone, the previous account's
 tracking is ended first, so nobody's points are ever sent with someone else's token.
@@ -191,7 +191,7 @@ On devices (by hand; not done automatically):
 | Offline | Emulator: turn Wi-Fi + data off, walk the route, turn back on, **Gửi ngay** | Điểm chờ gửi back to 0, nothing missing on the map |
 | Reboot (Android) | Tracking on, then `adb reboot`, wait for the home screen, play the route | The notification **Find Me đang ghi hành trình** is back without opening the app, Điểm cuối moves |
 | iPhone relaunch | Sideloaded build (chapter 14), tracking on, leave it in the background for hours (iOS kills it eventually), walk > 1 km | Points from after the walk appear; a gap of ≤ ~500 m is normal |
-| Sign-out | 👋, sign in again | Đã tắt, Điểm chờ gửi 0 |
+| Sign-out | 👤 → 👋, sign in again | Đã tắt, Điểm chờ gửi 0 |
 
 `adb` lives in `D:\Android\Sdk\platform-tools` (chapter 01).
 

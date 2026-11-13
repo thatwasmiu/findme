@@ -11,6 +11,9 @@ abstract class Me with _$Me {
 
     /// Look Back media id of your avatar, when you set one.
     String? avatar,
+
+    /// The original (legacy) account, which cannot be deleted.
+    @Default(false) bool owner,
   }) = _Me;
   factory Me.fromJson(Map<String, dynamic> json) => _$MeFromJson(json);
 }

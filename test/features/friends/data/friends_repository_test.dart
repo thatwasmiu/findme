@@ -62,6 +62,28 @@ void main() {
     },
   );
 
+  test(
+    'deleteMe: DELETE /me; the owner flag; the owner account refused',
+    () async {
+      adapter = FakeAdapter(
+        (r) => r.method == 'GET'
+            ? (
+                status: 200,
+                body: {'name': 'Chủ', 'friendCode': 'K7QM-3XPA', 'owner': true},
+              )
+            : (status: 204, body: null),
+      );
+      expect((await repo().me()).owner, isTrue);
+      await repo().deleteMe();
+      expect(adapter.calls.last, 'DELETE https://api.test/me');
+      adapter = FakeAdapter((_) => (status: 400, body: {'error': 'owner'}));
+      await expectLater(
+        repo().deleteMe(),
+        throwsA(isA<FriendError>().having((e) => e.code, 'code', 'owner')),
+      );
+    },
+  );
+
   test('401 -> AuthExpired; 403 -> AccountMissing; '
       '400/404/409 -> FriendError(code)', () async {
     adapter = FakeAdapter((_) => (status: 401, body: null));

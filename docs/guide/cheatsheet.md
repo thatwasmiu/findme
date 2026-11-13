@@ -79,7 +79,7 @@ Privacy policy URL: `<WEB_ORIGIN>/privacy.html` (welcome card link).
 | `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`
-also on a login without a map. The tracker's keys and files are cleared only by a deliberate sign-out (👋) or when
+also on a login without a map. The tracker's keys and files are cleared only by a deliberate sign-out (👤 → 👋) or account delete or when
 another account signs in, never by an expired session.
 
 ## Timings
@@ -129,7 +129,8 @@ another account signs in, never by an expired session.
 
 ## Bag and avatar (chapter 18)
 
-- 👥 → "🎒 Túi của tôi & ảnh đại diện": edit your bag; the round picture on top changes your avatar.
+- 👤 → 🗑️ Xoá tài khoản: type your name → `DELETE /me` → signed out (owner account: no button). Server side: `travel-heatmap` f17b5ea.
+- 👤 → "🎒 Túi của tôi & ảnh đại diện": edit your bag; the round picture on top changes your avatar.
 - A friend's bag: tap their marker, or "🎒 Túi" in 👥. A share link opens it only with 🎒 on.
 - 8 pockets; phone, Zalo, email, YouTube, Spotify, TikTok, Instagram once each; links, QR, photos, notes repeat.
 - Pictures: Look Back upload → receipt (10 min) → `PUT /me/bag`; old pictures deleted only after a save.

@@ -9,7 +9,7 @@ an **avatar**: a round picture that replaces Hachiware on your map and your init
 
 | You want | Tap |
 |---|---|
-| Edit your bag | 👥 → "🎒 Túi của tôi & ảnh đại diện" → a pocket. Then "Lưu túi". |
+| Edit your bag | 👤 → "🎒 Túi của tôi & ảnh đại diện" → a pocket. Then "Lưu túi". |
 | Change your avatar | The round picture at the top of your bag. Drag to move, slider to zoom, "Lưu ảnh". |
 | Open a friend's bag | Their marker on the map, or "🎒 Túi" on their row in 👥 |
 | Let a share link open your bag | 🔗 → "Cho mở túi đồ 🎒" on a new link, or 🎒 on an existing one. A warning comes first: anyone holding the link sees everything. |

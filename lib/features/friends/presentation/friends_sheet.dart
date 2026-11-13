@@ -6,7 +6,6 @@ import 'package:findme/core/time/format.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
-import 'package:findme/features/bag/presentation/bag_editor.dart';
 import 'package:findme/features/bag/presentation/bag_sheet.dart';
 import 'package:findme/features/bag/presentation/bag_widgets.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
@@ -151,15 +150,6 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
                   },
                 ),
               ],
-            ),
-          if (s.me != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Pill(
-                label: '🎒 Túi của tôi & ảnh đại diện',
-                style: PillStyle.lav,
-                onTap: () => BagEditor.open(context),
-              ),
             ),
           const SizedBox(height: 8),
           Row(
