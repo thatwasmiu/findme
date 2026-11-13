@@ -50,3 +50,4 @@ graphify-out/cache/
 graphify-out/manifest.json
 graphify-out/.graphify_root
 graphify-out/graph.html
+graphify-out/.graphify_*
