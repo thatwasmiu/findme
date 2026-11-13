@@ -13,6 +13,8 @@ import 'package:findme/features/pins/presentation/pins_controller.dart';
 import 'package:findme/features/replay/presentation/replay_bar.dart';
 import 'package:findme/features/replay/presentation/replay_controller.dart';
 import 'package:findme/features/shares/presentation/shares_sheet.dart';
+import 'package:findme/features/tracker/data/trip_channel.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/tracker/presentation/tracker_sheet.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
 import 'package:findme/features/trail/presentation/map_view.dart';
@@ -50,7 +52,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ref.read(friendsControllerProvider.notifier).resumed();
         ref.read(pinsControllerProvider.notifier).resumed();
         ref.read(friendPinsControllerProvider.notifier).resumed();
+        // A trip ended elsewhere (the web, its timer) stops GPS here too.
+        unawaited(ref.read(trackerControllerProvider.notifier).syncTrip());
       },
+    );
+    // Opened by the Quick Settings tile's long-press: straight to the trip presets.
+    unawaited(
+      ref.read(tripChannelProvider).takePicker().then((open) {
+        if (open && mounted) unawaited(TrackerSheet.open(context));
+      }),
     );
   }
 
@@ -83,6 +93,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The tile was long-pressed while the app runs.
+    ref.listen(
+      trackerControllerProvider.select((s) => s.picker),
+      (_, _) => unawaited(TrackerSheet.open(context)),
+    );
     final trail = ref.watch(trailControllerProvider);
     final replay = ref.watch(replayControllerProvider);
     final friends = ref.watch(friendsOnMapProvider);

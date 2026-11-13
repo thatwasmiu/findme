@@ -98,12 +98,16 @@ class FriendPart {
     this.from,
     this.points = const [],
     this.last,
+    this.trip,
+    this.visibleFrom,
   });
 
   factory FriendPart.fromJson(Map<String, dynamic> j) => FriendPart(
     id: j['id'] as String,
     unchanged: j['unchanged'] == true,
     from: j['from'] as String?,
+    trip: j['trip'] as bool?,
+    visibleFrom: j['visibleFrom'] as String?,
     points: trackPointsFromJson(j['points']),
     last: j['last'] == null
         ? null
@@ -115,6 +119,12 @@ class FriendPart {
   final String? from;
   final List<TrackPoint> points;
   final LastPoint? last;
+
+  /// false: a trip-mode friend not on a trip; nothing of them may be shown (travel-heatmap chapter 22).
+  final bool? trip;
+
+  /// Nothing before this may be shown (their trip started later than midnight).
+  final String? visibleFrom;
 }
 
 /// What `GET /track` answers: your trail (or [unchanged]: nothing new since `have`, only [Track.last] is filled) and

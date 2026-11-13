@@ -4,6 +4,24 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Trip mode, phone side** (2026-11-13, branch `feat/trip-mode`, not merged, not pushed; follows `travel-heatmap`
+  trip mode, merged there but **not deployed**; guide chapter 19, plan
+  `docs/superpowers/plans/2026-11-13-trip-mode-phone.md`). Trip-mode accounts: 🧭 → "Bắt đầu chuyến đi" (15 phút ·
+  1 giờ · đến tối nay · đến khi tắt) / "Kết thúc"; the tracker stops at the end (Android alarm, each fix, upload tick,
+  resume/wake), on app open / return when `GET /me` says no trip, and on `/ingest`'s `trip: false`. Offline start
+  retried before the next upload. Quick Settings tile "Chuyến đi" and a ⏺/⏹ chip on the home widget send `toggle`
+  to the running engine or a screenless one (`tripCommand`). 👤 mode switch "Luôn bật" / "Chỉ khi đi"; friends
+  "không trong chuyến đi"; friend prints cut at `visibleFrom`, cleared on `trip: false`. Always-on accounts and a
+  server without `sharing` in `GET /me`: no change. **Verified:** 435 unit + widget tests, `flutter analyze` clean,
+  dev debug APK builds; on the emulator (API 35): the tile installs and shows "Luôn bật" (unavailable) with no trip
+  mode, "Bắt đầu" with `flutter.findme.sharing=trip` faked in prefs, and a tap without background location opens the
+  app on the presets. **Not yet seen** (needs the server deployed and a trip-mode account): a real start/end, the
+  headless start from the tile/widget (Android's limits on starting a location service from the background are the
+  risk), the alarm stopping GPS, the widget chip, `trip: false` from `/ingest`. Not built: notification "Kết thúc"
+  (deferred), iPhone controls. Also fixed on this branch: `FriendsController.refresh` threw a cast error when
+  `/me` and `/friends` failed together (it cast to Riverpod's `AsyncError` instead of `dart:async`'s), so a 401/403
+  on the first load was lost.
+
 - **Account sheet + delete your account** (2026-11-13, follows `travel-heatmap` f17b5ea, guide chapter 04): 👋 on the top
   bar became 👤 → `AccountSheet` with 🎒 bag & avatar (moved out of 👥), 👋 Đăng xuất, 🗑️ Xoá tài khoản (type your
   name → `DELETE /me` → `signOut()`, which also stops the tracker); hidden for the owner (`Me.owner`). Needed for the

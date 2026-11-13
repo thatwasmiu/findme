@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
@@ -5,6 +7,7 @@ import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/bag/presentation/bag_editor.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/friends/presentation/friends_controller.dart';
+import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -98,9 +101,27 @@ class _AccountSheetState extends ConsumerState<AccountSheet> {
     }
   }
 
+  /// "Luôn bật" / "Chỉ khi đi".
+  Future<void> _mode({required bool trip}) async {
+    setState(() {
+      _err = '';
+      _busy = true;
+    });
+    try {
+      await ref.read(trackerControllerProvider.notifier).setMode(trip: trip);
+    } on Object {
+      if (mounted) setState(() => _err = 'Chưa đổi được, thử lại nhé.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(friendsControllerProvider.select((s) => s.me));
+    final sharing = ref.watch(
+      trackerControllerProvider.select((s) => s.sharing),
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: Column(
@@ -133,6 +154,35 @@ class _AccountSheetState extends ConsumerState<AccountSheet> {
               style: PillStyle.lav,
               onTap: () => BagEditor.open(context),
             ),
+          // Trip mode (travel-heatmap chapter 22): only once the server has said which mode this account is in.
+          if (sharing != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Pill(
+                  label: 'Luôn bật',
+                  selected: sharing == 'always',
+                  onTap: _busy || sharing == 'always'
+                      ? null
+                      : () => unawaited(_mode(trip: false)),
+                ),
+                const SizedBox(width: 6),
+                Pill(
+                  label: 'Chỉ khi đi',
+                  selected: sharing == 'trip',
+                  onTap: _busy || sharing == 'trip'
+                      ? null
+                      : () => unawaited(_mode(trip: true)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Notice(
+              sharing == 'trip'
+                  ? 'Chỉ ghi và chia sẻ khi bạn bắt đầu chuyến đi trong app Find Me.'
+                  : 'Luôn ghi và chia sẻ vị trí.',
+            ),
+          ],
           const SizedBox(height: 8),
           Pill(
             label: '👋 Đăng xuất',

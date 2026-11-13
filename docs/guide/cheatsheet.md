@@ -76,6 +76,10 @@ Privacy policy URL: `<WEB_ORIGIN>/privacy.html` (welcome card link).
 | `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was fetched |
 | `findme.trackerIndicator` | shared_preferences | iPhone: show the blue location indicator while tracking (a phone setting, kept on sign-out) |
 | `findme.trackerUploadSeconds` | shared_preferences | "Gửi mỗi": seconds between uploads (5, 10, 30, 60, 120; default 60; kept on sign-out) |
+| `findme.sharing` | shared_preferences | trip mode: `always` / `trip` as `GET /me` last said; the tile and widget read it natively (chapter 19) |
+| `findme.tripUntil` | shared_preferences | trip mode: when the running trip ends, epoch ms (absent = no end) |
+| `findme.tripPreset` | shared_preferences | trip mode: the last preset, used by the tile and widget (`1h` the first time; kept on sign-out) |
+| `findme.tripPending` | shared_preferences | trip mode: a start (preset key) or `end` not sent to the server yet |
 | `tracker/queue.jsonl`, `tracker/rejected.jsonl` | app documents folder | fixes waiting for `/ingest`; batches the server refused |
 
 All three are cleared when you sign out or the session expires (the next login may be someone else); `findme.today`
@@ -101,6 +105,15 @@ another account signs in, never by an expired session.
 | `flutter test test/features/tracker` | Tracker unit + widget tests |
 | `D:\Android\Sdk\platform-tools\adb.exe reboot` | Reboots the emulator or phone (tracking should come back on its own) |
 | Emulator ⋯ → Location → Routes → Play route | Fakes a walk |
+
+## Trip mode (chapter 19)
+
+| Command / body | Does |
+|---|---|
+| `PUT /me/sharing {"start": "15m"\|"1h"\|"tonight"\|"open"}` | starts a trip (the app does this, then turns GPS on) |
+| `PUT /me/sharing {"end": true}` / `{"mode": "always"\|"trip"}` | ends it / switches the mode |
+| `adb shell cmd statusbar click-tile app.findme.mobile.dev/app.findme.findme.TripTileService` | taps the "Chuyến đi" tile |
+| `adb shell cmd statusbar add-tile app.findme.mobile.dev/app.findme.findme.TripTileService` | adds the tile to Quick Settings |
 
 ## Photo pins (chapter 16)
 

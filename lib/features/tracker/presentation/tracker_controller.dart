@@ -4,12 +4,15 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/data/session_store.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/data/trip_channel.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart'
     as policy
@@ -35,7 +38,22 @@ class TrackerState {
     this.sending = false,
     this.indicator = false,
     this.uploadEvery = policy.uploadEvery,
+    this.sharing,
+    this.tripUntil,
+    this.picker = 0,
   });
+
+  /// The account's mode as the server last said ('always' / 'trip'); null = not known (or no trip mode on the
+  /// server yet): the tracker behaves as always on.
+  final String? sharing;
+
+  /// When the running trip stops by itself; null = an open trip, or no trip.
+  final DateTime? tripUntil;
+
+  /// Counts the tile's long-presses while the app runs: each one opens the preset picker.
+  final int picker;
+
+  bool get tripMode => sharing == 'trip';
 
   /// Recording right now.
   final bool on;
@@ -64,7 +82,15 @@ class TrackerState {
     bool? sending,
     bool? indicator,
     Duration? uploadEvery,
+    String? sharing,
+    Object? tripUntil = _keep,
+    int? picker,
   }) => TrackerState(
+    sharing: sharing ?? this.sharing,
+    tripUntil: identical(tripUntil, _keep)
+        ? this.tripUntil
+        : tripUntil as DateTime?,
+    picker: picker ?? this.picker,
     on: on ?? this.on,
     problem: problem ?? this.problem,
     queued: queued ?? this.queued,
@@ -76,6 +102,9 @@ class TrackerState {
     uploadEvery: uploadEvery ?? this.uploadEvery,
   );
 }
+
+/// copyWith's "not given" for a field that can be set to null.
+const _keep = Object();
 
 /// The time, replaceable in tests.
 final trackerClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
@@ -103,14 +132,31 @@ class TrackerController extends Notifier<TrackerState> {
     _widget = ref.read(trailWidgetProvider);
     ref
       ..onDispose(_stop)
-      ..read(wakeChannelProvider).onWake(() => unawaited(wake()));
+      ..read(wakeChannelProvider).onWake(() => unawaited(wake()))
+      ..read(tripChannelProvider).onCommand((c) => unawaited(_command(c)));
     return const TrackerState();
+  }
+
+  TripChannel get _trip => ref.read(tripChannelProvider);
+  FriendsRepository get _sharing => ref.read(friendsRepositoryProvider);
+
+  /// From Android: the tile or widget was tapped, the end-of-trip alarm rang, the tile was long-pressed.
+  Future<void> _command(String c) async {
+    switch (c) {
+      case 'toggle':
+        await toggleTrip();
+      case 'expire':
+        await _expired();
+      case 'picker':
+        state = state.copyWith(picker: state.picker + 1);
+    }
   }
 
   /// iOS woke the app (significant location change, possibly a background relaunch): start GPS again, since iOS
   /// may have paused it while you stood still.
   Future<void> wake() async {
     if (_fixes == null) return;
+    if (await _expired()) return;
     unawaited(_fixes!.cancel());
     _fixes = null;
     await _start();
@@ -129,25 +175,174 @@ class TrackerController extends Notifier<TrackerState> {
     state = state.copyWith(uploadEvery: d);
     if (_tick != null) {
       _tick!.cancel();
-      _tick = Timer.periodic(d, (_) => unawaited(_upload()));
+      _tick = Timer.periodic(d, (_) => unawaited(_onTick()));
     }
     await _upload();
   }
 
-  /// At app start (also a background relaunch): carry on if tracking was left on.
+  /// At app start (also a background relaunch): carry on if tracking was left on, unless the trip is over; then
+  /// ask the server whether a trip is still on.
   Future<void> resume() async {
     unawaited(_widget.refresh());
     await _refresh();
     state = state.copyWith(
       indicator: await _store.indicator(),
       uploadEvery: await _store.uploadEvery(),
+      sharing: await _store.sharingMode(),
+      tripUntil: await _store.tripUntil(),
     );
-    if (!await _store.enabled()) return;
-    if (await _gps.access() != LocationAccess.always) {
+    if (await _store.enabled() && !await _expired()) {
+      if (await _gps.access() != LocationAccess.always) {
+        state = state.copyWith(on: false, problem: TrackerProblem.needAlways);
+      } else {
+        await _start();
+        await _trip.sync(state.tripUntil); // alarms do not survive a reboot
+      }
+    }
+    await syncTrip();
+  }
+
+  // ---- Trip mode (travel-heatmap chapter 22). Always-on accounts never reach any of it: their tripUntil stays
+  // null, so nothing ever stops by itself.
+
+  /// Asks the server whether a trip is on (app open, back to the app): a trip ended elsewhere (the web, its timer,
+  /// the mode switched) stops GPS here. Offline or signed out: keeps what it has.
+  Future<void> syncTrip() async {
+    if (!await _flushPending()) return;
+    final Sharing? s;
+    try {
+      s = await _sharing.sharing();
+    } on Object {
+      return;
+    }
+    await _apply(s);
+  }
+
+  /// Takes the server's word for the mode and the running trip.
+  Future<void> _apply(Sharing? s) async {
+    if (s == null) return; // the server has no trip mode yet
+    final mode = s.tripMode ? 'trip' : 'always';
+    await _store.setSharingMode(mode);
+    state = state.copyWith(sharing: mode);
+    if (!s.tripMode) return;
+    if (!s.on) {
+      if (state.on || state.tripUntil != null || await _store.enabled()) {
+        await turnOff();
+      }
+    } else if (state.on) {
+      await _setUntil(s.until); // restarted elsewhere: the server's end wins
+    }
+  }
+
+  Future<void> _setUntil(DateTime? at) async {
+    await _store.setTripUntil(at);
+    state = state.copyWith(tripUntil: at);
+    await _trip.sync(at);
+  }
+
+  /// Past the trip's own end: GPS off. True when it stopped (or was already over).
+  Future<bool> _expired() async {
+    if (!tripOver(state.tripUntil, _now())) return false;
+    await turnOff();
+    return true;
+  }
+
+  Future<void> _onTick() async {
+    if (!await _expired()) await _upload();
+  }
+
+  /// A start or end that could not reach the server, sent now. False: still offline (nothing else should go).
+  Future<bool> _flushPending() async {
+    final p = await _store.tripPending();
+    if (p == null) return true;
+    try {
+      final s = await _sharing.setSharing(
+        p == 'end' ? {'end': true} : {'start': p},
+      );
+      await _store.setTripPending(null);
+      if (p != 'end' && s != null && s.on && state.on) await _setUntil(s.until);
+    } on FriendError {
+      await _store.setTripPending(
+        null,
+      ); // 400: no longer in trip mode; nothing to retry
+    } on Object {
+      return false;
+    }
+    return true;
+  }
+
+  /// "Bắt đầu chuyến đi": what is queued goes first (it belongs to an earlier trip's window), then the server
+  /// opens the window, then GPS. Offline: GPS starts with the end worked out here and the start is retried before
+  /// the next upload (the server drops points until it has the window). Starting while on restarts the timer.
+  Future<void> startTrip(TripPreset p) async {
+    await _store.setLastPreset(p);
+    if (await _gps.request() != LocationAccess.always) {
       state = state.copyWith(on: false, problem: TrackerProblem.needAlways);
       return;
     }
-    await _start();
+    try {
+      await sendNow().timeout(const Duration(seconds: 10));
+    } on Object {
+      // best effort
+    }
+    DateTime? until;
+    try {
+      final s = await _sharing.setSharing({'start': p.key});
+      await _store.setTripPending(null);
+      until = s?.until;
+    } on FriendError {
+      unawaited(
+        syncTrip(),
+      ); // 400: not in trip mode any more (switched on the web)
+      return;
+    } on Object {
+      until = localEnd(p, _now());
+      await _store.setTripPending(p.key);
+    }
+    await _store.setTripUntil(until);
+    state = state.copyWith(tripUntil: until);
+    await turnOn();
+    await _trip.sync(
+      state.tripUntil,
+    ); // after turnOn: the tile and widget read "recording" from the prefs
+  }
+
+  /// "Kết thúc": GPS off at once, what is queued goes, then the server closes the window (retried at the next app
+  /// open when offline).
+  // ponytail: an offline end of an open trip reaches the server only when the app next opens; friends see the last
+  // spot until then. Retry from the alarm / a WorkManager job if that matters.
+  Future<void> endTrip() async {
+    await turnOff();
+    try {
+      await sendNow().timeout(const Duration(seconds: 10));
+    } on Object {
+      // best effort
+    }
+    try {
+      await _sharing.setSharing({'end': true});
+      await _store.setTripPending(null);
+    } on FriendError {
+      await _store.setTripPending(null);
+    } on Object {
+      await _store.setTripPending('end');
+    }
+  }
+
+  /// The tile or the widget button: ends a running trip, else starts one with the last preset.
+  Future<void> toggleTrip() async {
+    if (!state.tripMode) return;
+    state.on ? await endTrip() : await startTrip(await _store.lastPreset());
+  }
+
+  /// "Luôn bật" / "Chỉ khi đi" in 👤. To trip mode: no trip is on, so GPS stops. To always on: recording carries on
+  /// with no end. Throws like [FriendsRepository.setSharing].
+  Future<void> setMode({required bool trip}) async {
+    final s = await _sharing.setSharing({'mode': trip ? 'trip' : 'always'});
+    if (!trip) {
+      await _store.setTripPending(null);
+      await _setUntil(null);
+    }
+    await _apply(s);
   }
 
   /// The user turned the switch on (after the disclosure screen).
@@ -173,12 +368,15 @@ class TrackerController extends Notifier<TrackerState> {
     _stop();
     await ref.read(wakeChannelProvider).stop();
     await _store.setEnabled(on: false);
+    await _store.setTripUntil(null);
     state = state.copyWith(
       on: false,
       problem: state.problem == TrackerProblem.needAlways
           ? TrackerProblem.none
           : null,
+      tripUntil: null,
     );
+    await _trip.sync(null);
   }
 
   Future<void> sendNow() {
@@ -211,6 +409,7 @@ class TrackerController extends Notifier<TrackerState> {
     _failures = 0;
     _notBefore = null;
     state = const TrackerState();
+    await _trip.sync(null);
   }
 
   Future<void> _start() async {
@@ -226,7 +425,7 @@ class TrackerController extends Notifier<TrackerState> {
           ),
         );
     // Standing still sends no fixes; this still uploads what waits once "Gửi mỗi" is up.
-    _tick ??= Timer.periodic(state.uploadEvery, (_) => unawaited(_upload()));
+    _tick ??= Timer.periodic(state.uploadEvery, (_) => unawaited(_onTick()));
     _widget.start();
     await ref.read(wakeChannelProvider).start();
     final token = await _readToken();
@@ -251,6 +450,10 @@ class TrackerController extends Notifier<TrackerState> {
   /// Fixes are written one after another, in order; the upload they may start runs beside them, so fixes keep
   /// landing in the queue while a slow upload is in flight.
   void _onFix(Fix f) {
+    if (tripOver(state.tripUntil, _now())) {
+      unawaited(_expired()); // after the trip's end: dropped, GPS off
+      return;
+    }
     _work = _work.then((_) async {
       await (await _queue).append(f);
       try {
@@ -366,6 +569,7 @@ class TrackerController extends Notifier<TrackerState> {
         fresh = true;
       }
       final q = await _queue;
+      var flushed = false;
       state = state.copyWith(sending: true);
       while (force ||
           shouldUpload(
@@ -377,14 +581,28 @@ class TrackerController extends Notifier<TrackerState> {
           )) {
         final batch = await q.peek(maxBatch);
         if (batch.isEmpty) break;
+        // A trip start still unknown to the server first: until it lands, every point would be dropped.
+        if (!flushed) {
+          if (!await _flushPending()) {
+            _failed();
+            break;
+          }
+          flushed = true;
+        }
         final r = await ref
             .read(ingestClientProvider)
             .send(token!, batch, deviceIdForPlatform);
-        if (r == IngestResult.ok) {
+        if (r == IngestResult.ok || r == IngestResult.tripOver) {
           await q.commit(batch.length);
           _failures = 0;
           _notBefore = null;
           state = state.copyWith(lastOk: _now());
+          if (r == IngestResult.tripOver) {
+            // No trip on (ended on the web, or by its timer): GPS off here too.
+            await _store.setSharingMode('trip');
+            state = state.copyWith(sharing: 'trip');
+            if (state.on) await turnOff(); // the rest of the queue still goes: it may be from inside the trip
+          }
         } else if (r == IngestResult.rejected) {
           await q.reject(batch.length);
         } else if (r == IngestResult.unauthorized) {

@@ -1,4 +1,5 @@
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +85,32 @@ void main() {
       throwsA(isA<StorageUnreadable>()),
     );
   });
+
+  test(
+    'trip fields round-trip under native keys; forget keeps the preset',
+    () async {
+      expect(await s.sharingMode(), isNull);
+      expect(await s.tripUntil(), isNull);
+      expect(await s.lastPreset(), TripPreset.h1);
+      expect(await s.tripPending(), isNull);
+      final at = DateTime.utc(2026, 11, 13, 11);
+      await s.setSharingMode('trip');
+      await s.setTripUntil(at);
+      await s.setLastPreset(TripPreset.m15);
+      await s.setTripPending('end');
+      expect(await s.sharingMode(), 'trip');
+      expect(await s.tripUntil(), at);
+      expect(await s.tripPending(), 'end');
+      final p = await SharedPreferences.getInstance();
+      expect(p.getInt('findme.tripUntil'), at.millisecondsSinceEpoch);
+      expect(p.getString('findme.sharing'), 'trip');
+      await s.forget();
+      expect(await s.sharingMode(), isNull);
+      expect(await s.tripUntil(), isNull);
+      expect(await s.tripPending(), isNull);
+      expect(await s.lastPreset(), TripPreset.m15);
+    },
+  );
 }
 
 /// The Keychain while the iPhone is locked: every read fails.

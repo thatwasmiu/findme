@@ -26,6 +26,9 @@ abstract class Friend with _$Friend {
     required String since,
     String? lastTs,
     String? avatar,
+
+    /// Only for a trip-mode friend: false = not on a trip, nothing to see.
+    bool? trip,
   }) = _Friend;
   factory Friend.fromJson(Map<String, dynamic> json) => _$FriendFromJson(json);
 }

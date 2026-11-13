@@ -68,6 +68,13 @@ void main() {
     expect(r, IngestResult.ok);
   });
 
+  test('200 ok with trip false -> tripOver (stored, no trip on)', () async {
+    final (r, _) = await answer(
+      (_) => (status: 200, body: {'result': 'ok', 'trip': false}),
+    );
+    expect(r, IngestResult.tripOver);
+  });
+
   test('200 with another body -> retry', () async {
     final (r, _) = await answer((_) => (status: 200, body: {'x': 1}));
     expect(r, IngestResult.retry);

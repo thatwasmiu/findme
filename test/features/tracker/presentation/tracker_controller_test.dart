@@ -9,6 +9,7 @@ import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,7 +58,13 @@ class FakeTrailWidget implements TrailWidget {
 }
 
 void main() {
-  setUpAll(() => registerFallbackValue(<Fix>[]));
+  setUpAll(() {
+    registerFallbackValue(<Fix>[]);
+    registerFallbackValue(<String, Object>{});
+  });
+
+  late MockFriends friends;
+  late FakeTripChannel trip;
 
   late Directory dir;
   late PointQueue queue;
@@ -92,11 +99,15 @@ void main() {
     answer(IngestResult.ok);
     when(() => ingest.newToken()).thenAnswer((_) async => 'issued');
     trail = FakeTrailWidget();
+    friends = quietFriends();
+    trip = FakeTripChannel();
     c = ProviderContainer(
       overrides: [
         ...baseOverrides(
           auth: fakeAuth(token: jwt('sub-1')),
           trackerStore: store,
+          friends: friends,
+          trip: trip,
           fakeTracker: false,
         ),
         pointQueueProvider.overrideWith((_) async => queue),
@@ -541,5 +552,194 @@ void main() {
     await ctl().resume();
     expect(st().on, isTrue);
     expect(st().problem, TrackerProblem.none);
+  });
+
+  group('trip', () {
+    Sharing tripOn(DateTime? until) => (tripMode: true, on: true, until: until);
+    const noTrip = (tripMode: true, on: false, until: null);
+    void serverStarts() =>
+        when(() => friends.setSharing(any()))
+            .thenAnswer((_) async => tripOn(now.add(const Duration(hours: 1))));
+
+    setUp(() {
+      store.sharing = 'trip';
+      serverStarts();
+    });
+
+    test('start: the queue goes first, then {start}, then GPS until the '
+        "answer's end", () async {
+      await ctl().resume();
+      await queue.append(fx());
+      await ctl().startTrip(TripPreset.h1);
+      verifyInOrder([
+        () => ingest.send('tok', any(that: hasLength(1)), any()),
+        () => friends.setSharing({'start': '1h'}),
+      ]);
+      final end = now.add(const Duration(hours: 1));
+      expect(st().on, isTrue);
+      expect(store.on, isTrue);
+      expect(st().tripUntil, end);
+      expect(store.until, end);
+      expect(trip.synced.last, end);
+      expect(store.preset, TripPreset.h1);
+    });
+
+    test('a fix after the end is dropped and GPS goes off', () async {
+      await ctl().resume();
+      await ctl().startTrip(TripPreset.m15);
+      now = now.add(const Duration(hours: 2));
+      await emit(1);
+      expect(st().on, isFalse);
+      expect(gps.listening, isFalse);
+      expect(st().queued, 0);
+      expect(store.until, isNull);
+      expect(trip.synced.last, isNull);
+    });
+
+    test('the alarm (expire) stops GPS only once the end has passed', () async {
+      await ctl().resume();
+      await ctl().startTrip(TripPreset.h1);
+      trip.fire('expire');
+      await settle();
+      expect(st().on, isTrue);
+      now = now.add(const Duration(hours: 1));
+      trip.fire('expire');
+      await settle();
+      expect(st().on, isFalse);
+    });
+
+    test('/ingest says no trip (ended on the web) -> tracker off', () async {
+      await ctl().resume();
+      await ctl().startTrip(TripPreset.open);
+      answer(IngestResult.tripOver);
+      await emit(1);
+      expect(st().on, isFalse);
+      expect(store.on, isFalse);
+      expect(st().queued, 0); // stored all the same
+    });
+
+    test('offline start: GPS on with the local end; the PUT is retried '
+        'before any upload', () async {
+      when(() => friends.setSharing(any())).thenThrow(const NetworkError());
+      await ctl().resume();
+      await ctl().startTrip(TripPreset.m15);
+      expect(st().on, isTrue);
+      expect(store.until, now.add(const Duration(minutes: 15)));
+      expect(store.pending, '15m');
+      await emit(1);
+      verifyNever(() => ingest.send(any(), any(), any()));
+      expect(st().queued, 1);
+      serverStarts();
+      await ctl().sendNow();
+      verify(() => friends.setSharing({'start': '15m'})).called(3);
+      verify(() => ingest.send('tok', any(), any())).called(1);
+      expect(store.pending, isNull);
+      expect(store.until, now.add(const Duration(hours: 1))); // the server's
+    });
+
+    test('app open: the server says no trip -> tracker off', () async {
+      store
+        ..on = true
+        ..until = now.add(const Duration(hours: 1));
+      when(friends.sharing).thenAnswer((_) async => noTrip);
+      await ctl().resume();
+      expect(st().on, isFalse);
+      expect(store.on, isFalse);
+      expect(store.until, isNull);
+      expect(gps.listening, isFalse);
+    });
+
+    test(
+      'end: GPS off, {end: true}; offline -> retried at the next open',
+      () async {
+        await ctl().resume();
+        await ctl().startTrip(TripPreset.h1);
+        when(() => friends.setSharing({'end': true}))
+            .thenThrow(const NetworkError());
+        await ctl().endTrip();
+        expect(st().on, isFalse);
+        expect(store.pending, 'end');
+        when(() => friends.setSharing({'end': true}))
+            .thenAnswer((_) async => noTrip);
+        when(friends.sharing).thenAnswer((_) async => noTrip);
+        await ctl().resume();
+        verify(() => friends.setSharing({'end': true})).called(2);
+        expect(store.pending, isNull);
+      },
+    );
+
+    test(
+      'tile / widget toggle: starts with the last preset, then ends',
+      () async {
+        store.preset = TripPreset.m15;
+        await ctl().resume();
+        trip.fire('toggle');
+        await settle();
+        await ctl().idle();
+        verify(() => friends.setSharing({'start': '15m'})).called(1);
+        expect(st().on, isTrue);
+        when(() => friends.setSharing({'end': true}))
+            .thenAnswer((_) async => noTrip);
+        trip.fire('toggle');
+        await settle();
+        await ctl().idle();
+        expect(st().on, isFalse);
+        verify(() => friends.setSharing({'end': true})).called(1);
+      },
+    );
+
+    test('toggle does nothing for an always-on account', () async {
+      store.sharing = 'always';
+      await ctl().resume();
+      trip.fire('toggle');
+      await settle();
+      expect(st().on, isFalse);
+      verifyNever(() => friends.setSharing(any()));
+    });
+
+    test('long-press while open: picker counter goes up', () async {
+      st(); // built: the channel handler is set
+      trip.fire('picker');
+      await settle();
+      expect(st().picker, 1);
+    });
+
+    test(
+      'switch to always on while on a trip: keeps recording, no end',
+      () async {
+        await ctl().resume();
+        await ctl().startTrip(TripPreset.h1);
+        when(() => friends.setSharing({'mode': 'always'}))
+            .thenAnswer((_) async => (tripMode: false, on: false, until: null));
+        await ctl().setMode(trip: false);
+        expect(st().on, isTrue);
+        expect(st().sharing, 'always');
+        expect(store.until, isNull);
+        now = now.add(const Duration(hours: 5));
+        await emit(1);
+        expect(st().on, isTrue);
+      },
+    );
+
+    test('switch to trip mode stops recording (no trip is on)', () async {
+      store.sharing = 'always';
+      await ctl().resume();
+      await ctl().turnOn();
+      when(() => friends.setSharing({'mode': 'trip'}))
+          .thenAnswer((_) async => noTrip);
+      await ctl().setMode(trip: true);
+      expect(st().on, isFalse);
+      expect(st().sharing, 'trip');
+    });
+  });
+
+  test('always-on account: no end, fixes never stop it', () async {
+    store.sharing = 'always';
+    await ctl().resume();
+    await ctl().turnOn();
+    now = now.add(const Duration(days: 2));
+    await emit(1);
+    expect(st().on, isTrue);
+    expect(st().queued + 1, greaterThan(0));
   });
 }

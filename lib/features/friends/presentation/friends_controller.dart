@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:async' as async show AsyncError;
 
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/storage/prefs.dart';
@@ -99,7 +100,8 @@ class FriendsController extends Notifier<FriendsState> {
       if (!ref.mounted) return;
       state = state.copyWith(me: me, relations: rel);
     } on ParallelWaitError<dynamic, dynamic> catch (e) {
-      final errs = e.errors as (AsyncError<Object?>?, AsyncError<Object?>?);
+      // dart:async's AsyncError, not Riverpod's (flutter_riverpod exports a class of the same name).
+      final errs = e.errors as (async.AsyncError?, async.AsyncError?);
       _failed((errs.$1 ?? errs.$2)!.error);
     } on Object catch (e) {
       _failed(e);

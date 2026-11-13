@@ -165,13 +165,23 @@ String friendAsk(String id, FriendTrail? d, String todayIso) {
   return '$id~${tailFrom(Track(points: d.points), todayIso)}~${d.last?.ts ?? ''}';
 }
 
-/// Fold a friend's answer into what we hold. Prints from before today ([todayStart], epoch ms) are dropped: friends
-/// only share today.
+/// Fold a friend's answer into what we hold (the web's `friendMerge`). Prints from before today ([todayStart], epoch
+/// ms) are dropped: friends only share today; so are prints from before their trip started (`visibleFrom`).
+/// `trip: false`: their trip ended, nothing at all.
 FriendTrail friendMerge(FriendTrail? prev, FriendPart got, int todayStart) {
   if (got.unchanged && prev != null) return prev;
+  if (got.trip == false) return (points: const [], last: null);
+  final vf = got.visibleFrom == null
+      ? 0
+      : DateTime.parse(got.visibleFrom!).millisecondsSinceEpoch;
+  final floor = vf > todayStart ? vf : todayStart;
+  final last = prev?.last;
   final base = Track(
-    points: [...?prev?.points.where((p) => p.t * 1000 >= todayStart)],
-    last: prev?.last,
+    points: [...?prev?.points.where((p) => p.t * 1000 >= floor)],
+    last:
+        last != null && DateTime.parse(last.ts).millisecondsSinceEpoch >= floor
+        ? last
+        : null,
   );
   final m = mergeTail(
     base,
