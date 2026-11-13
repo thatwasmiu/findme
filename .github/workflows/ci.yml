@@ -52,8 +52,8 @@ jobs:
 
   ios:
     name: Build iOS (unsigned .ipa)
-    # macOS minutes cost 10x on private repos: only on main, or when started by hand.
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    # macOS minutes cost 10x on private repos: only on main, spike/ branches, or when started by hand.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/spike/') || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,12 +73,30 @@ jobs:
           else
             echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
           fi
+      - name: Add the test widget extension (no Mac to do it in Xcode)
+        working-directory: ios
+        run: |
+          gem list -i xcodeproj || sudo gem install xcodeproj --no-document
+          ruby scripts/add_widget_target.rb
       # Release: an iOS debug build does not start without a debugger attached.
       - run: flutter build ios --release --no-codesign --dart-define=DEBUG_CONSOLE=true --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
       - name: Pack the unsigned .ipa (sign and install it with Sideloadly, guide chapter 14 A2)
         run: |
           mkdir -p Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
+          app=Payload/Runner.app
+          appex=$app/PlugIns/FindMeWidget.appex
+          test -d "$appex" # fail loudly if the widget was not embedded
+          # The widget's version numbers must match the app's.
+          for k in CFBundleShortVersionString CFBundleVersion; do
+            v=$(/usr/libexec/PlistBuddy -c "Print :$k" "$app/Info.plist")
+            /usr/libexec/PlistBuddy -c "Set :$k $v" "$appex/Info.plist"
+          done
+          # Ad-hoc sign, inside out, only so the App Group entitlement is inside the .ipa for Sideloadly to see.
+          for f in "$app"/Frameworks/*; do codesign --force --sign - "$f"; done
+          codesign --force --sign - --entitlements ios/FindMeWidget/FindMeWidget.entitlements "$appex"
+          codesign --force --sign - --entitlements ios/Runner/Runner.entitlements "$app"
+          codesign -d --entitlements - "$appex"
           zip -qry findme.ipa Payload
       - uses: actions/upload-artifact@v4
         with:

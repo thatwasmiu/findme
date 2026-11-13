@@ -9,6 +9,17 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   name → `DELETE /me` → `signOut()`, which also stops the tracker); hidden for the owner (`Me.owner`). Needed for the
   App Store (5.1.1(v)). Committed on `main`, not pushed. Unit + widget tested only: **`DELETE /me` is not deployed**
   yet (travel-heatmap HANDOFF), so nothing has run against a server or on a device.
+- **iPhone widget: parked** (2026-11-13, spike `spike/ios-widget` merged to `main`): Sideloadly with a free Apple ID
+  cannot give the app and its widget a shared App Group, so the real iPhone widget cannot get data and is not built.
+  Tested on the owner's iPhone in three rounds (guide chapter 17, "iPhone spike"): round 3 shows "widget: no file"
+  (no signing profile in the widget at all) and "app: no groups". What works: CI adds the `FindMeWidget` extension
+  with `ios/scripts/add_widget_target.rb` (no Mac), the Swift compiles, the widget installs and runs. **Kept on
+  purpose (owner's call):** the test widget ships in every iOS build ("Find Me" in the widget gallery, shows
+  "group: MISSING" and diagnostics), and the app writes the time to the App Group on each start
+  (`live_trail_widget.dart` `_iosSpike`). **To resume:** with the paid Apple account or SideStore/AltStore, sideload
+  and check the widget shows `app: +group…`; if so, build the real widget as on Android (Dart draws into the App
+  Group, Swift shows it, live age label), about a day. Declined: a widget that fetches a share link (`/public/{id}`)
+  instead of the App Group.
 - **Pins taken where you are, shared per photo** (2026-11-12, merged to `main` and pushed 2026-11-12, follows `travel-heatmap`
   24f0c21, guide chapter 16, plan `docs/superpowers/plans/2026-11-12-pins-here-and-shared.md`): 📷 needs a fresh fix
   (refused / off / silent → no pin, **Thử lại**), camera photos only, name from a stop or `GET /place-name`;
