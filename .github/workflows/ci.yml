@@ -7,98 +7,98 @@ on:
 
 jobs:
   android:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.name: Check and build Android
- macOS minutes cost 10x on private repos: only on main, or when started by hand.runs-on: ubuntu-latest
- macOS minutes cost 10x on private repos: only on main, or when started by hand.env:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  TZ: Asia/Ho_Chi_Minh # the tests assume Vietnam time, like the web tests
- macOS minutes cost 10x on private repos: only on main, or when started by hand.steps:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/checkout@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/setup-java@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      distribution: temurin
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      java-version: "17"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: subosito/flutter-action@v2
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      flutter-version: 3.47.9
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      channel: stable
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      cache: true
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter pub get
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - name: Generated code is up to date
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    run: |
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      dart run build_runner build -d
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      git diff --exit-code -- '*.g.dart' '*.freezed.dart'
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: dart format --set-exit-if-changed lib test integration_test
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter analyze
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter test --coverage
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/upload-artifact@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      name: coverage
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      path: coverage/lcov.info
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    env:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      CFG: ${{ secrets.FINDME_DEV_CONFIG }}
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    run: |
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      if [ -n "$CFG" ]; then
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        printf '%s' "$CFG" > config/dev.json
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      else
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      fi
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter build apk --flavor dev --debug --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/upload-artifact@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      name: app-dev-debug-apk
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      path: build/app/outputs/flutter-apk/app-dev-debug.apk
+    name: Check and build Android
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Ho_Chi_Minh # the tests assume Vietnam time, like the web tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.9
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generated code is up to date
+        run: |
+          dart run build_runner build -d
+          git diff --exit-code -- '*.g.dart' '*.freezed.dart'
+      - run: dart format --set-exit-if-changed lib test integration_test
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/lcov.info
+      - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
+        env:
+          CFG: ${{ secrets.FINDME_DEV_CONFIG }}
+        run: |
+          if [ -n "$CFG" ]; then
+            printf '%s' "$CFG" > config/dev.json
+            echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
+          fi
+      - run: flutter build apk --flavor dev --debug --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-dev-debug-apk
+          path: build/app/outputs/flutter-apk/app-dev-debug.apk
 
   ios:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.name: Build iOS (unsigned .ipa)
- macOS minutes cost 10x on private repos: only on main, or when started by hand.# macOS minutes cost 10x on private repos: only on main, or when started by hand.
- macOS minutes cost 10x on private repos: only on main, or when started by hand.if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/spike/') || github.event_name == 'workflow_dispatch'
- macOS minutes cost 10x on private repos: only on main, or when started by hand.runs-on: macos-latest
- macOS minutes cost 10x on private repos: only on main, or when started by hand.steps:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/checkout@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: subosito/flutter-action@v2
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      flutter-version: 3.47.9
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      channel: stable
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      cache: true
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter pub get
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    env:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      CFG: ${{ secrets.FINDME_DEV_CONFIG }}
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    run: |
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      if [ -n "$CFG" ]; then
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        printf '%s' "$CFG" > config/dev.json
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      else
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      fi
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - name: Add the widget extension (spike, no Mac to do it in Xcode)
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    working-directory: ios
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    run: |
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      gem list -i xcodeproj || sudo gem install xcodeproj --no-document
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      ruby scripts/add_widget_target.rb
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  # Release: an iOS debug build does not start without a debugger attached.
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - run: flutter build ios --release --no-codesign --dart-define=DEBUG_CONSOLE=true --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - name: Pack the unsigned .ipa (sign and install it with Sideloadly, guide chapter 14 A2)
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    run: |
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      mkdir -p Payload
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      cp -R build/ios/iphoneos/Runner.app Payload/
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      app=Payload/Runner.app
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      appex=$app/PlugIns/FindMeWidget.appex
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      test -d "$appex" # spike: fail loudly if the widget was not embedded
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      # The widget's version numbers must match the app's.
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      for k in CFBundleShortVersionString CFBundleVersion; do
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        v=$(/usr/libexec/PlistBuddy -c "Print :$k" "$app/Info.plist")
- macOS minutes cost 10x on private repos: only on main, or when started by hand.        /usr/libexec/PlistBuddy -c "Set :$k $v" "$appex/Info.plist"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      done
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      # Ad-hoc sign, inside out, only so the App Group entitlement is inside the .ipa for Sideloadly to see.
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      for f in "$app"/Frameworks/*; do codesign --force --sign - "$f"; done
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      codesign --force --sign - --entitlements ios/FindMeWidget/FindMeWidget.entitlements "$appex"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      codesign --force --sign - --entitlements ios/Runner/Runner.entitlements "$app"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      codesign -d --entitlements - "$appex"
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      zip -qry findme.ipa Payload
- macOS minutes cost 10x on private repos: only on main, or when started by hand.  - uses: actions/upload-artifact@v4
- macOS minutes cost 10x on private repos: only on main, or when started by hand.    with:
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      name: findme-unsigned-ipa
- macOS minutes cost 10x on private repos: only on main, or when started by hand.      path: findme.ipa
+    name: Build iOS (unsigned .ipa)
+    # macOS minutes cost 10x on private repos: only on main, spike/ branches, or when started by hand.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/spike/') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.9
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Config (the FINDME_DEV_CONFIG secret if set, else the placeholder example)
+        env:
+          CFG: ${{ secrets.FINDME_DEV_CONFIG }}
+        run: |
+          if [ -n "$CFG" ]; then
+            printf '%s' "$CFG" > config/dev.json
+            echo "CONFIG=config/dev.json" >> "$GITHUB_ENV"
+          else
+            echo "CONFIG=config/example.json" >> "$GITHUB_ENV"
+          fi
+      - name: Add the widget extension (spike, no Mac to do it in Xcode)
+        working-directory: ios
+        run: |
+          gem list -i xcodeproj || sudo gem install xcodeproj --no-document
+          ruby scripts/add_widget_target.rb
+      # Release: an iOS debug build does not start without a debugger attached.
+      - run: flutter build ios --release --no-codesign --dart-define=DEBUG_CONSOLE=true --dart-define-from-file=$CONFIG --dart-define="APP_VERSION=$(git rev-parse --short HEAD) $(date -u '+%Y-%m-%d %H:%M')"
+      - name: Pack the unsigned .ipa (sign and install it with Sideloadly, guide chapter 14 A2)
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          app=Payload/Runner.app
+          appex=$app/PlugIns/FindMeWidget.appex
+          test -d "$appex" # spike: fail loudly if the widget was not embedded
+          # The widget's version numbers must match the app's.
+          for k in CFBundleShortVersionString CFBundleVersion; do
+            v=$(/usr/libexec/PlistBuddy -c "Print :$k" "$app/Info.plist")
+            /usr/libexec/PlistBuddy -c "Set :$k $v" "$appex/Info.plist"
+          done
+          # Ad-hoc sign, inside out, only so the App Group entitlement is inside the .ipa for Sideloadly to see.
+          for f in "$app"/Frameworks/*; do codesign --force --sign - "$f"; done
+          codesign --force --sign - --entitlements ios/FindMeWidget/FindMeWidget.entitlements "$appex"
+          codesign --force --sign - --entitlements ios/Runner/Runner.entitlements "$app"
+          codesign -d --entitlements - "$appex"
+          zip -qry findme.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: findme-unsigned-ipa
+          path: findme.ipa
