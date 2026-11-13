@@ -4,7 +4,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
-- **Trip mode, phone side** (2026-11-13, branch `feat/trip-mode`, not merged, not pushed; follows `travel-heatmap`
+- **Trip mode, phone side** (2026-11-13, merged to `main` and pushed 2026-11-13; follows `travel-heatmap`
   trip mode, merged there but **not deployed**; guide chapter 19, plan
   `docs/superpowers/plans/2026-11-13-trip-mode-phone.md`). Trip-mode accounts: 🧭 → "Bắt đầu chuyến đi" (15 phút ·
   1 giờ · đến tối nay · đến khi tắt) / "Kết thúc"; the tracker stops at the end (Android alarm, each fix, upload tick,
