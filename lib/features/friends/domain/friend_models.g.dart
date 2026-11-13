@@ -26,6 +26,7 @@ _Friend _$FriendFromJson(Map<String, dynamic> json) => _Friend(
   since: json['since'] as String,
   lastTs: json['lastTs'] as String?,
   avatar: json['avatar'] as String?,
+  trip: json['trip'] as bool?,
 );
 
 Map<String, dynamic> _$FriendToJson(_Friend instance) => <String, dynamic>{
@@ -34,6 +35,7 @@ Map<String, dynamic> _$FriendToJson(_Friend instance) => <String, dynamic>{
   'since': instance.since,
   'lastTs': instance.lastTs,
   'avatar': instance.avatar,
+  'trip': instance.trip,
 };
 
 _Pending _$PendingFromJson(Map<String, dynamic> json) => _Pending(

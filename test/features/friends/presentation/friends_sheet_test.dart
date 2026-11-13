@@ -86,13 +86,21 @@ void main() {
             lastTs: isoMs(now.subtract(const Duration(hours: 3))),
           ),
           const Friend(id: 'c', name: 'Chi', since: 'S'),
+          Friend(
+            id: 'd',
+            name: 'Dũng',
+            since: 'S',
+            trip: false,
+            lastTs: isoMs(now),
+          ),
         ],
         outgoing: const [Pending(id: 'o', name: 'Minh', at: 'A')],
       ),
     );
     expect(find.text('Lời mời đến'), findsOneWidget);
     expect(find.text('muốn làm bạn với bạn'), findsOneWidget);
-    expect(find.text('Bạn bè (2)'), findsOneWidget);
+    expect(find.text('Bạn bè (3)'), findsOneWidget);
+    expect(find.text('không trong chuyến đi'), findsOneWidget);
     expect(find.text('thấy 3 giờ trước'), findsOneWidget);
     expect(find.text('chưa thấy hôm nay'), findsOneWidget);
     expect(find.text('Đang chờ'), findsOneWidget);

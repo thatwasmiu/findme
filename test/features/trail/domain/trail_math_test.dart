@@ -227,5 +227,27 @@ void main() {
       expect(m.points, [p(10), p(25)]);
       expect(m.last, last(25));
     });
+
+    test('friendMerge: trip over clears all; prints and last from before '
+        'visibleFrom are dropped', () {
+      final FriendTrail had = (points: [p(10), p(20)], last: last(20));
+      final ms = t0.millisecondsSinceEpoch;
+      final gone = friendMerge(had, const FriendPart(id: 'f', trip: false), ms);
+      expect(gone.points, isEmpty);
+      expect(gone.last, isNull);
+      // a new trip started at minute 30: the morning's prints and spot go
+      final m = friendMerge(
+        had,
+        FriendPart(
+          id: 'f',
+          visibleFrom: isoMs(t0.add(const Duration(minutes: 30))),
+          from: isoMs(t0.add(const Duration(minutes: 30))),
+          points: [p(35)],
+        ),
+        ms,
+      );
+      expect(m.points, [p(35)]);
+      expect(m.last, isNull);
+    });
   });
 }

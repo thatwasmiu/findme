@@ -236,7 +236,9 @@ class _FriendsSheetState extends ConsumerState<FriendsSheet> {
                 fallback: Initial(f.name, friendColor(f.id)),
               ),
               title: f.name,
-              subtitle: f.lastTs != null
+              subtitle: f.trip == false
+                  ? 'không trong chuyến đi'
+                  : f.lastTs != null
                   ? 'thấy ${ago(f.lastTs!, now: now())}'
                   : 'chưa thấy hôm nay',
               actions: [
