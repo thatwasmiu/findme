@@ -3,9 +3,11 @@ import 'dart:convert';
 
 import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/data/trip_channel.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -54,6 +56,28 @@ class MemoryTrackerStore implements TrackerStore {
     saved = (token: raw.trim(), sub: sub);
   }
 
+  String? sharing;
+  DateTime? until;
+  TripPreset preset = TripPreset.h1;
+  String? pending;
+
+  @override
+  Future<String?> sharingMode() async => sharing;
+  @override
+  Future<void> setSharingMode(String? mode) async => sharing = mode;
+  @override
+  Future<DateTime?> tripUntil() async => until;
+  @override
+  Future<void> setTripUntil(DateTime? at) async => until = at;
+  @override
+  Future<TripPreset> lastPreset() async => preset;
+  @override
+  Future<void> setLastPreset(TripPreset p) async => preset = p;
+  @override
+  Future<String?> tripPending() async => pending;
+  @override
+  Future<void> setTripPending(String? p) async => pending = p;
+
   @override
   Future<bool> enabled() async => on;
   @override
@@ -64,6 +88,9 @@ class MemoryTrackerStore implements TrackerStore {
     saved = null;
     owned = null;
     on = false;
+    sharing = null;
+    until = null;
+    pending = null;
   }
 }
 
@@ -146,4 +173,24 @@ class FakeWake implements WakeChannel {
   Future<void> stop() async => stops++;
   @override
   void onWake(void Function() f) => _onWake = f;
+}
+
+/// The Android trip bridge, by hand: records [synced] ends, [fire] a command from the tile / widget / alarm.
+class FakeTripChannel implements TripChannel {
+  final synced = <DateTime?>[];
+  void Function(String)? _on;
+  bool picker = false;
+
+  void fire(String c) => _on?.call(c);
+
+  @override
+  Future<void> sync(DateTime? until) async => synced.add(until);
+  @override
+  void onCommand(void Function(String) f) => _on = f;
+  @override
+  Future<bool> takePicker() async {
+    final p = picker;
+    picker = false;
+    return p;
+  }
 }

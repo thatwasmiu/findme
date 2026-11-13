@@ -6,6 +6,7 @@ import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:findme/features/shares/data/shares_repository.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
+import 'package:findme/features/tracker/data/trip_channel.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/data/track_repository.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
@@ -94,6 +95,7 @@ MockFriends quietFriends() {
   final f = MockFriends();
   when(f.me).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K'));
   when(f.relations).thenAnswer((_) async => Relations.empty);
+  when(f.sharing).thenAnswer((_) async => null);
   return f;
 }
 
@@ -120,8 +122,10 @@ List<Override> baseOverrides({
   MockPins? pins,
   MemoryPrefs? prefs,
   MemoryTrackerStore? trackerStore,
+  FakeTripChannel? trip,
   bool fakeTracker = true,
 }) => [
+  tripChannelProvider.overrideWithValue(trip ?? FakeTripChannel()),
   appConfigProvider.overrideWithValue(testConfig),
   authRepositoryProvider.overrideWithValue(auth),
   prefsProvider.overrideWithValue(prefs ?? MemoryPrefs()),

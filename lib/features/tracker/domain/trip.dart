@@ -6,7 +6,7 @@ enum TripPreset {
   tonight('tonight', 'đến tối nay'),
   open('open', 'đến khi tắt');
 
-  const TripPreset(this.key, this.label);
+  TripPreset(this.key, this.label);
 
   /// What `PUT /me/sharing {start}` takes.
   final String key;
@@ -20,7 +20,7 @@ TripPreset? presetOf(String? key) {
   return null;
 }
 
-/// The account's mode and running trip as `GET /me` / `PUT /me/sharing` answer them. [until] null with [on] = "đến
+/// The account's mode and running trip as `GET /me` / `PUT /me/sharing` answer them. `until` null with `on` = "đến
 /// khi tắt".
 typedef Sharing = ({bool tripMode, bool on, DateTime? until});
 

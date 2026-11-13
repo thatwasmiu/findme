@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:findme/core/storage/secure.dart';
+import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart' as policy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,24 @@ abstract interface class TrackerStore {
   /// How long fixes may wait before an upload (50 waiting still go at once). A phone setting: [forget] keeps it.
   Future<Duration> uploadEvery();
   Future<void> setUploadEvery(Duration d);
+
+  /// The account's sharing mode as the server last said: 'always', 'trip', or null (not known yet). Android's tile
+  /// and widget read it natively (`flutter.findme.sharing`) to offer the trip button only in trip mode.
+  Future<String?> sharingMode();
+  Future<void> setSharingMode(String? mode);
+
+  /// When the running trip stops by itself; null = no end (an open trip, or no trip). Read natively by the tile
+  /// (`flutter.findme.tripUntil`, epoch ms).
+  Future<DateTime?> tripUntil();
+  Future<void> setTripUntil(DateTime? at);
+
+  /// The preset the tile and the widget start with ("1 giờ" the first time). A phone setting: [forget] keeps it.
+  Future<TripPreset> lastPreset();
+  Future<void> setLastPreset(TripPreset p);
+
+  /// A trip start (its preset key) or `'end'` that could not reach the server yet.
+  Future<String?> tripPending();
+  Future<void> setTripPending(String? p);
 }
 
 class SecureTrackerStore implements TrackerStore {
@@ -58,6 +77,10 @@ class SecureTrackerStore implements TrackerStore {
   static const _ownerKey = 'findme.trackerOwner';
   static const _indicatorKey = 'findme.trackerIndicator';
   static const _everyKey = 'findme.trackerUploadSeconds';
+  static const _sharingKey = 'findme.sharing';
+  static const _untilKey = 'findme.tripUntil';
+  static const _presetKey = 'findme.tripPreset';
+  static const _pendingKey = 'findme.tripPending';
 
   final FlutterSecureStorage _secure;
 
@@ -106,7 +129,53 @@ class SecureTrackerStore implements TrackerStore {
     final p = await SharedPreferences.getInstance();
     await p.remove(_onKey);
     await p.remove(_ownerKey);
+    await p.remove(_sharingKey);
+    await p.remove(_untilKey);
+    await p.remove(_pendingKey);
   }
+
+  static Future<void> _put(String key, String? v) async {
+    final p = await SharedPreferences.getInstance();
+    v == null ? await p.remove(key) : await p.setString(key, v);
+  }
+
+  @override
+  Future<String?> sharingMode() async =>
+      (await SharedPreferences.getInstance()).getString(_sharingKey);
+
+  @override
+  Future<void> setSharingMode(String? mode) => _put(_sharingKey, mode);
+
+  @override
+  Future<DateTime?> tripUntil() async {
+    final ms = (await SharedPreferences.getInstance()).getInt(_untilKey);
+    return ms == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+  }
+
+  @override
+  Future<void> setTripUntil(DateTime? at) async {
+    final p = await SharedPreferences.getInstance();
+    at == null
+        ? await p.remove(_untilKey)
+        : await p.setInt(_untilKey, at.millisecondsSinceEpoch);
+  }
+
+  @override
+  Future<TripPreset> lastPreset() async =>
+      presetOf((await SharedPreferences.getInstance()).getString(_presetKey)) ??
+      TripPreset.h1;
+
+  @override
+  Future<void> setLastPreset(TripPreset p) => _put(_presetKey, p.key);
+
+  @override
+  Future<String?> tripPending() async =>
+      (await SharedPreferences.getInstance()).getString(_pendingKey);
+
+  @override
+  Future<void> setTripPending(String? p) => _put(_pendingKey, p);
 
   @override
   Future<String?> owner() async =>
