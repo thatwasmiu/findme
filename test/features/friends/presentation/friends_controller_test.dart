@@ -21,13 +21,18 @@ void main() {
   late MemoryPrefs prefs;
   late ProviderContainer c;
 
-  void start(FakeAsync f, {List<String> shown = const []}) {
+  void start(
+    FakeAsync f, {
+    List<String> shown = const [],
+    void Function()? stub,
+  }) {
     repo = MockFriends();
     prefs = MemoryPrefs()..shown = shown;
     when(
       repo.me,
     ).thenAnswer((_) async => const Me(name: 'Đạt', friendCode: 'K7QM-3XPA'));
     when(repo.relations).thenAnswer((_) async => rel);
+    stub?.call();
     c =
         ProviderContainer(
             overrides: baseOverrides(
@@ -118,6 +123,21 @@ void main() {
       when(repo.relations).thenThrow(const AccountMissing());
       f.elapse(const Duration(seconds: 60));
       expect(c.read(authControllerProvider), AuthPhase.noAccount);
+    });
+  });
+
+  test('first load with /me and /friends both failing: 401 still signs out', () {
+    fakeAsync((f) {
+      start(
+        f,
+        stub: () {
+          // async failures, as on the wire: both land in one ParallelWaitError
+          when(repo.me).thenAnswer((_) async => throw const AuthExpired());
+          when(repo.relations)
+              .thenAnswer((_) async => throw const AuthExpired());
+        },
+      );
+      expect(c.read(authControllerProvider), AuthPhase.signedOut);
     });
   });
 

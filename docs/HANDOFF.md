@@ -18,8 +18,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   app on the presets. **Not yet seen** (needs the server deployed and a trip-mode account): a real start/end, the
   headless start from the tile/widget (Android's limits on starting a location service from the background are the
   risk), the alarm stopping GPS, the widget chip, `trip: false` from `/ingest`. Not built: notification "Kết thúc"
-  (deferred), iPhone controls. Seen in passing: `FriendsController.refresh` throws a cast error when both `/me` and
-  `/friends` fail (`(AsyncError, AsyncError)` vs `AsyncError<Object?>?`), pre-existing.
+  (deferred), iPhone controls. Also fixed on this branch: `FriendsController.refresh` threw a cast error when
+  `/me` and `/friends` failed together (it cast to Riverpod's `AsyncError` instead of `dart:async`'s), so a 401/403
+  on the first load was lost.
 
 - **Account sheet + delete your account** (2026-11-13, follows `travel-heatmap` f17b5ea, guide chapter 04): 👋 on the top
   bar became 👤 → `AccountSheet` with 🎒 bag & avatar (moved out of 👥), 👋 Đăng xuất, 🗑️ Xoá tài khoản (type your
