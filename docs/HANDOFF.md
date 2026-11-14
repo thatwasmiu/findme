@@ -4,7 +4,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
-- **Photos made ready on the phone** (2026-11-14, branch `feat/client-photo-files`, **not merged, not pushed**;
+- **Photos made ready on the phone** (2026-11-14, merged to `main` 2026-11-14, **not pushed**;
   follows Look Back's "client-made photo files", merged and deployed there the same day; guide chapter 16, section
   "Photos made ready on the phone"). While a photo uploads, the phone makes its thumb (400), display (2048) and blur
   as WebP (`lib/features/pins/data/client_files.dart`, new package `flutter_image_compress`) and hands them in when
