@@ -127,6 +127,11 @@ const _routeWords = {
   'pins',
   'share',
   'uploads',
+  'media',
+  'client-files',
+  'client-result',
+  'thumb',
+  'display',
 };
 
 /// A URL as the console may show it: route words kept, ids masked, query values dropped (they hold times and

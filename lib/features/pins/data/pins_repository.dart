@@ -9,6 +9,7 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/network/api_client.dart';
 import 'package:findme/core/network/api_client_provider.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
+import 'package:findme/features/pins/data/client_files.dart';
 import 'package:findme/features/pins/domain/pin.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,6 +80,7 @@ class PinsRepository {
     this._api, {
     Dio? dio,
     this._now = DateTime.now,
+    this._encoder,
     List<Duration> retryDelays = const [
       Duration.zero,
       Duration(seconds: 1),
@@ -93,6 +95,11 @@ class PinsRepository {
   final Dio _dio;
   final DateTime Function() _now;
   final List<Duration> _delays;
+
+  /// Makes a photo's small files on the phone (client_files.dart). null: Look Back makes them, as it always did.
+  final ClientEncoder? _encoder;
+  var _clientStrikes = 0;
+  var _clientOn = true; // off after two slow or failed photos in a row, until the next sign-in rebuilds this
   String? _cookie;
   String? _sharedCookie; // opens friends' shared pictures
   DateTime? _exchangedAt;
@@ -342,6 +349,10 @@ class PinsRepository {
 
   /// Resumable upload (tus 1.0.0) in 8 MiB chunks. A dropped connection asks the server how far it got and goes on.
   /// Returns the upload id, which is also the media id.
+  ///
+  /// A photo's small files are made here on the phone while it uploads (client_files.dart) and handed in when the
+  /// upload ends, so the picture is ready at once. That work never delays or fails an upload: whatever is not ready
+  /// or does not go through is left to Look Back, exactly as before.
   // ponytail: runs only while the app is open and is not resumed after a restart, same as the web.
   Future<String> uploadTus(
     Map<String, String> metadata,
@@ -351,20 +362,36 @@ class PinsRepository {
     final raf = await File(file.path).open();
     try {
       final size = await raf.length();
-      final meta = {...metadata, 'filename': file.name, 'filetype': file.type}
-          .entries
-          .map((e) => '${e.key} ${base64.encode(utf8.encode(e.value))}')
-          .join(',');
+      var client =
+          _clientOn && _encoder != null && file.type.startsWith('image/');
+      // Started now, beside the upload. `made` stays null until it is done (and if it fails).
+      ClientFiles? made;
+      if (client) unawaited(_makeClientFiles(file.path).then((m) => made = m));
+      String meta({required bool flagged}) =>
+          {
+                ...metadata,
+                'filename': file.name,
+                'filetype': file.type,
+                if (flagged) 'clientFiles': '1',
+              }.entries
+              .map((e) => '${e.key} ${base64.encode(utf8.encode(e.value))}')
+              .join(',');
       String? location;
       for (var i = 0; location == null; i++) {
         final r = await _try(
           'POST',
           '$_lb/uploads',
-          headers: {'Upload-Length': '$size', 'Upload-Metadata': meta},
+          headers: {
+            'Upload-Length': '$size',
+            'Upload-Metadata': meta(flagged: client),
+          },
         );
         if (r?.statusCode == 201) {
           location = r!.headers.value('location');
           if (location == null) throw _failure(r);
+        } else if (client && _failure(r).word == 'quota') {
+          // A flagged photo reserves room for its small files (4.3 MB) on top of itself. It may still fit without.
+          client = false;
         } else {
           if (!_retryable(r) || i == _delays.length) throw _failure(r);
           await Future<void>.delayed(_delays[i]);
@@ -401,9 +428,69 @@ class PinsRepository {
         final head = await _try('HEAD', url);
         if (head?.statusCode == 200) offset = _offsetOf(head) ?? offset;
       }
-      return Uri.parse(url).pathSegments.last;
+      final id = Uri.parse(url).pathSegments.last;
+      if (client) await _handInClientFiles(id, made);
+      return id;
     } finally {
       await raf.close();
+    }
+  }
+
+  void _clientStrike() {
+    if (++_clientStrikes >= 2) _clientOn = false;
+  }
+
+  /// null: could not be made. Two slow or failed photos in a row end it for this sign-in.
+  Future<ClientFiles?> _makeClientFiles(String path) async {
+    final began = _now();
+    try {
+      final m = await _encoder!(path);
+      if (tooSlow(_now().difference(began), m.width, m.height)) {
+        _clientStrike();
+      } else {
+        _clientStrikes = 0;
+      }
+      return m;
+    } on Object {
+      _clientStrike();
+      return null;
+    }
+  }
+
+  /// The upload has ended and Look Back is waiting for this photo's small files: send them, or say it should make
+  /// them itself ([files] null: not ready in time, or not made). Best effort: if nothing gets through, Look Back
+  /// takes the photo anyway after its own wait.
+  Future<void> _handInClientFiles(String id, ClientFiles? files) async {
+    final media = '$_lb/media/$id';
+    Future<Response<dynamic>> put(String name, List<int> bytes) => _call(
+      'PUT',
+      '$media/client-files/$name',
+      data: bytes,
+      contentType: 'application/octet-stream',
+      headers: {Headers.contentLengthHeader: '${bytes.length}'},
+    );
+    Future<Response<dynamic>> result(Map<String, Object> body) => _call(
+      'POST',
+      '$media/client-result',
+      data: body,
+      contentType: Headers.jsonContentType,
+    );
+    try {
+      if (files != null) {
+        if ((await put('thumb', files.thumb)).statusCode == 204 &&
+            (await put('display', files.display)).statusCode == 204) {
+          await result({
+            'width': files.width,
+            'height': files.height,
+            'blurDataUrl': files.blurDataUrl,
+          });
+          return;
+        }
+        _clientStrike(); // refused: a proxy that will not take the bodies would cost every photo these calls
+      }
+      await result({'skip': true});
+    } on Object {
+      // quietly
     }
   }
 
@@ -459,5 +546,6 @@ final pinsRepositoryProvider = Provider<PinsRepository>((ref) {
   return PinsRepository(
     ref.watch(appConfigProvider),
     ref.watch(apiClientProvider),
+    encoder: encodeClientFiles,
   );
 });

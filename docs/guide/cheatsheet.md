@@ -129,6 +129,17 @@ another account signs in, never by an expired session.
 - Polling: every 5 s only while a file is `processing`.
 - App icon: `assets/images/logo.png` and the launcher files all come from the web's `web/public/icon-512.png`.
 
+### Photos made on the phone
+
+| Command / item | Does |
+|---|---|
+| `clientFiles=1` in the tus metadata | Look Back holds the photo for the phone's own thumb, display and blur instead of queueing it |
+| `PUT /lb/api/findme/media/<id>/client-files/{thumb,display}` | The two WebP files (≤ 300 KB, ≤ 4 MB) |
+| `POST /lb/api/findme/media/<id>/client-result` | `{width,height,blurDataUrl}` → 204 ready now, 202 Look Back makes them; `{"skip":true}` → Look Back makes them |
+| Display 2048, thumb 400 (long edge), within 1 px | What Look Back accepts; `targetShort` / `rightSize` in `client_files.dart` |
+| 150 ms per megapixel, two in a row | The limit after which the phone stops making files until the next sign-in |
+| `flutter test integration_test/client_files_test.dart --flavor dev --dart-define-from-file=config/example.json` | The real encoder's sizes, on an emulator or phone |
+
 ## Home-screen widget (chapter 17)
 
 | Command / item | Does |

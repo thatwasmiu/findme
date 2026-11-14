@@ -4,6 +4,24 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Photos made ready on the phone** (2026-11-14, branch `feat/client-photo-files`, **not merged, not pushed**;
+  follows Look Back's "client-made photo files", merged and deployed there the same day; guide chapter 16, section
+  "Photos made ready on the phone"). While a photo uploads, the phone makes its thumb (400), display (2048) and blur
+  as WebP (`lib/features/pins/data/client_files.dart`, new package `flutter_image_compress`) and hands them in when
+  the upload ends (`PinsRepository.uploadTus`: `clientFiles=1`, `PUT …/client-files/{thumb,display}`,
+  `POST …/client-result`), so Look Back has nothing to process and the picture is ready at once. Pins, avatar and
+  bag pictures all go through it; videos do not. Anything not ready when the upload ends, refused, or failing is
+  handed to Look Back with `skip`: the old behaviour. Two slow (150 ms per megapixel) or failed photos in a row
+  switch it off until the next sign-in. A marked upload that gets `quota` (Look Back reserves 4.3 MB for the small
+  files) is asked again unmarked. **Verified:** 456 unit + widget tests, `flutter analyze` clean; on the emulator
+  (API 35) `integration_test/client_files_test.dart` passes: the real codecs give 4000×3000 → 2048×1536 and
+  400×300, tall, 16:9, small and odd sizes right to the pixel, all WebP. **Not yet seen:** an upload against the
+  real Look Back (the three calls, a 204 from `client-result`, the picture ready without a wait); a real camera JPEG
+  with EXIF rotation (the sizing does not depend on it, but it has only run on generated PNGs); how long the
+  encoder takes on a real phone (the first photo took ~7 s on the emulator, which would count as slow: two such in
+  a row switch it off); iPhone, whose WebP encoder is a bundled third-party one and slower. Not built: gates for
+  battery saver or a hot phone. Side effect of the emulator build: Gradle installed Android SDK Platform 34.
+
 - **Trip mode, phone side** (2026-11-13, merged to `main` and pushed 2026-11-13; follows `travel-heatmap`
   trip mode, merged there but **not deployed**; guide chapter 19, plan
   `docs/superpowers/plans/2026-11-13-trip-mode-phone.md`). Trip-mode accounts: 🧭 → "Bắt đầu chuyến đi" (15 phút ·

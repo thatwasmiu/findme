@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/core/network/api_client.dart';
 import 'package:findme/features/bag/data/bag_repository.dart';
+import 'package:findme/features/pins/data/client_files.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,6 +80,7 @@ Never down() => throw DioException.connectionError(
   Map<String, List<R Function()>> routes, {
   String? token = 't',
   DateTime Function()? now,
+  ClientEncoder? encoder,
 }) {
   final s = Server(routes);
   final dio = Dio()..httpClientAdapter = s;
@@ -88,6 +92,7 @@ Never down() => throw DioException.connectionError(
       dio: dio,
       now: now ?? DateTime.now,
       retryDelays: const [Duration.zero, Duration.zero],
+      encoder: encoder,
     ),
     s: s,
   );
@@ -443,6 +448,251 @@ void main() {
       expect(r.failed, 1);
       expect(m.s.count('DELETE $_pins/a'), 0);
     });
+  });
+
+  group('client-made photo files', () {
+    late Directory dir;
+    late PinFile photo;
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('pins');
+      File('${dir.path}/a.jpg').writeAsStringSync('hello');
+      photo = PinFile('${dir.path}/a.jpg', 'a.jpg');
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    const thumbUrl = '$_lb/media/u1/client-files/thumb';
+    const displayUrl = '$_lb/media/u1/client-files/display';
+    const resultUrl = '$_lb/media/u1/client-result';
+    R created() => reply(201, null, {'location': '/lb/api/findme/uploads/u1'});
+    R moved() => reply(204, null, {'upload-offset': '5'});
+    R ok() => reply(204);
+    // Plain text stands in for the WebP bytes: the fake server reads bodies as text.
+    final files = (
+      thumb: Uint8List.fromList(utf8.encode('THUMB')),
+      display: Uint8List.fromList(utf8.encode('DISPLAY')),
+      blurDataUrl: 'data:image/webp;base64,AA',
+      width: 2048,
+      height: 1536,
+    );
+    Future<ClientFiles> ready(String _) async => files;
+    Map<String, String> metaOf(Server s, [int nth = 0]) {
+      final posts = s.requests
+          .where((r) => '${r.method} ${r.uri}' == 'POST $_upload')
+          .toList();
+      return {
+        for (final kv
+            in (posts[nth].headers['Upload-Metadata'] as String).split(','))
+          kv.split(' ')[0]: utf8.decode(base64.decode(kv.split(' ')[1])),
+      };
+    }
+
+    Map<String, List<R Function()>> upload() => {
+      'POST $_upload': [created],
+      'PATCH $_uploadUrl': [moved],
+    };
+    List<String> after(Server s) =>
+        s.calls.skipWhile((c) => !c.startsWith('PATCH')).skip(1).toList();
+
+    test(
+      'files ready: flagged, both files PUT after the upload, then the result',
+      () async {
+        final m = make({
+          ...upload(),
+          'PUT $thumbUrl': [ok],
+          'PUT $displayUrl': [ok],
+          'POST $resultUrl': [ok],
+        }, encoder: ready);
+        expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+        expect(metaOf(m.s)['clientFiles'], '1');
+        expect(after(m.s), [
+          'PUT $thumbUrl',
+          'PUT $displayUrl',
+          'POST $resultUrl',
+        ]);
+        final put = m.s.first('PUT $thumbUrl');
+        expect(put.contentType, 'application/octet-stream');
+        expect(m.s.bodies[m.s.calls.indexOf('PUT $thumbUrl')], 'THUMB');
+        expect(m.s.bodies[m.s.calls.indexOf('PUT $displayUrl')], 'DISPLAY');
+        expect(jsonDecode(m.s.bodies.last), {
+          'width': 2048,
+          'height': 1536,
+          'blurDataUrl': 'data:image/webp;base64,AA',
+        });
+      },
+    );
+
+    test('files not ready when the upload ends: handed to Look Back', () async {
+      final never = Completer<ClientFiles>();
+      final m = make({
+        ...upload(),
+        'POST $resultUrl': [() => reply(202)],
+      }, encoder: (_) => never.future);
+      expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+      expect(after(m.s), ['POST $resultUrl']);
+      expect(jsonDecode(m.s.bodies.last), {'skip': true});
+    });
+
+    test('the encoder fails: the upload still succeeds, handed over', () async {
+      final m = make({
+        ...upload(),
+        'POST $resultUrl': [() => reply(202)],
+      }, encoder: (_) async => throw StateError('no codec'));
+      expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+      expect(jsonDecode(m.s.bodies.last), {'skip': true});
+    });
+
+    test('a file refused (413): handed over, nothing thrown', () async {
+      final m = make({
+        ...upload(),
+        'PUT $thumbUrl': [ok],
+        'PUT $displayUrl': [() => reply(413)],
+        'POST $resultUrl': [() => reply(202)],
+      }, encoder: ready);
+      expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+      expect(jsonDecode(m.s.bodies.last), {'skip': true});
+    });
+
+    test(
+      'Look Back away for the small files: the upload still counts',
+      () async {
+        final m = make({
+          ...upload(),
+          'PUT $thumbUrl': [down],
+          'POST $resultUrl': [down],
+        }, encoder: ready);
+        expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+      },
+    );
+
+    test('a video is never flagged and sends nothing more', () async {
+      File('${dir.path}/v.mp4').writeAsStringSync('hello');
+      var asked = 0;
+      final m = make(
+        upload(),
+        encoder: (p) {
+          asked++;
+          return ready(p);
+        },
+      );
+      await m.repo.uploadTus(
+        {'pinId': 'p1'},
+        PinFile('${dir.path}/v.mp4', 'v.mp4'),
+        (_) {},
+      );
+      expect(metaOf(m.s).containsKey('clientFiles'), isFalse);
+      expect(after(m.s), isEmpty);
+      expect(asked, 0);
+    });
+
+    test('without an encoder nothing changes', () async {
+      final m = make(upload());
+      await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {});
+      expect(metaOf(m.s).containsKey('clientFiles'), isFalse);
+      expect(after(m.s), isEmpty);
+    });
+
+    test(
+      'two failures in a row switch it off until the next sign-in',
+      () async {
+        final m = make({
+          ...upload(),
+          'POST $resultUrl': [() => reply(202)],
+        }, encoder: (_) async => throw StateError('no codec'));
+        for (var i = 0; i < 3; i++) {
+          await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {});
+        }
+        expect(metaOf(m.s).containsKey('clientFiles'), isTrue);
+        expect(metaOf(m.s, 1).containsKey('clientFiles'), isTrue);
+        expect(metaOf(m.s, 2).containsKey('clientFiles'), isFalse);
+        expect(m.s.count('POST $resultUrl'), 2);
+      },
+    );
+
+    test('a good photo between two failures keeps it on', () async {
+      var n = 0;
+      final m = make({
+        ...upload(),
+        'PUT $thumbUrl': [ok],
+        'PUT $displayUrl': [ok],
+        'POST $resultUrl': [ok],
+      }, encoder: (p) async => (++n).isOdd ? throw StateError('x') : files);
+      for (var i = 0; i < 4; i++) {
+        await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {});
+      }
+      expect(metaOf(m.s, 3).containsKey('clientFiles'), isTrue);
+    });
+
+    test('two slow photos in a row switch it off', () async {
+      var t = DateTime(2026);
+      final m = make(
+        {
+          ...upload(),
+          'PUT $thumbUrl': [ok],
+          'PUT $displayUrl': [ok],
+          'POST $resultUrl': [ok],
+        },
+        now: () => t,
+        encoder: (_) async {
+          t = t.add(
+            const Duration(seconds: 5),
+          ); // far over 150 ms per megapixel
+          return files;
+        },
+      );
+      for (var i = 0; i < 3; i++) {
+        await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {});
+      }
+      expect(metaOf(m.s, 1).containsKey('clientFiles'), isTrue);
+      expect(metaOf(m.s, 2).containsKey('clientFiles'), isFalse);
+      expect(m.s.count('PUT $thumbUrl'), 2); // what was made is still used
+    });
+
+    test(
+      'no room for the reserve (quota): tried again without the flag',
+      () async {
+        final m = make({
+          'POST $_upload': [
+            () => reply(413, {'error': 'quota'}),
+            created,
+          ],
+          'PATCH $_uploadUrl': [moved],
+        }, encoder: ready);
+        expect(await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}), 'u1');
+        expect(metaOf(m.s).containsKey('clientFiles'), isTrue);
+        expect(metaOf(m.s, 1).containsKey('clientFiles'), isFalse);
+        expect(after(m.s), isEmpty); // not waiting: nothing to hand over
+      },
+    );
+
+    test('quota without the flag is still the quota message', () async {
+      final m = make({
+        'POST $_upload': [
+          () => reply(413, {'error': 'quota'}),
+        ],
+      }, encoder: ready);
+      await expectLater(
+        m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {}),
+        throwsA(isA<PinUploadFailed>().having((e) => e.word, 'word', 'quota')),
+      );
+      expect(m.s.count('POST $_upload'), 2);
+    });
+
+    test(
+      'the cookie ran out: small files go again after a new session',
+      () async {
+        final m = make({
+          ...ticketOk(),
+          ...upload(),
+          'PUT $thumbUrl': [() => reply(401), ok],
+          'PUT $displayUrl': [ok],
+          'POST $resultUrl': [ok],
+        }, encoder: ready);
+        await m.repo.uploadTus({'pinId': 'p1'}, photo, (_) {});
+        expect(m.s.count('PUT $thumbUrl'), 2);
+        expect(m.s.calls.last, 'POST $resultUrl');
+        expect(jsonDecode(m.s.bodies.last), isNot({'skip': true}));
+      },
+    );
   });
 
   group('setShared', () {
