@@ -44,100 +44,105 @@ class _HachiwareState extends State<Hachiware>
   Widget build(BuildContext context) => Semantics(
     label: widget.label,
     image: true,
-    child: SizedBox(
-      width: 56,
-      height: 66,
-      child: AnimatedBuilder(
-        animation: _loop,
-        builder: (_, _) {
-          final t = _loop.value;
-          final hop = hopAt(t);
-          final shadow = shadowAt(t);
-          final ripple = rippleAt(t);
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // ripple on the ground
-              Positioned(
-                left: 13,
-                bottom: 2,
-                child: Opacity(
-                  opacity: ripple.opacity,
-                  child: Transform.scale(
-                    scale: ripple.scale,
-                    child: Container(
-                      width: 30,
-                      height: 12,
-                      decoration: const ShapeDecoration(
-                        shape: OvalBorder(
-                          side: BorderSide(color: Palette.pink, width: 2),
+    // Own layer: without it every hop frame repaints the whole map (tiles' colour filter, every paw print).
+    child: RepaintBoundary(
+      child: SizedBox(
+        width: 56,
+        height: 66,
+        child: AnimatedBuilder(
+          animation: _loop,
+          builder: (_, _) {
+            final t = _loop.value;
+            final hop = hopAt(t);
+            final shadow = shadowAt(t);
+            final ripple = rippleAt(t);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // ripple on the ground
+                Positioned(
+                  left: 13,
+                  bottom: 2,
+                  child: Opacity(
+                    opacity: ripple.opacity,
+                    child: Transform.scale(
+                      scale: ripple.scale,
+                      child: Container(
+                        width: 30,
+                        height: 12,
+                        decoration: const ShapeDecoration(
+                          shape: OvalBorder(
+                            side: BorderSide(color: Palette.pink, width: 2),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              // shadow under her feet
-              Positioned(
-                left: 16,
-                bottom: 3,
-                child: Opacity(
-                  opacity: shadow.opacity,
-                  child: Transform.scale(
-                    scale: shadow.scale,
-                    child: Container(
-                      width: 24,
-                      height: 8,
-                      decoration: const ShapeDecoration(
-                        color: Color(0x403F2A3A), // rgba(63, 42, 58, 0.25)
-                        shape: OvalBorder(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Hachiware, scaled and turned around her feet (transform-origin 50% 100%)
-              Positioned(
-                left: 4,
-                bottom: 10,
-                child: Transform(
-                  key: const Key('hachiware-hop'),
-                  alignment: Alignment.bottomCenter,
-                  transform: Matrix4.translationValues(0, hop.dy, 0)
-                    ..rotateZ(hop.turnDeg * math.pi / 180)
-                    ..scaleByDouble(hop.sx, hop.sy, 1, 1),
-                  child: Container(
-                    key: const Key('hachiware-face'),
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Palette.pink, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x73EC4899), // rgba(236, 72, 153, 0.45)
-                          offset: Offset(0, 4),
-                          blurRadius: 12,
+                // shadow under her feet
+                Positioned(
+                  left: 16,
+                  bottom: 3,
+                  child: Opacity(
+                    opacity: shadow.opacity,
+                    child: Transform.scale(
+                      scale: shadow.scale,
+                      child: Container(
+                        width: 24,
+                        height: 8,
+                        decoration: const ShapeDecoration(
+                          color: Color(0x403F2A3A), // rgba(63, 42, 58, 0.25)
+                          shape: OvalBorder(),
                         ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/hachiware.webp',
-                        fit: BoxFit.cover,
-                        alignment: const Alignment(
-                          0,
-                          -0.3,
-                        ), // object-position 50% 35%
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+                // Hachiware, scaled and turned around her feet (transform-origin 50% 100%)
+                Positioned(
+                  left: 4,
+                  bottom: 10,
+                  child: Transform(
+                    key: const Key('hachiware-hop'),
+                    alignment: Alignment.bottomCenter,
+                    transform: Matrix4.translationValues(0, hop.dy, 0)
+                      ..rotateZ(hop.turnDeg * math.pi / 180)
+                      ..scaleByDouble(hop.sx, hop.sy, 1, 1),
+                    child: Container(
+                      key: const Key('hachiware-face'),
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Palette.pink, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(
+                              0x73EC4899,
+                            ), // rgba(236, 72, 153, 0.45)
+                            offset: Offset(0, 4),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/hachiware.webp',
+                          fit: BoxFit.cover,
+                          alignment: const Alignment(
+                            0,
+                            -0.3,
+                          ), // object-position 50% 35%
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     ),
   );

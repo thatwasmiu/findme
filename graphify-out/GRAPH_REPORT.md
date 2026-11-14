@@ -1,7 +1,7 @@
 # Graph Report - findme  (2026-11-14)
 
 ## Corpus Check
-- 208 files · ~134,974 words
+- 208 files · ~134,997 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 41 file(s) not represented in the graph (top: .xml 15, (none) 5, .plist 5)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e5677535`
+- Built from commit: `ef8b9141`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -59,7 +59,7 @@
 - bag_sheet.dart
 - add_pin_sheet.dart
 - replay_bar.dart
-- friend_pins_test.dart
+- package:flutter/material.dart
 - debug_console.dart
 - hachiware.dart
 - widget_updater.dart
@@ -84,13 +84,13 @@
 - colors.dart
 - tile_cache_test.dart
 - dart:async
-- package:flutter/material.dart
+- day_log.dart
 - TrailWidgetProvider.kt
 - fix.dart
 - trip.dart
 - package:findme/features/auth/presentation/auth_controller.dart
 - tracker_sheet.dart
-- package:flutter_riverpod/flutter_riverpod.dart
+- tracker_sheet_test.dart
 - TripBridge
 - live_trail_widget.dart
 - pill.dart
@@ -110,7 +110,7 @@
 - package:findme/features/auth/data/session_store.dart
 - upload_policy.dart
 - TripTileService
-- ../../../helpers/fakes.dart
+- package:findme/core/network/api_client.dart
 - Cheatsheet
 - dart:convert
 - _HachiwareState
@@ -129,7 +129,7 @@
 - Review Focus
 - Home-screen widget: where I am now
 - version.dart
-- day_log.dart
+- package:findme/features/pins/domain/pin.dart
 - Find Me tracker (replaces Overland): built, final-review fixes half done
 - 04. Sign-in (Cognito) and secure storage
 - MainActivity.kt
@@ -167,12 +167,12 @@
 - 09. Share links and friends
 - tracker_store_test.dart
 - LaunchImage.imageset/README.md
+- FakeTripChannel
 - account_sheet.dart
+- FakeWake
 - .onReceive
 - ConsumerState
-- FakeTripChannel
 - Chapter 19: Trip mode
-- FakeWake
 
 ## God Nodes (most connected - your core abstractions)
 1. `authControllerProvider` - 20 edges
@@ -375,9 +375,9 @@ Nodes (18): AddPinSheet, _AddPinSheetState, build, createState, dispose, _err, _
 Cohesion: 0.19
 Nodes (10): build, createState, didChangeDependencies, dispose, initState, _prev, ReplayBar, _ReplayBarState (+2 more)
 
-### Community 43 - "friend_pins_test.dart"
-Cohesion: 0.29
-Nodes (5): a, b, item, main, pin
+### Community 43 - "package:flutter/material.dart"
+Cohesion: 0.12
+Nodes (11): ConfigErrorApp, createState, FindMeApp, _FindMeAppState, message, _navigator, showTiles, base (+3 more)
 
 ### Community 44 - "debug_console.dart"
 Cohesion: 0.12
@@ -475,9 +475,9 @@ Nodes (13): a, answer, b, c, cache, dir, fetch, fetches (+5 more)
 Cohesion: 0.09
 Nodes (13): app, main, eight, main, MockBag, pump, clipboard, live (+5 more)
 
-### Community 68 - "package:flutter/material.dart"
-Cohesion: 0.12
-Nodes (11): ConfigErrorApp, createState, FindMeApp, _FindMeAppState, message, _navigator, showTiles, base (+3 more)
+### Community 68 - "day_log.dart"
+Cohesion: 0.17
+Nodes (11): FileDayLog, append, clear, DayLog, last, read, sameLocalDay, today (+3 more)
 
 ### Community 70 - "fix.dart"
 Cohesion: 0.15
@@ -495,7 +495,7 @@ Nodes (10): main, main, _scoped, settle, main, now, pump, repo (+2 more)
 Cohesion: 0.11
 Nodes (16): locationSourceProvider, _clock, createState, _disclosed, _disclosure, _disclosureKey, dispose, initState (+8 more)
 
-### Community 74 - "package:flutter_riverpod/flutter_riverpod.dart"
+### Community 74 - "tracker_sheet_test.dart"
 Cohesion: 0.11
 Nodes (12): confirmWith, main, pump, repo, tracker, main, gps, main (+4 more)
 
@@ -563,7 +563,7 @@ Nodes (4): host, main, pts, stop
 Cohesion: 0.20
 Nodes (8): backoff, every, m, maxBatch, shouldUpload, uploadAt, uploadChoices, uploadEvery
 
-### Community 94 - "../../../helpers/fakes.dart"
+### Community 94 - "package:findme/core/network/api_client.dart"
 Cohesion: 0.15
 Nodes (7): apiClientProvider, auth, calls, main, res, fixes, main
 
@@ -635,9 +635,9 @@ Nodes (12): Global Constraints, Home-Screen Widget Implementation Plan, Review F
 Cohesion: 0.15
 Nodes (12): Anti-goals, Biggest unknown: test this first, Goals, Guide chapter (for learning), Home-screen widget: where I am now, How it behaves, Left to the builder, Non-goals (+4 more)
 
-### Community 117 - "day_log.dart"
-Cohesion: 0.17
-Nodes (11): FileDayLog, append, clear, DayLog, last, read, sameLocalDay, today (+3 more)
+### Community 117 - "package:findme/features/pins/domain/pin.dart"
+Cohesion: 0.29
+Nodes (5): a, b, item, main, pin
 
 ### Community 118 - "Find Me tracker (replaces Overland): built, final-review fixes half done"
 Cohesion: 0.15
