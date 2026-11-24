@@ -54,6 +54,14 @@ class ErrorEntry extends DebugEntry {
   final String message;
 }
 
+/// One live-broker event (`LiveSender`): connecting, refused, published… Never the token, the account id, the
+/// topic or a position.
+class MqttEntry extends DebugEntry {
+  MqttEntry(this.what, {this.failed = false});
+  final String what;
+  final bool failed;
+}
+
 /// What the console shows, newest first. In memory only: nothing leaves the phone or survives a restart.
 // ponytail: one global log, not a provider; the dio interceptor and the error hooks live outside Riverpod.
 class DebugLog extends ChangeNotifier {
@@ -62,11 +70,13 @@ class DebugLog extends ChangeNotifier {
 
   final http = <HttpEntry>[];
   final errors = <ErrorEntry>[];
+  final live = <MqttEntry>[];
 
   void add(DebugEntry e) {
     final list = switch (e) {
       HttpEntry() => http,
       ErrorEntry() => errors,
+      MqttEntry() => live,
     };
     list.insert(0, e);
     if (list.length > max) list.removeLast();
@@ -76,8 +86,12 @@ class DebugLog extends ChangeNotifier {
   void clear() {
     http.clear();
     errors.clear();
+    live.clear();
     notifyListeners();
   }
+
+  void mqtt(String what, {bool failed = false}) =>
+      add(MqttEntry(what, failed: failed));
 
   DateTime? _lastTile;
 

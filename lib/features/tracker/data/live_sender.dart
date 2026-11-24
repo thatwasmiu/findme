@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:findme/core/config/app_config.dart';
+import 'package:findme/core/debug/debug_log.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/live_policy.dart';
@@ -114,6 +115,7 @@ class LiveSender {
     this._token, {
     DateTime Function()? now,
     Random? random,
+    this._log,
   }) : _now = now ?? DateTime.now,
        _suffix = List.generate(
          4,
@@ -128,6 +130,9 @@ class LiveSender {
   final LiveLink _link;
   final Future<IngestToken?> Function() _token;
   final DateTime Function() _now;
+
+  /// The 🐞 console in dev builds: what happened, never the token, the id, the topic or a position.
+  final void Function(String event)? _log;
   final String _suffix;
 
   static const _first = Duration(seconds: 2);
@@ -182,8 +187,10 @@ class LiveSender {
     try {
       _link.publish(liveTopic(who.id), livePayload(f));
     } on Object {
+      _log?.call('publish failed');
       return; // dropped: onDrop reconnects and sends it then
     }
+    _log?.call('published (acc ${f.acc.round()} m)');
     _published = f;
     _pending = null;
     _sentAt = _now();
@@ -198,12 +205,16 @@ class LiveSender {
       t = null; // Keychain locked: later
     }
     if (gen != _gen) return;
-    if (t == null) return _later();
+    if (t == null) {
+      _log?.call('no ingest token yet');
+      return _later();
+    }
     final who = (
       clientId: '${t.sub}/phone-$_suffix',
       password: t.token,
       id: t.sub,
     );
+    _log?.call('connecting');
     final ok = await _link.connect(
       clientId: who.clientId,
       password: who.password,
@@ -212,7 +223,11 @@ class LiveSender {
       if (ok) _link.disconnect(); // stopped meanwhile
       return;
     }
-    if (!ok) return _later();
+    if (!ok) {
+      _log?.call('refused or unreachable');
+      return _later();
+    }
+    _log?.call('connected');
     _who = who;
     _up = true;
     _upSince = _now();
@@ -225,6 +240,7 @@ class LiveSender {
     _retry?.cancel();
     final gen = _gen;
     _retry = Timer(_wait, () => unawaited(_connect(gen)));
+    _log?.call('retry in ${_wait.inSeconds} s');
     final next = _wait * 2;
     _wait = next > _most ? _most : next;
   }
@@ -235,6 +251,9 @@ class LiveSender {
     _soon?.cancel();
     _soon = null;
     final since = _upSince;
+    if (since != null) {
+      _log?.call('dropped after ${_now().difference(since).inSeconds} s');
+    }
     // A connection that lasted resets the wait; one kicked at once (trip not open on the server yet) does not.
     if (since != null && _now().difference(since) >= _most) _wait = _first;
     _later();
@@ -259,14 +278,17 @@ class LiveSender {
           !await _link
               .connect(clientId: who.clientId, password: who.password)
               .timeout(const Duration(seconds: 10), onTimeout: () => false)) {
+        _log?.call('clear: refused or unreachable');
         return;
       }
       _link.publish(liveTopic(who.id), '');
       await Future<void>.delayed(
         _gap,
       ); // let the clear leave before the socket closes
+      _log?.call('cleared, disconnected');
     } on Object catch (e) {
       debugPrint('live clear failed: ${e.runtimeType}');
+      _log?.call('clear failed: ${e.runtimeType}');
     } finally {
       _link.disconnect();
     }
@@ -278,5 +300,19 @@ final liveSenderProvider = Provider<LiveSender?>((ref) {
   final url = ref.watch(appConfigProvider).mqttUrl;
   if (url == null) return null;
   final store = ref.watch(trackerStoreProvider);
-  return LiveSender(MqttLiveLink(url), store.token);
+  return LiveSender(
+    MqttLiveLink(url),
+    store.token,
+    log: debugConsoleEnabled
+        ? (e) => DebugLog.instance.mqtt(
+            e,
+            failed: const [
+              'refused',
+              'dropped',
+              'publish failed',
+              'clear',
+            ].any((w) => e.startsWith(w) && e != 'cleared, disconnected'),
+          )
+        : null,
+  );
 });

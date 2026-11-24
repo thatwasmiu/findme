@@ -112,7 +112,7 @@ class DebugSheet extends ConsumerWidget {
     return ListenableBuilder(
       listenable: log,
       builder: (context, _) => DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             Row(
@@ -122,6 +122,7 @@ class DebugSheet extends ConsumerWidget {
                     tabs: [
                       Tab(text: 'HTTP (${log.http.length})'),
                       Tab(text: 'Errors (${log.errors.length})'),
+                      Tab(text: 'MQTT (${log.live.length})'),
                       const Tab(text: 'Env'),
                     ],
                   ),
@@ -138,6 +139,10 @@ class DebugSheet extends ConsumerWidget {
                 children: [
                   _list(log.http.map(_httpRow).toList(), 'No calls yet'),
                   _list(log.errors.map(_errorRow).toList(), 'No errors'),
+                  _list(
+                    log.live.map(_mqttRow).toList(),
+                    'Nothing yet (live starts with the tracker)',
+                  ),
                   const _Env(),
                 ],
               ),
@@ -202,6 +207,14 @@ class DebugSheet extends ConsumerWidget {
     ),
   );
 
+  static Widget _mqttRow(MqttEntry e) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Text(
+      '${_hms(e.at)}  ${e.what}',
+      style: _mono.copyWith(color: e.failed ? Colors.red.shade700 : null),
+    ),
+  );
+
   static Widget _errorRow(ErrorEntry e) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Column(
@@ -234,6 +247,7 @@ class _Env extends ConsumerWidget {
       ('API', cfg.api),
       ('Cognito', cfg.cognitoHost),
       ('Web', cfg.web),
+      ('MQTT', cfg.mqttUrl ?? '(off)'),
       ('Auth', phase.name),
       (
         'Token expires',

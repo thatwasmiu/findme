@@ -251,4 +251,55 @@ void main() {
       expect(() => live.onFix(north(0)), returnsNormally);
     });
   });
+
+  test('debug log: what happened, never token, id, topic or position', () {
+    fakeAsync((a) {
+      final events = <String>[];
+      final start = DateTime.utc(2026, 11, 24, 8);
+      link.accept = false;
+      live = LiveSender(
+        link,
+        () async => token,
+        now: () => start.add(a.elapsed),
+        log: events.add,
+      )..start();
+      a.flushMicrotasks();
+      link.accept = true;
+      a.elapse(const Duration(seconds: 2));
+      live.onFix(north(0));
+      a.elapse(const Duration(seconds: 5));
+      link.drop();
+      a.elapse(const Duration(seconds: 4));
+      unawaited(live.stop());
+      a.elapse(const Duration(seconds: 2));
+      expect(events, [
+        'connecting',
+        'refused or unreachable',
+        'retry in 2 s',
+        'connecting',
+        'connected',
+        'published (acc 5 m)',
+        'dropped after 5 s',
+        'retry in 4 s',
+        'connecting',
+        'connected',
+        'published (acc 5 m)',
+        'cleared, disconnected',
+      ]);
+      final all = events.join(' ');
+      for (final secret in ['tok', 'acct-1', 'live/', '10.77', '106.7']) {
+        expect(all, isNot(contains(secret)));
+      }
+    });
+  });
+
+  test('debug log: no token yet', () {
+    fakeAsync((a) {
+      final events = <String>[];
+      token = null;
+      live = LiveSender(link, () async => token, log: events.add)..start();
+      a.flushMicrotasks();
+      expect(events, ['no ingest token yet', 'retry in 2 s']);
+    });
+  });
 }

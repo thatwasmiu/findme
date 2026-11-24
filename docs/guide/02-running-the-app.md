@@ -91,7 +91,8 @@ second tap closes it. The sheet has:
 |---|---|
 | **HTTP** | Every call to the API and to Cognito, newest first: time, status, milliseconds, method and path (or the Cognito action, e.g. `Cognito InitiateAuth`), and the server's error code (`UserNotFoundException`, `self`…). Red = failed or no answer. **Tap a call** for the full URL and the request and response bodies (indented JSON, selectable to copy). |
 | **Errors** | Flutter errors (layout, build), uncaught errors, and map tiles that did not load (one entry per 30 s). A red dot on the 🐞 means there is at least one. |
-| **Env** | Flavor, build stamp, API / Cognito / web addresses, signed in or not, when the access token runs out. |
+| **MQTT** | The live broker (chapter 20): connecting, connected, refused or unreachable, published (with the fix's accuracy), dropped after N s, retry in N s, cleared. Red = refused, dropped or failed. Never the token, account id, topic or position. |
+| **Env** | Flavor, build stamp, API / Cognito / web / MQTT addresses (`(off)` without `MQTT_URL`), signed in or not, when the access token runs out. |
 
 🗑 clears both lists. The console keeps the last 200 entries in memory only: nothing is sent anywhere or kept after
 the app closes, and prod builds compile it out (`debugConsoleEnabled` in `lib/core/debug/debug_log.dart` is

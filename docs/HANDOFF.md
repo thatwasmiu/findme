@@ -16,7 +16,8 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   connect through nginx with the `mqtt` WebSocket subprotocol, a friend's web marker following, the empty clear on
   trip end, the broker kicking a trip-mode phone with no trip; the Android screen-off and iPhone background
   behaviour; `battery_plus` on a device. `config/dev.json` and the `FINDME_DEV_CONFIG` secret need
-  `"MQTT_URL": "wss://mqtt.daste.io.vn"` to turn it on.
+  `"MQTT_URL": "wss://mqtt.daste.io.vn"` to turn it on. Dev builds show the live channel in 🐞 → **MQTT**
+  (connect / refused / published / dropped / retry / cleared; no ids or positions) and its address under Env.
 
 - **Photos made ready on the phone** (2026-11-14, merged to `main` 2026-11-14, **not pushed**;
   follows Look Back's "client-made photo files", merged and deployed there the same day; guide chapter 16, section

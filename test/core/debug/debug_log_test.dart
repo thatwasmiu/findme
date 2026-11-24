@@ -48,6 +48,23 @@ void main() {
     },
   );
 
+  test('mqtt events: own list, newest first, kept to max, cleared', () {
+    final log = DebugLog()
+      ..mqtt('connecting')
+      ..mqtt('refused or unreachable', failed: true);
+    expect(log.live.map((e) => e.what), [
+      'refused or unreachable',
+      'connecting',
+    ]);
+    expect(log.live.first.failed, isTrue);
+    for (var i = 0; i < DebugLog.max + 5; i++) {
+      log.mqtt('e$i');
+    }
+    expect(log.live, hasLength(DebugLog.max));
+    log.clear();
+    expect(log.live, isEmpty);
+  });
+
   test('map tile failures: one entry per burst, not one per tile', () {
     final log = DebugLog();
     for (var i = 0; i < 50; i++) {
@@ -138,7 +155,8 @@ void main() {
           response: '{"points": []}',
         ),
       )
-      ..add(ErrorEntry('StateError', 'Bad state: boom'));
+      ..add(ErrorEntry('StateError', 'Bad state: boom'))
+      ..mqtt('connected');
     final nav = GlobalKey<NavigatorState>();
     await t.pumpWidget(
       ProviderScope(
@@ -162,9 +180,16 @@ void main() {
     await t.tap(find.text('Errors (1)'));
     await t.pumpAndSettle();
     expect(find.text('Bad state: boom'), findsOneWidget);
+    await t.tap(find.text('MQTT (1)'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('connected'), findsOneWidget);
     await t.tap(find.text('Env'));
     await t.pumpAndSettle();
     expect(find.text('https://api.test'), findsOneWidget);
+    expect(
+      find.text('(off)'),
+      findsOneWidget,
+    ); // no MQTT_URL in the test config
   });
 
   testWidgets(

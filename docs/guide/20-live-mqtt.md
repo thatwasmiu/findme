@@ -91,6 +91,8 @@ refusing never delays or drops an upload.
 
 ## 8. Check it
 
+- Dev builds: 🐞 → **MQTT** tab lists each connect, refusal, publish, drop, retry and the final clear (chapter 02).
+  Nothing there? `MQTT_URL` is missing (Env says `(off)`) or the tracker is not recording.
 - Unit tests: `flutter test test/features/tracker` (a fake broker, `FakeLink`, in `test/helpers/tracker_fakes.dart`).
 - On a device, with a friend's browser on the map: walk; their marker should follow within a couple of seconds.
 - From a computer (travel-heatmap chapter 23 §6): `npx mqtt sub … -t "live/<your id>" -v` shows each message; ending
