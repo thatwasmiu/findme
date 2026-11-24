@@ -1,9 +1,9 @@
-# Graph Report - live-mqtt-25a087  (2026-11-24)
+# Graph Report - findme  (2026-11-24)
 
 ## Corpus Check
 - 215 files · ~139,645 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 42 file(s) not represented in the graph (top: .xml 15, (none) 6, .plist 5)
+- Unclassified: 41 file(s) not represented in the graph (top: .xml 15, (none) 5, .plist 5)
 
 ## Summary
 - 2966 nodes · 4492 edges · 187 communities (159 shown, 28 thin omitted)
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3033601b`
+- Built from commit: `7c945e11`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -34,12 +34,12 @@
 - with
 - tracker_controller_test.dart
 - AppDelegate
-- friends_repository.dart
+- ingest_client.dart
 - avatar_crop.dart
 - bag_widgets.dart
 - dependencies
 - pin_sheet.dart
-- StatelessWidget
+- card_box.dart
 - paw_layer.dart
 - bag.dart
 - pins_ui_test.dart
@@ -59,23 +59,23 @@
 - bag_sheet.dart
 - add_pin_sheet.dart
 - replay_bar.dart
-- package:findme/core/errors/app_errors.dart
+- package:findme/features/auth/presentation/auth_controller.dart
 - debug_console.dart
 - hachiware.dart
 - widget_updater.dart
 - tile_cache.dart
-- render_test.dart
+- render.dart
 - client_files.dart
-- auth_repository.dart
+- auth_repository_test.dart
 - format.dart
 - palette.dart
 - welcome_screen.dart
 - point_queue.dart
-- BootReceiver
-- FindMeWidget.swift
+- BootReceiver.kt
+- SpikeEntry
 - session_store.dart
 - List
-- trackerControllerProvider
+- friendsControllerProvider
 - trail_sheet.dart
 - file_day_log.dart
 - trail_controller_test.dart
@@ -88,9 +88,9 @@
 - TrailWidgetProvider.kt
 - fix.dart
 - trip.dart
-- live_sender.dart
+- authControllerProvider
 - tracker_sheet.dart
-- package:findme/features/auth/presentation/auth_controller.dart
+- package:flutter_test/flutter_test.dart
 - TripBridge
 - live_trail_widget.dart
 - pill.dart
@@ -100,21 +100,21 @@
 - Find Me Flutter app built and pushed; local Android toolchain blocked (no admin, 8.8 GB free)
 - geolocator_source_test.dart
 - home_widget_host.dart
-- replay_math.dart
+- package:findme/features/trail/domain/colors.dart
 - fake_adapter.dart
-- package:flutter/material.dart
+- friends_repository.dart
 - package:findme/core/config/app_config.dart
 - bag_icons.dart
-- shares_repository_test.dart
-- package:flutter_test/flutter_test.dart
-- package:findme/features/tracker/data/tracker_store.dart
+- package:findme/core/config/app_config.dart
+- map_view_test.dart
+- package:findme/features/auth/data/session_store.dart
 - upload_policy.dart
 - TripTileService
-- package:flutter_riverpod/flutter_riverpod.dart
+- bag_repository_test.dart
 - Cheatsheet
 - dart:convert
-- SpikeEntry
-- package:findme/core/storage/prefs.dart
+- _HachiwareState
+- package:findme/features/trail/domain/models.dart
 - location_source.dart
 - guide/README.md
 - Review Focus
@@ -129,7 +129,7 @@
 - Review Focus
 - Home-screen widget: where I am now
 - version.dart
-- dart:async
+- package:findme/features/pins/domain/pin.dart
 - Find Me tracker (replaces Overland): built, final-review fixes half done
 - 04. Sign-in (Cognito) and secure storage
 - MainActivity.kt
@@ -145,7 +145,7 @@
 - date_filter.dart
 - 15. Background tracking (Find Me replaces Overland)
 - main.dart
-- app_config.dart
+- dart:ui
 - Google Play: background location (drafts)
 - trail_painting.dart
 - 05. The map and paw prints
@@ -165,7 +165,7 @@
 - 06. Date filter and live refresh
 - 08. Replay
 - 09. Share links and friends
-- package:mocktail/mocktail.dart
+- tracker_store_test.dart
 - LaunchImage.imageset/README.md
 - Mock
 - account_sheet.dart
@@ -294,7 +294,7 @@ Nodes (33): answer, base, c, clear, clears, ctl, dir, emit (+25 more)
 Cohesion: 0.19
 Nodes (4): 2. Code, First native code: how Dart and Swift / Kotlin talk, Task 10: iOS significant-location relaunch, AppDelegate
 
-### Community 18 - "friends_repository.dart"
+### Community 18 - "ingest_client.dart"
 Cohesion: 0.07
 Nodes (25): ApiClient, apiClientProvider, auth, answer, _api, deleteMe, FriendsRepository, me (+17 more)
 
@@ -314,7 +314,7 @@ Nodes (41): dependencies, battery_plus, dio, flutter, flutter_image_compress, fl
 Cohesion: 0.05
 Nodes (36): pinsRepositoryProvider, _load, _act, build, by, _c, child, createState (+28 more)
 
-### Community 23 - "StatelessWidget"
+### Community 23 - "card_box.dart"
 Cohesion: 0.10
 Nodes (19): ConfigErrorApp, build, CardBox, child, error, Notice, padding, text (+11 more)
 
@@ -394,7 +394,7 @@ Nodes (18): AddPinSheet, _AddPinSheetState, build, createState, dispose, _err, _
 Cohesion: 0.17
 Nodes (10): build, createState, didChangeDependencies, dispose, initState, _prev, ReplayBar, _ReplayBarState (+2 more)
 
-### Community 43 - "package:findme/core/errors/app_errors.dart"
+### Community 43 - "package:findme/features/auth/presentation/auth_controller.dart"
 Cohesion: 0.10
 Nodes (12): confirmWith, main, pump, repo, tracker, main, now, pump (+4 more)
 
@@ -414,7 +414,7 @@ Nodes (19): clear, _closed, _dirty, _draw, _drawing, _drawnAt, _generation, _log
 Cohesion: 0.11
 Nodes (15): client, _dir, _failedAt, _fetch, fetchOsmTile, _file, _freshFor, maxFiles (+7 more)
 
-### Community 48 - "render_test.dart"
+### Community 48 - "render.dart"
 Cohesion: 0.13
 Nodes (14): codec, data, decode, fromARGB, here, image, main, o (+6 more)
 
@@ -422,7 +422,7 @@ Nodes (14): codec, data, decode, fromARGB, here, image, main, o (+6 more)
 Cohesion: 0.08
 Nodes (24): blur, ClientEncoder, ClientFiles, d, display, displayEdge, _displayMaxBytes, displaySize (+16 more)
 
-### Community 50 - "auth_repository.dart"
+### Community 50 - "auth_repository_test.dart"
 Cohesion: 0.11
 Nodes (16): _api, cfg, _cid, confirmSignUp, _fromResult, getAccessToken, login, logout (+8 more)
 
@@ -442,11 +442,11 @@ Nodes (18): _busy, _code, createState, dispose, _email, _err, _go, _invite (+10 
 Cohesion: 0.12
 Nodes (16): append, clear, commit, count, create, dir, _drop, _endsMidLine (+8 more)
 
-### Community 55 - "BootReceiver"
+### Community 55 - "BootReceiver.kt"
 Cohesion: 0.24
 Nodes (5): BootReceiver, The two Android pieces, Task 11: Android reboot restart, How it gets made, Where We're Going
 
-### Community 56 - "FindMeWidget.swift"
+### Community 56 - "SpikeEntry"
 Cohesion: 0.17
 Nodes (9): describe(), FindMeWidget, .body, grantedGroups(), SpikeView, .body, View, SwiftUI (+1 more)
 
@@ -458,7 +458,7 @@ Nodes (15): access, expiresAt, fromJson, _key, load, refresh, save, SecureSessio
 Cohesion: 0.19
 Nodes (12): build, signedInProvider, build, build, friendCountProvider, FriendPinsController, build, PinsController (+4 more)
 
-### Community 59 - "trackerControllerProvider"
+### Community 59 - "friendsControllerProvider"
 Cohesion: 0.22
 Nodes (20): build, friendsControllerProvider, friendsOnMapProvider, build, friendPinsControllerProvider, pinsControllerProvider, tripChannelProvider, locationSourceProvider (+12 more)
 
@@ -506,7 +506,7 @@ Nodes (11): acc, at, deviceIdForPlatform, Fix, fromJson, hashCode, lat, lon (+3 
 Cohesion: 0.12
 Nodes (15): key, label, localEnd, m, null, presetOf, rest, s (+7 more)
 
-### Community 72 - "live_sender.dart"
+### Community 72 - "authControllerProvider"
 Cohesion: 0.06
 Nodes (31): _c, connect, disconnect, _dropped, _first, _gap, _gen, _later (+23 more)
 
@@ -514,7 +514,7 @@ Nodes (31): _c, connect, disconnect, _dropped, _first, _gap, _gen, _later (+23 m
 Cohesion: 0.10
 Nodes (16): _clock, createState, _disclosed, _disclosure, _disclosureKey, dispose, initState, open (+8 more)
 
-### Community 74 - "package:findme/features/auth/presentation/auth_controller.dart"
+### Community 74 - "package:flutter_test/flutter_test.dart"
 Cohesion: 0.12
 Nodes (11): main, main, _scoped, settle, main, gps, main, now (+3 more)
 
@@ -550,7 +550,7 @@ Nodes (7): checkPermission, FakeGeolocator, granted, main, requestAnswers, reque
 Cohesion: 0.13
 Nodes (11): clear, HomeWidgetHost, _lastFixKey, _png, _pngKey, _provider, publish, refreshLabel (+3 more)
 
-### Community 84 - "replay_math.dart"
+### Community 84 - "package:findme/features/trail/domain/colors.dart"
 Cohesion: 0.29
 Nodes (6): advance, _minMs, _msPerPrint, nextSpeed, replayMs, speeds
 
@@ -558,7 +558,7 @@ Nodes (6): advance, _minMs, _msPerPrint, nextSpeed, replayMs, speeds
 Cohesion: 0.18
 Nodes (10): calls, close, contentType, fakeDio, fetch, offline, Reply, requests (+2 more)
 
-### Community 86 - "package:flutter/material.dart"
+### Community 86 - "friends_repository.dart"
 Cohesion: 0.14
 Nodes (7): host, main, app, main, eight, main, pump
 
@@ -570,11 +570,11 @@ Nodes (20): AppConfig, _cfg, _dio, send, _token, TokenGetter, call, _cfg (+12 mo
 Cohesion: 0.13
 Nodes (10): ItemType, BagIcon, build, _icons, _ink, _s, size, type (+2 more)
 
-### Community 89 - "shares_repository_test.dart"
+### Community 89 - "package:findme/core/config/app_config.dart"
 Cohesion: 0.18
 Nodes (8): ShareInvalid, Server, adapter, cfg, main, repo, shareJson, FakeAdapter
 
-### Community 90 - "package:flutter_test/flutter_test.dart"
+### Community 90 - "map_view_test.dart"
 Cohesion: 0.11
 Nodes (9): main, main, iso, main, stopAt, host, main, pts (+1 more)
 
@@ -582,7 +582,7 @@ Nodes (9): main, main, iso, main, stopAt, host, main, pts (+1 more)
 Cohesion: 0.15
 Nodes (11): backoff, every, m, maxAccuracyM, maxBatch, minMoveM, movingEvery, shouldUpload (+3 more)
 
-### Community 94 - "package:flutter_riverpod/flutter_riverpod.dart"
+### Community 94 - "bag_repository_test.dart"
 Cohesion: 0.13
 Nodes (6): createState, initState, message, _navigator, showTiles, main
 
@@ -646,7 +646,7 @@ Nodes (12): Global Constraints, Home-Screen Widget Implementation Plan, Review F
 Cohesion: 0.15
 Nodes (12): Anti-goals, Biggest unknown: test this first, Goals, Guide chapter (for learning), Home-screen widget: where I am now, How it behaves, Left to the builder, Non-goals (+4 more)
 
-### Community 117 - "dart:async"
+### Community 117 - "package:findme/features/pins/domain/pin.dart"
 Cohesion: 0.15
 Nodes (7): a, b, item, main, pin, main, of
 
@@ -706,7 +706,7 @@ Nodes (9): 15. Background tracking (Find Me replaces Overland), 3. Run, 4. Look,
 Cohesion: 0.20
 Nodes (6): c, _headless, main, startTrackerHeadless, trackerBoot, tripCommand
 
-### Community 134 - "app_config.dart"
+### Community 134 - "dart:ui"
 Cohesion: 0.17
 Nodes (11): api, apiUrl, authority, bad, clientId, cognitoHost, fromEnvironment, fromMap (+3 more)
 
@@ -786,7 +786,7 @@ Nodes (3): 08. Replay, The clock, Two modes
 Cohesion: 0.67
 Nodes (3): 09. Share links and friends, 👥 Friends, 🔗 Share links
 
-### Community 155 - "package:mocktail/mocktail.dart"
+### Community 155 - "tracker_store_test.dart"
 Cohesion: 0.15
 Nodes (8): c, ctl, main, own, s, main, read, s
 
@@ -866,13 +866,13 @@ Nodes (3): DebugEntry, ErrorEntry, HttpEntry
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `FindMeWidget` connect `FindMeWidget.swift` to `Handoff: Find Me mobile (Flutter)`?**
+- **Why does `FindMeWidget` connect `SpikeEntry` to `Handoff: Find Me mobile (Flutter)`?**
   _High betweenness centrality (0.235) - this node is a cross-community bridge._
 - **What connects `main`, `main`, `picture` to the rest of the system?**
   _1586 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `models.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.06376811594202898 - nodes in this community are weakly interconnected._
-- **Why does `Where things stand` connect `Handoff: Find Me mobile (Flutter)` to `MainActivity.kt`, `AppDelegate`, `FindMeWidget.swift`?**
+- **Why does `Where things stand` connect `Handoff: Find Me mobile (Flutter)` to `MainActivity.kt`, `AppDelegate`, `SpikeEntry`?**
   _High betweenness centrality (0.213) - this node is a cross-community bridge._
 - **Should `friend_models.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.11229946524064172 - nodes in this community are weakly interconnected._
