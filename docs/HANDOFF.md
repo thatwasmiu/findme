@@ -4,7 +4,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
-- **Live positions over MQTT, phone side** (2026-11-24, merged to `main` 2026-11-24, **not pushed**; follows
+- **Live positions over MQTT, phone side** (2026-11-24, merged to `main` and pushed 2026-11-24; follows
   `travel-heatmap` live MQTT (branch `worktree-live-mqtt-spec`, being merged there, not deployed); guide chapter 20,
   spec `docs/superpowers/specs/2026-11-24-live-mqtt-phone-design.md`). With `MQTT_URL` in the config, the tracker
   publishes each fix that moved max(5 m, acc/2) (≤ 1/s, acc ≤ 100 m) to `live/<sub>` on the owner's broker (MQTT
