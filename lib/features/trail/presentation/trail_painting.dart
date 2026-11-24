@@ -22,9 +22,14 @@ void paintPaws(
   Color? color,
 }) {
   final paint = Paint();
+  // A white outline for the halo, not a blur: on iOS (Impeller) every blurred draw is its own offscreen pass, and
+  // with thousands of prints repainted each frame while Hachiware hops, that made the UI lag.
   final glow = Paint()
     ..color = Colors.white.withValues(alpha: 0.9)
-    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.5
+    ..strokeJoin = StrokeJoin.round;
+  final paw = _pawPath(size);
   for (var i = 0; i < points.length; i++) {
     final p = points[i];
     final at = project(p);
@@ -45,15 +50,16 @@ void paintPaws(
       ..translate(at.dx, at.dy)
       ..rotate(angle)
       ..translate(side * size * 0.35, 0);
-    _drawPaw(canvas, size, glow);
     paint.color = (color ?? pawColor(p.t)).withValues(alpha: 0.85);
-    _drawPaw(canvas, size, paint);
-    canvas.restore();
+    canvas
+      ..drawPath(paw, glow)
+      ..drawPath(paw, paint)
+      ..restore();
   }
 }
 
 /// One cat paw at (0,0), toes pointing up, about [s] px tall.
-void _drawPaw(Canvas c, double s, Paint paint) {
+Path _pawPath(double s) {
   final path = Path()
     ..addOval(
       Rect.fromCenter(
@@ -72,5 +78,5 @@ void _drawPaw(Canvas c, double s, Paint paint) {
       Rect.fromCircle(center: Offset(x * s, y * s), radius: r * s),
     ); // toe beans
   }
-  c.drawPath(path, paint);
+  return path;
 }

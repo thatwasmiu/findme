@@ -156,8 +156,10 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - Viewing a past range, shown friends are not refreshed (same as the web); pick Hôm nay to follow them.
 - iOS has no dev/prod schemes (needs a Mac) and has never been built; CI's macOS job is the first check.
 - iPhone UI lag (2026-11-14): Hachiware's endless hop repainted the whole map (tile colour filter + every paw
-  print) each frame; now in its own `RepaintBoundary`. Not yet checked on the iPhone. If still laggy: pan/zoom repaint
-  of long trails is next.
+  print) each frame; now in its own `RepaintBoundary`. Still a bit laggy with her on screen (2026-11-24): Impeller has
+  no raster cache, so each hop frame re-rasters the map anyway, and each paw's white glow was a `MaskFilter.blur`
+  (one offscreen pass per print). Glow is now a white outline. Not yet checked on the iPhone. If still laggy: draw the
+  prints with `drawAtlas` from one pre-rendered paw, or let Hachiware rest between hops.
 - iOS privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` added (chapter 13; `feda214`, `271e535`, pushed 2026-11-12, so the
   iOS CI job on main is its first build); not yet seen in an Xcode privacy
   report. Privacy policy link under the welcome card opens `<WEB_ORIGIN>/privacy.html` (page lives in travel-heatmap
