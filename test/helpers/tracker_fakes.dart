@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:findme/features/tracker/data/ingest_client.dart';
+import 'package:findme/features/tracker/data/live_sender.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/data/trip_channel.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
@@ -24,12 +25,6 @@ class MemoryTrackerStore implements TrackerStore {
   String? owned;
   bool on = false;
   bool indicatorOn = false;
-  Duration every = const Duration(minutes: 1);
-
-  @override
-  Future<Duration> uploadEvery() async => every;
-  @override
-  Future<void> setUploadEvery(Duration d) async => every = d;
   int forgets = 0;
 
   @override
@@ -155,8 +150,7 @@ class FakeTracker extends TrackerController {
   Future<void> setIndicator({required bool on}) async =>
       calls.add('setIndicator:$on');
   @override
-  Future<void> setUploadEvery(Duration d) async =>
-      calls.add('setUploadEvery:${d.inSeconds}s');
+  Future<void> flush() async => calls.add('flush');
   @override
   Future<void> syncTrip() async => calls.add('syncTrip');
   @override
@@ -208,5 +202,46 @@ class FakeTripChannel implements TripChannel {
     final p = picker;
     picker = false;
     return p;
+  }
+}
+
+/// The broker, by hand: [accept] decides each connect, [drop] kicks us, [sent] keeps what was published.
+class FakeLink implements LiveLink {
+  bool accept = true;
+  bool up = false;
+  final connects = <({String clientId, String password})>[];
+  final sent = <({String topic, String payload})>[];
+  int disconnects = 0;
+  Completer<bool>? hold;
+
+  @override
+  void Function()? onDrop;
+
+  @override
+  Future<bool> connect({
+    required String clientId,
+    required String password,
+  }) async {
+    connects.add((clientId: clientId, password: password));
+    final ok = hold != null ? await hold!.future : accept;
+    up = ok;
+    return ok;
+  }
+
+  @override
+  void publish(String topic, String payload) {
+    if (!up) throw StateError('not connected');
+    sent.add((topic: topic, payload: payload));
+  }
+
+  @override
+  void disconnect() {
+    up = false;
+    disconnects++;
+  }
+
+  void drop() {
+    up = false;
+    onDrop?.call();
   }
 }

@@ -53,8 +53,24 @@ void main() {
     expect(go15(50, const Duration(minutes: 1)), isTrue);
   });
 
-  test('the choices offered', () {
-    expect([for (final d in uploadChoices) d.inSeconds], [5, 10, 30, 60, 120]);
-    expect(uploadEvery, const Duration(minutes: 1));
-  });
+  test(
+    'moving (a 5 m move in the last minute): every minute; still: every 5',
+    () {
+      expect(uploadWait(lastMove: null, now: now), const Duration(minutes: 5));
+      expect(
+        uploadWait(
+          lastMove: now.subtract(const Duration(seconds: 59)),
+          now: now,
+        ),
+        const Duration(minutes: 1),
+      );
+      expect(
+        uploadWait(
+          lastMove: now.subtract(const Duration(minutes: 1)),
+          now: now,
+        ),
+        const Duration(minutes: 5),
+      );
+    },
+  );
 }

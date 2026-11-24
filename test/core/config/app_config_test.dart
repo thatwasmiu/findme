@@ -43,4 +43,17 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('MQTT_URL is optional; when set it must be ws(s)://', () {
+    expect(AppConfig.fromMap(full).mqttUrl, isNull);
+    expect(AppConfig.fromMap(const {...full, 'MQTT_URL': ''}).mqttUrl, isNull);
+    expect(
+      AppConfig.fromMap(const {...full, 'MQTT_URL': 'wss://mqtt.x.io'}).mqttUrl,
+      'wss://mqtt.x.io',
+    );
+    expect(
+      () => AppConfig.fromMap(const {...full, 'MQTT_URL': 'mqtt.x.io'}),
+      throwsA(isA<StateError>()),
+    );
+  });
 }

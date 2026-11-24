@@ -71,13 +71,6 @@ void main() {
     },
   );
 
-  test('upload interval: 1 min by default, kept across forget', () async {
-    expect(await s.uploadEvery(), const Duration(minutes: 1));
-    await s.setUploadEvery(const Duration(seconds: 10));
-    await s.forget();
-    expect(await s.uploadEvery(), const Duration(seconds: 10));
-  });
-
   test('a token that cannot be read is not "no token"', () async {
     final locked = _LockedStorage();
     expect(

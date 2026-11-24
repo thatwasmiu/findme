@@ -5,7 +5,9 @@ import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/data/session_store.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/friends/data/friends_repository.dart';
+import 'package:findme/features/tracker/data/charging.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
+import 'package:findme/features/tracker/data/live_sender.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/data/trip_channel.dart';
@@ -14,9 +16,7 @@ import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/domain/upload_policy.dart';
-import 'package:findme/features/tracker/domain/upload_policy.dart'
-    as policy
-    show uploadEvery;
+import 'package:findme/features/trail/domain/colors.dart';
 import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +37,6 @@ class TrackerState {
     this.lastFix,
     this.sending = false,
     this.indicator = false,
-    this.uploadEvery = policy.uploadEvery,
     this.sharing,
     this.tripUntil,
     this.picker = 0,
@@ -69,9 +68,6 @@ class TrackerState {
   /// iPhone shows its blue location indicator while recording.
   final bool indicator;
 
-  /// Chosen wait between uploads.
-  final Duration uploadEvery;
-
   TrackerState copyWith({
     bool? on,
     TrackerProblem? problem,
@@ -81,7 +77,6 @@ class TrackerState {
     DateTime? lastFix,
     bool? sending,
     bool? indicator,
-    Duration? uploadEvery,
     String? sharing,
     Object? tripUntil = _keep,
     int? picker,
@@ -99,7 +94,6 @@ class TrackerState {
     lastFix: lastFix ?? this.lastFix,
     sending: sending ?? this.sending,
     indicator: indicator ?? this.indicator,
-    uploadEvery: uploadEvery ?? this.uploadEvery,
   );
 }
 
@@ -115,7 +109,13 @@ final trackerClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
 class TrackerController extends Notifier<TrackerState> {
   StreamSubscription<Fix>? _fixes;
   Timer? _tick;
+  StreamSubscription<bool>? _power;
   bool _uploading = false;
+
+  /// Last fix, and when one last moved [minMoveM] from the one before: uploads every minute while moving, every 5
+  /// while still.
+  Fix? _prev;
+  DateTime? _lastMove;
   int _failures = 0;
   DateTime? _notBefore;
 
@@ -126,10 +126,12 @@ class TrackerController extends Notifier<TrackerState> {
 
   /// Kept, not read each time: [_stop] also runs from onDispose, where ref can no longer be used.
   late TrailWidget _widget;
+  LiveSender? _live;
 
   @override
   TrackerState build() {
     _widget = ref.read(trailWidgetProvider);
+    _live = ref.read(liveSenderProvider);
     ref
       ..onDispose(_stop)
       ..read(wakeChannelProvider).onWake(() => unawaited(wake()))
@@ -169,17 +171,6 @@ class TrackerController extends Notifier<TrackerState> {
     await wake();
   }
 
-  /// The "Gửi mỗi" choice: saved; what waits goes now if it is already due.
-  Future<void> setUploadEvery(Duration d) async {
-    await _store.setUploadEvery(d);
-    state = state.copyWith(uploadEvery: d);
-    if (_tick != null) {
-      _tick!.cancel();
-      _tick = Timer.periodic(d, (_) => unawaited(_onTick()));
-    }
-    await _upload();
-  }
-
   /// At app start (also a background relaunch): carry on if tracking was left on, unless the trip is over; then
   /// ask the server whether a trip is still on.
   Future<void> resume() async {
@@ -187,7 +178,6 @@ class TrackerController extends Notifier<TrackerState> {
     await _refresh();
     state = state.copyWith(
       indicator: await _store.indicator(),
-      uploadEvery: await _store.uploadEvery(),
       sharing: await _store.sharingMode(),
       tripUntil: await _store.tripUntil(),
     );
@@ -352,7 +342,6 @@ class TrackerController extends Notifier<TrackerState> {
       return;
     }
     await _store.setEnabled(on: true);
-    state = state.copyWith(uploadEvery: await _store.uploadEvery());
     // Whose points these are, even before a token is pasted: another account signing in ends them (AuthController).
     final access = await ref.read(authRepositoryProvider).getAccessToken();
     final sub = subOf(access ?? '');
@@ -377,11 +366,21 @@ class TrackerController extends Notifier<TrackerState> {
       tripUntil: null,
     );
     await _trip.sync(null);
+    unawaited(flush()); // a trip ended, or sharing went off: the rest goes now
   }
 
   Future<void> sendNow() {
     _notBefore = null;
     return _upload(force: true);
+  }
+
+  /// Everything queued goes now, unless a failure's backoff is still running: the app went to the background, a
+  /// trip ended, the phone was plugged in.
+  Future<void> flush() async {
+    if (state.problem == TrackerProblem.noAccount) return;
+    if (_notBefore != null && _now().isBefore(_notBefore!)) return;
+    if (await (await _queue).count() == 0) return;
+    await _upload(force: true);
   }
 
   /// This account's tracking ends on this phone: one last upload (best effort), then queue and token are gone.
@@ -424,8 +423,15 @@ class TrackerController extends Notifier<TrackerState> {
             problem: TrackerProblem.needAlways,
           ),
         );
-    // Standing still sends no fixes; this still uploads what waits once "Gửi mỗi" is up.
-    _tick ??= Timer.periodic(state.uploadEvery, (_) => unawaited(_onTick()));
+    // Standing still sends no fixes; this still uploads what waits once its time is up.
+    _tick ??= Timer.periodic(movingEvery, (_) => unawaited(_onTick()));
+    _power ??= ref.read(chargingProvider).listen(
+      (on) {
+        if (on) unawaited(flush());
+      },
+      onError: (Object _) {}, // no battery info: no flush on charge
+    );
+    _live?.start();
     _widget.start();
     await ref.read(wakeChannelProvider).start();
     final token = await _readToken();
@@ -444,6 +450,9 @@ class TrackerController extends Notifier<TrackerState> {
     _fixes = null;
     _tick?.cancel();
     _tick = null;
+    unawaited(_power?.cancel());
+    _power = null;
+    unawaited(_live?.stop()); // clears the live position first
     _widget.stop();
   }
 
@@ -453,6 +462,19 @@ class TrackerController extends Notifier<TrackerState> {
     if (tripOver(state.tripUntil, _now())) {
       unawaited(_expired()); // after the trip's end: dropped, GPS off
       return;
+    }
+    final p = _prev;
+    _prev = f;
+    if (p != null &&
+        f.acc <= maxAccuracyM &&
+        distanceM((lat: p.lat, lon: p.lon), (lat: f.lat, lon: f.lon)) >=
+            minMoveM) {
+      _lastMove = _now();
+    }
+    try {
+      _live?.onFix(f); // at once, beside the queue: MQTT never holds up /ingest
+    } on Object catch (e) {
+      debugPrint('live fix failed: ${e.runtimeType}');
     }
     _work = _work.then((_) async {
       await (await _queue).append(f);
@@ -549,7 +571,7 @@ class TrackerController extends Notifier<TrackerState> {
 
   /// One upload run at a time; [force] = "Gửi ngay": ignore the thresholds and the backoff, send everything.
   Future<void> _upload({bool force = false}) {
-    if (_uploading) return Future.value();
+    if (_uploading) return _running;
     _uploading = true;
     return _running = _uploadRun(force: force);
   }
@@ -577,7 +599,7 @@ class TrackerController extends Notifier<TrackerState> {
             lastOk: state.lastOk,
             now: _now(),
             notBefore: _notBefore,
-            every: state.uploadEvery,
+            every: uploadWait(lastMove: _lastMove, now: _now()),
           )) {
         final batch = await q.peek(maxBatch);
         if (batch.isEmpty) break;

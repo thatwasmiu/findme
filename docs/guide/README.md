@@ -25,5 +25,6 @@ A step-by-step guide to the Find Me Flutter app (Android + iOS), written for som
 | 17 | [Home-screen widget](17-home-screen-widget.md): widgets, RemoteViews, drawing a map picture in Dart |
 | 18 | [The bag and your avatar](18-bag-and-avatar.md): 8 pockets friends open, pictures with Look Back receipts, cropping in `dart:ui` |
 | 19 | [Trip mode](19-trip-mode.md): record only during a timed trip; a Quick Settings tile, a widget button and an alarm talking to Dart |
+| 20 | [Live positions over MQTT](20-live-mqtt.md): publish each new fix to the owner's broker; `/ingest` every 1 min moving, 5 min still |
 
 Every command and config key in one place: [cheatsheet.md](cheatsheet.md).

@@ -156,18 +156,13 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets(
-    'upload interval: current one selected, tap calls setUploadEvery',
-    (t) async {
-      await pump(t, const TrackerState(on: true));
-      for (final l in ['5 giây', '10 giây', '30 giây', '1 phút', '2 phút']) {
-        expect(find.text(l), findsOneWidget);
-      }
-      await t.tap(find.text('10 giây'));
-      await t.pump();
-      expect(tracker.calls, ['setUploadEvery:10s']);
-    },
-  );
+  testWidgets('no upload interval choice: batching follows movement', (
+    t,
+  ) async {
+    await pump(t, const TrackerState(on: true));
+    expect(find.text('Gửi mỗi'), findsNothing);
+    expect(find.text('10 giây'), findsNothing);
+  });
 
   testWidgets('trip mode, no trip: no switch, presets after the disclosure', (
     t,

@@ -56,9 +56,9 @@ Removing lines means rewriting the file. Writing over `queue.jsonl` directly cou
 died in the middle. So the new content goes to `queue.jsonl.tmp`, then a **rename** swaps it in. A rename is atomic:
 afterwards there is either the old file or the new one, never a mix.
 
-When does it upload? As soon as 50 fixes wait, or when the time picked under **Gửi mỗi** in the 🧭 sheet (5, 10 or 30
-seconds, 1 or 2 minutes; default 1 minute, how often the map asks for new points) has passed since the last successful upload, or when you press
-**Gửi ngay**. A longer wait means fewer requests and a little less battery, but friends see you later. A failure (no network, server error) waits 1, 2, 4, 8, 16, then 30 minutes before trying again.
+When does it upload? As soon as 50 fixes wait, or 1 minute after the last successful upload while moving (5 minutes
+while still), or at once when the app goes to the background, tracking stops or the phone is plugged in, or when you
+press **Gửi ngay** (chapter 20: live movement goes over MQTT, so `/ingest` can wait). A failure (no network, server error) waits 1, 2, 4, 8, 16, then 30 minutes before trying again.
 
 | Server answer | What the app does |
 |---|---|

@@ -10,6 +10,7 @@ class AppConfig {
     required this.authority,
     required this.clientId,
     required this.webOrigin,
+    this.mqttUrl,
   });
 
   factory AppConfig.fromEnvironment() => AppConfig.fromMap(const {
@@ -17,6 +18,7 @@ class AppConfig {
     'AUTHORITY': String.fromEnvironment('AUTHORITY'),
     'CLIENT_ID': String.fromEnvironment('CLIENT_ID'),
     'WEB_ORIGIN': String.fromEnvironment('WEB_ORIGIN'),
+    'MQTT_URL': String.fromEnvironment('MQTT_URL'),
   });
 
   factory AppConfig.fromMap(Map<String, String?> m) {
@@ -31,11 +33,19 @@ class AppConfig {
     if (!api.startsWith('https://') && !api.startsWith('http://')) {
       throw StateError(bad);
     }
+    final mqtt = m['MQTT_URL'];
+    final live = mqtt == null || mqtt.isEmpty ? null : mqtt;
+    if (live != null &&
+        !live.startsWith('wss://') &&
+        !live.startsWith('ws://')) {
+      throw StateError(bad);
+    }
     return AppConfig(
       apiUrl: api,
       authority: need('AUTHORITY'),
       clientId: need('CLIENT_ID'),
       webOrigin: need('WEB_ORIGIN'),
+      mqttUrl: live,
     );
   }
 
@@ -57,6 +67,9 @@ class AppConfig {
 
   /// The user pool's API lives on the issuer's host.
   String get cognitoHost => Uri.parse(authority).host;
+
+  /// The live broker (`wss://mqtt.daste.io.vn`); null = no live channel, `/ingest` alone, as before.
+  final String? mqttUrl;
 
   String get web => webOrigin.replaceFirst(RegExp(r'/+$'), '');
 }

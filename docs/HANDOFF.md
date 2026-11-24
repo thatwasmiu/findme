@@ -4,6 +4,20 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Live positions over MQTT, phone side** (2026-11-24, branch `claude/live-mqtt-25a087`, **not merged**; follows
+  `travel-heatmap` live MQTT (branch `worktree-live-mqtt-spec`, being merged there, not deployed); guide chapter 20,
+  spec `docs/superpowers/specs/2026-11-24-live-mqtt-phone-design.md`). With `MQTT_URL` in the config, the tracker
+  publishes each fix that moved max(5 m, acc/2) (≤ 1/s, acc ≤ 100 m) to `live/<sub>` on the owner's broker (MQTT
+  3.1.1 over WSS, `mqtt_client`, password = ingest token, client id `<sub>/phone-…`), reconnects 2 s → 60 s, and
+  clears the retained position on every stop (switch, trip end, sign-out). `/ingest` now uploads after 1 min moving /
+  5 min still (+ 50 fixes, Gửi ngay) and flushes on background, stop and plug-in (`battery_plus`). **"Gửi mỗi"
+  removed** (owner). New dependencies: `mqtt_client`, `battery_plus`. **Verified:** 480 unit + widget tests
+  (fake broker), `flutter analyze` clean. **Not yet seen:** anything against the real broker (not deployed): a
+  connect through nginx with the `mqtt` WebSocket subprotocol, a friend's web marker following, the empty clear on
+  trip end, the broker kicking a trip-mode phone with no trip; the Android screen-off and iPhone background
+  behaviour; `battery_plus` on a device. `config/dev.json` and the `FINDME_DEV_CONFIG` secret need
+  `"MQTT_URL": "wss://mqtt.daste.io.vn"` to turn it on.
+
 - **Photos made ready on the phone** (2026-11-14, merged to `main` 2026-11-14, **not pushed**;
   follows Look Back's "client-made photo files", merged and deployed there the same day; guide chapter 16, section
   "Photos made ready on the phone"). While a photo uploads, the phone makes its thumb (400), display (2048) and blur

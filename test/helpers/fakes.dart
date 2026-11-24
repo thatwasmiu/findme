@@ -5,6 +5,7 @@ import 'package:findme/features/friends/data/friends_repository.dart';
 import 'package:findme/features/friends/domain/friend_models.dart';
 import 'package:findme/features/pins/data/pins_repository.dart';
 import 'package:findme/features/shares/data/shares_repository.dart';
+import 'package:findme/features/tracker/data/charging.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/data/trip_channel.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
@@ -123,9 +124,11 @@ List<Override> baseOverrides({
   MemoryPrefs? prefs,
   MemoryTrackerStore? trackerStore,
   FakeTripChannel? trip,
+  Stream<bool>? charging,
   bool fakeTracker = true,
 }) => [
   tripChannelProvider.overrideWithValue(trip ?? FakeTripChannel()),
+  chargingProvider.overrideWithValue(charging ?? const Stream.empty()),
   appConfigProvider.overrideWithValue(testConfig),
   authRepositoryProvider.overrideWithValue(auth),
   prefsProvider.overrideWithValue(prefs ?? MemoryPrefs()),

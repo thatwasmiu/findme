@@ -1,18 +1,22 @@
 /// Upload as soon as this many fixes wait…
 const uploadAt = 50;
 
-/// …or when this long has passed since the last successful upload (the default; the 🧭 sheet offers
-/// [uploadChoices]). One minute matches how often the map asks `/track`, so friends see you about as soon as
-/// they can.
-const uploadEvery = Duration(minutes: 1);
+/// …or when this long has passed since the last successful upload: a minute while moving (a friend who opens the
+/// map mid-trip, with no live tail yet, sees a trail at most a minute behind), five while still. Live movement goes
+/// over MQTT, so `/ingest` can wait.
+const movingEvery = Duration(minutes: 1);
+const stillEvery = Duration(minutes: 5);
 
-const uploadChoices = [
-  Duration(seconds: 5),
-  Duration(seconds: 10),
-  Duration(seconds: 30),
-  Duration(minutes: 1),
-  Duration(minutes: 2),
-];
+/// The server's `MAX_ACCURACY_M` (rougher fixes are not stored) and `MIN_MOVE_M` (closer ones count as standing
+/// still).
+const maxAccuracyM = 100.0;
+const minMoveM = 5.0;
+
+/// [lastMove]: when a fix last moved [minMoveM] from the one before it.
+Duration uploadWait({required DateTime? lastMove, required DateTime now}) =>
+    lastMove != null && now.difference(lastMove) < movingEvery
+    ? movingEvery
+    : stillEvery;
 
 /// At most this many fixes per request.
 const maxBatch = 500;
@@ -22,7 +26,7 @@ bool shouldUpload({
   required DateTime? lastOk,
   required DateTime now,
   required DateTime? notBefore,
-  Duration every = uploadEvery,
+  Duration every = movingEvery,
 }) {
   if (queued == 0) return false;
   if (notBefore != null && now.isBefore(notBefore)) return false;

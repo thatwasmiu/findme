@@ -46,6 +46,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ref.read(friendsControllerProvider.notifier).paused();
         ref.read(pinsControllerProvider.notifier).paused();
         ref.read(friendPinsControllerProvider.notifier).paused();
+        // Leaving the app: what the tracker queued goes now (iOS may suspend it soon).
+        unawaited(ref.read(trackerControllerProvider.notifier).flush());
       },
       onShow: () {
         ref.read(trailControllerProvider.notifier).resumed();

@@ -6,7 +6,6 @@ import 'package:findme/core/widgets/card_box.dart';
 import 'package:findme/core/widgets/pill.dart';
 import 'package:findme/features/tracker/domain/location_source.dart';
 import 'package:findme/features/tracker/domain/trip.dart';
-import 'package:findme/features/tracker/domain/upload_policy.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/trail/presentation/trail_controller.dart';
 import 'package:flutter/foundation.dart';
@@ -203,24 +202,6 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
           Text('Điểm cuối: ${when(s.lastFix)}'),
           if (s.rejected > 0)
             Notice('Điểm bị từ chối: ${s.rejected}', error: true),
-          const SizedBox(height: 8),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const Text('Gửi mỗi'),
-              for (final d in uploadChoices)
-                Pill(
-                  label: d.inSeconds < 60
-                      ? '${d.inSeconds} giây'
-                      : '${d.inMinutes} phút',
-                  selected: s.uploadEvery == d,
-                  onTap: () => unawaited(ctl.setUploadEvery(d)),
-                ),
-            ],
-          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerLeft,

@@ -5,6 +5,7 @@ import 'package:findme/core/errors/app_errors.dart';
 import 'package:findme/features/auth/data/auth_repository.dart';
 import 'package:findme/features/auth/presentation/auth_controller.dart';
 import 'package:findme/features/tracker/data/ingest_client.dart';
+import 'package:findme/features/tracker/data/live_sender.dart';
 import 'package:findme/features/tracker/data/point_queue.dart';
 import 'package:findme/features/tracker/data/wake_channel.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
@@ -13,6 +14,7 @@ import 'package:findme/features/tracker/domain/trip.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/widget/domain/trail_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -20,9 +22,11 @@ import '../../../helpers/fakes.dart';
 import '../../../helpers/tracker_fakes.dart';
 
 var _s = 0;
-Fix fx() => Fix(
+
+/// [north]: metres north of the usual spot.
+Fix fx({double north = 0}) => Fix(
   at: DateTime.utc(2026, 11, 4).add(Duration(seconds: _s++)),
-  lat: 10.77,
+  lat: 10.77 + north / 111195,
   lon: 106.7,
   acc: 9,
 );
@@ -75,6 +79,8 @@ void main() {
   late DateTime now;
   late ProviderContainer c;
   late FakeTrailWidget trail;
+  late StreamController<bool> power;
+  late List<Override> base;
 
   TrackerController ctl() => c.read(trackerControllerProvider.notifier);
   TrackerState st() => c.read(trackerControllerProvider);
@@ -101,23 +107,24 @@ void main() {
     trail = FakeTrailWidget();
     friends = quietFriends();
     trip = FakeTripChannel();
-    c = ProviderContainer(
-      overrides: [
-        ...baseOverrides(
-          auth: fakeAuth(token: jwt('sub-1')),
-          trackerStore: store,
-          friends: friends,
-          trip: trip,
-          fakeTracker: false,
-        ),
-        pointQueueProvider.overrideWith((_) async => queue),
-        locationSourceProvider.overrideWithValue(gps),
-        wakeChannelProvider.overrideWithValue(wake),
-        ingestClientProvider.overrideWithValue(ingest),
-        trackerClockProvider.overrideWithValue(() => now),
-        trailWidgetProvider.overrideWithValue(trail),
-      ],
-    );
+    power = StreamController<bool>.broadcast();
+    base = [
+      ...baseOverrides(
+        auth: fakeAuth(token: jwt('sub-1')),
+        trackerStore: store,
+        friends: friends,
+        trip: trip,
+        charging: power.stream,
+        fakeTracker: false,
+      ),
+      pointQueueProvider.overrideWith((_) async => queue),
+      locationSourceProvider.overrideWithValue(gps),
+      wakeChannelProvider.overrideWithValue(wake),
+      ingestClientProvider.overrideWithValue(ingest),
+      trackerClockProvider.overrideWithValue(() => now),
+      trailWidgetProvider.overrideWithValue(trail),
+    ];
+    c = ProviderContainer(overrides: base);
   });
   tearDown(() {
     c.dispose();
@@ -501,28 +508,121 @@ void main() {
     expect(st().indicator, isTrue);
   });
 
-  test('a shorter interval sends what waits once it is due', () async {
+  test('still: what waits goes after 5 min, not 1', () async {
     await ctl().turnOn();
     await emit(1); // first upload: lastOk = now
-    await emit(3);
+    await emit(3); // same spot: standing still
     verify(() => ingest.send(any(), any(), any())).called(1);
-    now = now.add(const Duration(seconds: 10));
-    await ctl().setUploadEvery(const Duration(seconds: 5));
-    await ctl().idle();
-    verify(() => ingest.send(any(), any(that: hasLength(3)), any())).called(1);
-    expect(store.every, const Duration(seconds: 5));
-    expect(st().uploadEvery, const Duration(seconds: 5));
+    now = now.add(const Duration(minutes: 2));
+    await emit(1);
+    verifyNever(() => ingest.send(any(), any(), any()));
+    now = now.add(const Duration(minutes: 3));
+    await emit(1);
+    verify(() => ingest.send(any(), any(that: hasLength(5)), any())).called(1);
   });
 
-  test('a longer interval holds fixes past the default', () async {
-    store.every = const Duration(minutes: 2);
+  test('moving: what waits goes after 1 min', () async {
     await ctl().turnOn();
     await emit(1);
     verify(() => ingest.send(any(), any(), any())).called(1);
-    now = now.add(const Duration(seconds: 90));
-    await emit(3);
-    verifyNever(() => ingest.send(any(), any(), any()));
-    expect(st().uploadEvery, const Duration(minutes: 2));
+    gps.emit(fx(north: 20)); // moved 20 m
+    await settle();
+    await ctl().idle();
+    now = now.add(const Duration(seconds: 61));
+    gps.emit(fx(north: 40));
+    await settle();
+    await ctl().idle();
+    verify(() => ingest.send(any(), any(that: hasLength(2)), any())).called(1);
+  });
+
+  test('plugged in: what waits goes at once', () async {
+    await ctl().turnOn();
+    await emit(1);
+    await emit(2);
+    clearInteractions(ingest);
+    power.add(true);
+    await settle();
+    await ctl().idle();
+    verify(() => ingest.send(any(), any(that: hasLength(2)), any())).called(1);
+  });
+
+  test('flush: sends what waits, but not inside a backoff', () async {
+    await ctl().turnOn();
+    await emit(1);
+    await emit(2);
+    clearInteractions(ingest);
+    await ctl().flush();
+    verify(() => ingest.send(any(), any(that: hasLength(2)), any())).called(1);
+    answer(IngestResult.retry);
+    await emit(1);
+    await ctl()
+        .flush(); // the first try failed: nothing more until the backoff is up
+    await ctl().flush();
+    verify(() => ingest.send(any(), any(), any())).called(1);
+  });
+
+  test('flush with nothing queued asks for nothing', () async {
+    store.saved = null;
+    await ctl().flush();
+    verifyNever(() => ingest.newToken());
+  });
+
+  test('turning off sends what waits', () async {
+    await ctl().turnOn();
+    await emit(1);
+    await emit(2);
+    clearInteractions(ingest);
+    await ctl().turnOff();
+    await settle();
+    await ctl().idle();
+    verify(() => ingest.send(any(), any(that: hasLength(2)), any())).called(1);
+  });
+
+  group('live (MQTT)', () {
+    late FakeLink link;
+    setUp(() {
+      link = FakeLink();
+      c.dispose();
+      c = ProviderContainer(
+        overrides: [
+          ...base,
+          liveSenderProvider.overrideWithValue(
+            LiveSender(link, store.token, now: () => now),
+          ),
+        ],
+      );
+    });
+
+    test('recording: each new spot goes live; off: cleared', () async {
+      await ctl().turnOn();
+      await settle();
+      expect(link.connects.single.clientId, startsWith('sub-1/phone-'));
+      await emit(1);
+      now = now.add(const Duration(seconds: 5));
+      gps.emit(fx(north: 20));
+      await settle();
+      expect(link.sent.map((s) => s.topic), ['live/sub-1', 'live/sub-1']);
+      await ctl().turnOff();
+      await settle();
+      await ctl().idle();
+      expect(link.sent.last.payload, '');
+    });
+
+    test('a broker that is down never holds up /ingest', () async {
+      link.accept = false;
+      await ctl().turnOn();
+      await emit(1);
+      verify(() => ingest.send(any(), any(), any())).called(1);
+      expect(link.sent, isEmpty);
+    });
+
+    test('sign-out clears the live position too', () async {
+      await ctl().turnOn();
+      await emit(1);
+      await ctl().forget();
+      await settle();
+      expect(link.sent.last.payload, '');
+    });
   });
 
   test(

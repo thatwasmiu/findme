@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:findme/core/storage/secure.dart';
 import 'package:findme/features/tracker/domain/trip.dart';
-import 'package:findme/features/tracker/domain/upload_policy.dart' as policy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,10 +34,6 @@ abstract interface class TrackerStore {
   /// iPhone's blue "using location" indicator while tracking. A phone setting: [forget] keeps it.
   Future<bool> indicator();
   Future<void> setIndicator({required bool on});
-
-  /// How long fixes may wait before an upload (50 waiting still go at once). A phone setting: [forget] keeps it.
-  Future<Duration> uploadEvery();
-  Future<void> setUploadEvery(Duration d);
 
   /// The account's sharing mode as the server last said: 'always', 'trip', or null (not known yet). Android's tile
   /// and widget read it natively (`flutter.findme.sharing`) to offer the trip button only in trip mode.
@@ -76,7 +71,6 @@ class SecureTrackerStore implements TrackerStore {
   static const _onKey = 'findme.tracking';
   static const _ownerKey = 'findme.trackerOwner';
   static const _indicatorKey = 'findme.trackerIndicator';
-  static const _everyKey = 'findme.trackerUploadSeconds';
   static const _sharingKey = 'findme.sharing';
   static const _untilKey = 'findme.tripUntil';
   static const _presetKey = 'findme.tripPreset';
@@ -189,20 +183,6 @@ class SecureTrackerStore implements TrackerStore {
   @override
   Future<void> setIndicator({required bool on}) async {
     await (await SharedPreferences.getInstance()).setBool(_indicatorKey, on);
-  }
-
-  @override
-  Future<Duration> uploadEvery() async {
-    final m = (await SharedPreferences.getInstance()).getInt(_everyKey);
-    return m == null || m <= 0 ? policy.uploadEvery : Duration(seconds: m);
-  }
-
-  @override
-  Future<void> setUploadEvery(Duration d) async {
-    await (await SharedPreferences.getInstance()).setInt(
-      _everyKey,
-      d.inSeconds,
-    );
   }
 
   @override

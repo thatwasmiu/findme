@@ -50,6 +50,7 @@ Dev builds: the 🐞 button opens the debug console (HTTP calls with status and 
 | `AUTHORITY` | `https://cognito-idp.<region>.amazonaws.com/<pool id>` | `authority` |
 | `CLIENT_ID` | Cognito app client id | `clientId` |
 | `WEB_ORIGIN` | Web app address; share links are `WEB_ORIGIN/s/<id>` | the site you open |
+| `MQTT_URL` | optional live broker, `wss://mqtt.daste.io.vn`; empty = no live channel | `mqttUrl` |
 
 ## Flavors
 
@@ -75,7 +76,6 @@ Privacy policy URL: `<WEB_ORIGIN>/privacy.html` (welcome card link).
 | `findme.trackerDisclosure` | shared_preferences | the location explanation was accepted once |
 | `findme.trackerOwner` | shared_preferences | the account (`sub`) that switched tracking on, before any token was fetched |
 | `findme.trackerIndicator` | shared_preferences | iPhone: show the blue location indicator while tracking (a phone setting, kept on sign-out) |
-| `findme.trackerUploadSeconds` | shared_preferences | "Gửi mỗi": seconds between uploads (5, 10, 30, 60, 120; default 60; kept on sign-out) |
 | `findme.sharing` | shared_preferences | trip mode: `always` / `trip` as `GET /me` last said; the tile and widget read it natively (chapter 19) |
 | `findme.tripUntil` | shared_preferences | trip mode: when the running trip ends, epoch ms (absent = no end) |
 | `findme.tripPreset` | shared_preferences | trip mode: the last preset, used by the tile and widget (`1h` the first time; kept on sign-out) |
@@ -94,7 +94,8 @@ another account signs in, never by an expired session.
 | Friends list | 60 s |
 | Access token renewal | when < 60 s left |
 | Replay alone / together | 120 ms per print (min 10 s) / 60 s |
-| Tracker upload | at 50 waiting fixes, or "Gửi mỗi" (default 1 min) after the last ok, or Gửi ngay; ≤ 500 per request |
+| Tracker upload | at 50 waiting fixes, or 1 min (moving) / 5 min (still) after the last ok, or Gửi ngay; at once on background, stop, plug-in; ≤ 500 per request |
+| Live publish (MQTT) | each fix ≥ max(5 m, acc/2) from the last sent, ≤ 1/s, acc ≤ 100 m; reconnect 2 s doubling to 60 s |
 | Tracker backoff after a failure | 1, 2, 4, 8, 16, 30 min |
 | GPS | Android: every 10 s if moved 10 m; iPhone: ~100 m accuracy, pauses when still |
 
@@ -105,6 +106,13 @@ another account signs in, never by an expired session.
 | `flutter test test/features/tracker` | Tracker unit + widget tests |
 | `D:\Android\Sdk\platform-tools\adb.exe reboot` | Reboots the emulator or phone (tracking should come back on its own) |
 | Emulator ⋯ → Location → Routes → Play route | Fakes a walk |
+
+## Live positions (chapter 20)
+
+| Command | Does |
+|---|---|
+| `flutter test test/features/tracker/data/live_sender_test.dart` | connect, publish, throttle, reconnect, clear (fake broker) |
+| `npx mqtt sub -h mqtt.daste.io.vn -p 443 -l wss -i "<id>/cli" -u findme -P "<ticket>" -t "live/<id>" -v` | watch your own live messages (ticket: travel-heatmap ch. 23 §6) |
 
 ## Trip mode (chapter 19)
 
