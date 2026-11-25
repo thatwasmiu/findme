@@ -23,6 +23,26 @@ The cookie lives 12 hours; it is renewed after 6, or at once when Look Back answ
 
 If you know the web: this is what `credentials: 'same-origin'` was doing for you.
 
+### Pictures and videos through the image host
+
+Once Look Back has `MEDIA_IMAGE_HOST` set, `/lb/media/<id>/<file>` checks the cookie and answers **302** to a signed
+link on another host, `https://<image host>/s/<place>/<exp>/<sig>/<id>/<file>` (videos: `MEDIA_VIDEO_HOST` if set),
+valid 24–48 h. Without a host it answers 200 itself, as before. The app needs no code for either:
+
+- `Image.network` (Dart's `HttpClient`) follows redirects and, crossing to another host, drops the `Cookie` header
+  (`shouldCopyHeaderOnRedirect` in the Dart SDK's `http_impl.dart`). The signed link needs no cookie.
+- The video player (ExoPlayer, `video_player_android`'s `HttpVideoAsset`; AVPlayer on iPhone) follows the 302 and
+  reads segment names in the playlist against the **final** address. The signature covers `<place>/<id>`, every file
+  under it, so `segment0.ts` under the signed prefix is allowed. ExoPlayer re-sends our headers, cookie included, to
+  the image host; it ignores them.
+- The picture cache is in memory and keyed by the `/lb/media/…` address we asked for, so the 24 h links never churn
+  it. Nothing is cached on disk.
+- Plain HTTPS to a new host: Android's default network rules and iOS's ATS allow it, there is no allowlist to edit.
+- A 403 (link ran out) or 503 (traffic budget used up) from the host shows ⏳ / "Chưa mở được", like any failure.
+
+Avatars (`/lb/api/findme/avatar/<id>`) and bag pictures (`/lb/api/findme/bag-image/<grant>`) are served by Look
+Back's api directly and do not redirect.
+
 ## Where you are
 
 `pinFixProvider` → `currentFix(GeoApi)` in `pins_controller.dart` (the web's `geo.ts`) answers one of three:
@@ -124,6 +144,7 @@ Needs Look Back (migrations 015–016) and Find Me (`/pin-grant`, `/place-name`,
 |---|---|
 | No bubbles, no error | Look Back is away, the `/lb` route is not deployed, or the ticket secrets differ. Check `media-ticket` and `session` in the 🐞 console. |
 | Bubbles stay ⏳ but the list loaded | The picture request failed; usually the `Cookie` did not reach `/lb/media`. |
+| Pictures stopped after Look Back moved media to the image host | Open a `/lb/media/…` address with the cookie: a 302 to `https://<image host>/s/…` is right; a 403 from the host means its signing key differs from Look Back's `MEDIA_SIGN_KEY`. |
 | Video spins for ever on iPhone | AVPlayer did not send the header with the segments. Not tested yet. |
 | A photo still shows ⏳ for a while after uploading | The phone's small files were not used. 🐞 console: `client-result` 204 = used; 202 = Look Back refused them and made its own; no `client-files` calls at all = the phone gave up (slow, or switched off after two strikes). All three end in a ready picture. |
 | `client-files` answers 413 | Something between the phone and Look Back caps bodies under 4 MB (CloudFront or the outer nginx). |

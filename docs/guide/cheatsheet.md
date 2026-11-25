@@ -126,6 +126,7 @@ another account signs in, never by an expired session.
 ## Photo pins (chapter 16)
 
 - Look Back: `<WEB_ORIGIN>/lb/api/findme/…`, media `<WEB_ORIGIN>/lb/media/<key>`.
+- Media may answer 302 to `https://<image host>/s/<place>/<exp>/<sig>/<key>` (24–48 h); Dart and ExoPlayer follow it, no code.
 - Login: `POST /media-ticket` → `POST /lb/api/findme/session` → cookie `fm_user`, memory only, renewed after 6 h.
 - New pin: fresh fix (15 s, given up at 20 s) or no pin; name from a stop ≤ 100 m, else `GET /place-name?lat&lon`
   (`{name, pending}`, 4 tries 3 s apart). Camera photos only.

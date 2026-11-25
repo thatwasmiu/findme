@@ -4,6 +4,15 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Look Back media through the image host** (2026-11-25, checked, no code change; follows Look Back branch
+  `claude/findme-media-cdn-174336` commit 412e722, **not deployed**; guide chapter 16, "Pictures and videos through
+  the image host"). With `MEDIA_IMAGE_HOST` set, `/lb/media/…` answers 302 to a signed
+  `https://<host>/s/<place>/<exp>/<sig>/<id>/<file>`; without it, 200 as before. `Image.network` follows it and drops
+  the cookie across hosts; ExoPlayer follows it and resolves HLS segments under the signed prefix (signed per
+  `<place>/<id>`); the image cache keys on the `/lb` address. Avatars and bag pictures are not affected (served by the
+  api). **Not yet seen** (after Look Back is deployed): a pin picture, a pin video (Android and iPhone) and a
+  friend's shared picture loading through the host.
+
 - **Live positions over MQTT, phone side** (2026-11-24, merged to `main` and pushed 2026-11-24; follows
   `travel-heatmap` live MQTT (branch `worktree-live-mqtt-spec`, being merged there, not deployed); guide chapter 20,
   spec `docs/superpowers/specs/2026-11-24-live-mqtt-phone-design.md`). With `MQTT_URL` in the config, the tracker
