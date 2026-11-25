@@ -52,10 +52,13 @@ When the app starts sending a new kind of data, update the page, `ios/Runner/Pri
 | Question | Answer |
 |---|---|
 | Does the app collect or share user data? | Yes, collects |
-| Data types | **Location → Precise location**; **Personal info → Email address** |
-| Shared with third parties? | No (AWS is a service provider, which Play does not count as sharing) |
+| Data types | **Location → Precise location**; **Personal info → Email address, Name, User IDs**; **Photos and videos → Photos, Videos**; **App activity → Other user-generated content** (pin notes, bag items) |
+| Shared with third parties? | No (AWS and Look Back are service providers, which Play does not count as sharing; friends and link holders the user picks are the app's function, not sharing) |
 | Processed ephemerally? | No (stored) |
-| Required or optional? | Location: optional (only when the user turns tracking on). Email: required (sign-in) |
-| Purpose | App functionality (location, email); Account management (email) |
+| Required or optional? | Email, name, user ID: required (account). Location, photos/videos, user content: optional (only when the user records, pins or fills the bag) |
+| Purpose | App functionality (all); Account management (email, name, user ID) |
 | Encrypted in transit? | Yes (HTTPS) |
-| Can users request deletion? | Yes (contact above) |
+| Can users request deletion? | Yes: in the app (👤 → 🗑️ Xoá tài khoản) or by email |
+| Delete account URL (Data deletion section) | `<WEB_ORIGIN>/privacy.html` (its "Bạn có thể" list gives the in-app steps and the email) |
+
+Keep this table, `ios/Runner/PrivacyInfo.xcprivacy` and the App Store Connect privacy answers saying the same thing.

@@ -67,8 +67,8 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - **Account sheet + delete your account** (2026-11-13, follows `travel-heatmap` f17b5ea, guide chapter 04): 👋 on the top
   bar became 👤 → `AccountSheet` with 🎒 bag & avatar (moved out of 👥), 👋 Đăng xuất, 🗑️ Xoá tài khoản (type your
   name → `DELETE /me` → `signOut()`, which also stops the tracker); hidden for the owner (`Me.owner`). Needed for the
-  App Store (5.1.1(v)). Committed on `main`, not pushed. Unit + widget tested only: **`DELETE /me` is not deployed**
-  yet (travel-heatmap HANDOFF), so nothing has run against a server or on a device.
+  App Store (5.1.1(v)). Pushed. `DELETE /me` is live (2026-11-25: the route answers 401 without a token); not yet
+  tried from the app on a device.
 - **iPhone widget: parked** (2026-11-13, spike `spike/ios-widget` merged to `main`): Sideloadly with a free Apple ID
   cannot give the app and its widget a shared App Group, so the real iPhone widget cannot get data and is not built.
   Tested on the owner's iPhone in three rounds (guide chapter 17, "iPhone spike"): round 3 shows "widget: no file"
@@ -94,8 +94,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   (edit yours from 👥, open a friend's from their marker or row), avatar cropped on the phone replaces Hachiware /
   the initial, share links get the 🎒 option behind a warning. Pictures go to Look Back with receipts. New
   dependencies: `flutter_svg` (pocket icons), `url_launcher` (tel:, mailto:, links). Unit + widget tested only:
-  **the Find Me side of the bag is not deployed yet** (`travel-heatmap` HANDOFF, 2026-11-11), so nothing has run
-  against a server, an emulator or a phone. Not ported: the web's public share page (links open in the browser).
+  the server side is deployed (owner, 2026-11-25); not yet tried from the app on an emulator or a phone. Not ported: the web's public share page (links open in the browser).
 - **Home-screen widget** on branch `feat/home-widget` (2026-11-10, not merged): Android 2x2 widget showing the tracker's
   latest spot and today's paws on a pastel map, with an age label. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-09-home-widget*`,
   guide chapter 17. Also changes the tracker on Android: `MainActivity` now keeps one engine per process, because swiping
@@ -111,9 +110,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   iOS significant-location relaunch (Swift in `AppDelegate`), Android reboot restart (`BootReceiver.kt`), Play
   disclosure dialog. The ingest token comes from `POST /me/ingest-token` (2026-11-04; the paste field is gone):
   asked for when tracking starts with none, or once after `/ingest` says 401; 403 → "Tài khoản này không ghi được
-  hành trình"; 429/offline → backoff. **The server side of `/me/ingest-token` is not in `travel-heatmap` yet**
-  (checked at b4929b0): until it is live, a phone with no token cannot get one (API Gateway answers an unknown
-  route with 403 or 404, so it shows "Tài khoản này không ghi được hành trình" or "Chưa có token"). Guide chapter 15,
+  hành trình"; 429/offline → backoff. `POST /me/ingest-token` is live (2026-11-25: answers 401 without a token). Guide chapter 15,
   Play drafts in `docs/guide/play-store-location.md`. Spec/plan: `docs/superpowers/{specs,plans}/2026-11-04-*`.
   A fresh whole-branch review's critical/important findings are fixed (two engines on one queue after an Android
   reboot; forget() racing uploads/appends; account switch with no token; sign-out surviving a tracker error; iOS
@@ -187,8 +184,9 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 - iOS privacy manifest `ios/Runner/PrivacyInfo.xcprivacy` added (chapter 13; `feda214`, `271e535`, pushed 2026-11-12, so the
   iOS CI job on main is its first build); not yet seen in an Xcode privacy
   report. Privacy policy link under the welcome card opens `<WEB_ORIGIN>/privacy.html` (page lives in travel-heatmap
-  `web/public/`, not deployed yet; only on the signed-out screen). App Store still lacks: in-app account deletion,
-  signed CI upload.
+  `web/public/`, live 2026-11-25; only on the signed-out screen). Manifest now also lists other user content
+  (pin notes, bag items); Play Data safety answers in `docs/guide/play-store-location.md` §6 match it. Store release
+  still lacks: Android release signing (chapter 14), signed iOS CI upload, a reviewer demo account.
 - System font instead of the web's Nunito (chapter 13 says how to add it).
 - Taps on stops / prints / friends show a SnackBar, not a map popup.
 - In a widget test, the share sheet's ✕ was not found by its screen-reader label "Đóng" (found by text instead);
