@@ -9,8 +9,8 @@ ones stay always on. Until the server has trip mode deployed, `GET /me` has no `
 
 | You want | Do |
 |---|---|
-| Start a trip | 🧭 → "Bắt đầu chuyến đi" → 15 phút · 1 giờ · đến tối nay · đến khi tắt. Or the "Chuyến đi" Quick Settings tile, or ⏺ on the home widget (both use the last preset; "1 giờ" the first time). |
-| End it early | 🧭 → "Kết thúc", or tap the tile / ⏹ again. |
+| Start a trip | ▶ above 📷 (or the tracker sheet) → 15 phút · 1 giờ · đến tối nay · đến khi tắt. Or the "Chuyến đi" Quick Settings tile, or ⏺ on the home widget (both use the last preset; "1 giờ" the first time). |
+| End it early | ■ above 📷, "Kết thúc" in the tracker sheet, or tap the tile / ⏹ again. |
 | Pick another length from outside the app | Long-press the tile: the app opens on the presets. |
 | Switch the mode | 👤 → "Luôn bật" / "Chỉ khi đi". |
 

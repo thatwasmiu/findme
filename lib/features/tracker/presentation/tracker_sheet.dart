@@ -20,6 +20,54 @@ const _disclosure =
     'Vị trí được gửi về máy chủ Find Me để vẽ hành trình của bạn, và chỉ hiện cho bạn bè '
     'cùng những link chia sẻ mà bạn chọn. Bạn có thể tắt bất cứ lúc nào.';
 
+/// Google Play's disclosure, once, before anything asks for location. False: declined.
+Future<bool> trackerDisclosed(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(_disclosureKey) ?? false) return true;
+  if (!context.mounted) return false;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('Ghi hành trình'),
+      content: const Text(_disclosure),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: const Text('Không'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(c, true),
+          child: const Text('Đồng ý'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  await prefs.setBool(_disclosureKey, true);
+  return true;
+}
+
+/// The status line and whether it is a problem, shared by the sheet and the map's track button.
+(String, bool) trackerStatus(TrackerState s, DateTime now) =>
+    switch (s.problem) {
+      TrackerProblem.needAlways => ('Thiếu quyền vị trí "Luôn luôn"', true),
+      TrackerProblem.badToken => ('Token sai hoặc đã đổi', true),
+      TrackerProblem.noToken => ('Chưa có token', true),
+      TrackerProblem.noAccount => (
+        'Tài khoản này không ghi được hành trình',
+        true,
+      ),
+      TrackerProblem.none =>
+        s.tripMode
+            ? (
+                s.on
+                    ? 'Đang đi · ${tripLeft(s.tripUntil, now)}'
+                    : 'Không trong chuyến đi',
+                false,
+              )
+            : (s.on ? 'Đang ghi' : 'Đã tắt', false),
+    };
+
 /// 📍 Ghi hành trình: the switch and what the tracker is doing. The ingest token is fetched by the controller.
 class TrackerSheet extends ConsumerStatefulWidget {
   const TrackerSheet({super.key});
@@ -61,39 +109,11 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
       await ctl.turnOff();
       return;
     }
-    if (await _disclosed()) await ctl.turnOn();
-  }
-
-  /// Google Play's disclosure, once, before anything asks for location. False: declined.
-  Future<bool> _disclosed() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!(prefs.getBool(_disclosureKey) ?? false)) {
-      if (!mounted) return false;
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Ghi hành trình'),
-          content: const Text(_disclosure),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text('Không'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: const Text('Đồng ý'),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return false;
-      await prefs.setBool(_disclosureKey, true);
-    }
-    return true;
+    if (await trackerDisclosed(context)) await ctl.turnOn();
   }
 
   Future<void> _start(TripPreset p) async {
-    if (await _disclosed()) {
+    if (await trackerDisclosed(context)) {
       await ref.read(trackerControllerProvider.notifier).startTrip(p);
     }
   }
@@ -106,24 +126,7 @@ class _TrackerSheetState extends ConsumerState<TrackerSheet> {
     String when(DateTime? t) =>
         t == null ? 'chưa' : ago(t.toIso8601String(), now: now);
     final openSettings = ref.read(locationSourceProvider).openSettings;
-    final (status, bad) = switch (s.problem) {
-      TrackerProblem.needAlways => ('Thiếu quyền vị trí "Luôn luôn"', true),
-      TrackerProblem.badToken => ('Token sai hoặc đã đổi', true),
-      TrackerProblem.noToken => ('Chưa có token', true),
-      TrackerProblem.noAccount => (
-        'Tài khoản này không ghi được hành trình',
-        true,
-      ),
-      TrackerProblem.none =>
-        s.tripMode
-            ? (
-                s.on
-                    ? 'Đang đi · ${tripLeft(s.tripUntil, now)}'
-                    : 'Không trong chuyến đi',
-                false,
-              )
-            : (s.on ? 'Đang ghi' : 'Đã tắt', false),
-    };
+    final (status, bad) = trackerStatus(s, now);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,

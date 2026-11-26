@@ -4,6 +4,13 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 ## Where things stand
 
+- **Track button on the map** (2026-11-26, on `main`, not committed yet; guide chapter 15). 🧭 left the top bar: a
+  round ▶/■ sits above 📷 (`track_button.dart`). Always on: ▶ turns recording on, ■ off. Trip mode: ▶ asks for a
+  preset, ■ ends the trip. A chip beside it shows the status ("Đang ghi", "Đang đi · còn 42 phút", problems in red)
+  and opens the tracker sheet (so does a long press). Both buttons ride just above the trail sheet and fade out when
+  it is dragged above 40 %. Disclosure and status text moved to `trackerDisclosed` / `trackerStatus` in
+  `tracker_sheet.dart`. **Verified:** 488 unit + widget tests, `flutter analyze` clean. **Not yet seen** on a device.
+
 - **Look Back media through the image host** (2026-11-25, checked, no code change; follows Look Back branch
   `claude/findme-media-cdn-174336` commit 412e722, **not deployed**; guide chapter 16, "Pictures and videos through
   the image host"). With `MEDIA_IMAGE_HOST` set, `/lb/media/…` answers 302 to a signed
@@ -48,7 +55,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
 
 - **Trip mode, phone side** (2026-11-13, merged to `main` and pushed 2026-11-13; follows `travel-heatmap`
   trip mode, merged there but **not deployed**; guide chapter 19, plan
-  `docs/superpowers/plans/2026-11-13-trip-mode-phone.md`). Trip-mode accounts: 🧭 → "Bắt đầu chuyến đi" (15 phút ·
+  `docs/superpowers/plans/2026-11-13-trip-mode-phone.md`). Trip-mode accounts: ▶ above 📷 → preset ("Bắt đầu chuyến đi" (15 phút ·
   1 giờ · đến tối nay · đến khi tắt) / "Kết thúc"; the tracker stops at the end (Android alarm, each fix, upload tick,
   resume/wake), on app open / return when `GET /me` says no trip, and on `/ingest`'s `trip: false`. Offline start
   retried before the next upload. Quick Settings tile "Chuyến đi" and a ⏺/⏹ chip on the home widget send `toggle`

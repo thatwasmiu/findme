@@ -14,6 +14,7 @@ import 'package:findme/features/replay/presentation/replay_bar.dart';
 import 'package:findme/features/replay/presentation/replay_controller.dart';
 import 'package:findme/features/shares/presentation/shares_sheet.dart';
 import 'package:findme/features/tracker/data/trip_channel.dart';
+import 'package:findme/features/tracker/presentation/track_button.dart';
 import 'package:findme/features/tracker/presentation/tracker_controller.dart';
 import 'package:findme/features/tracker/presentation/tracker_sheet.dart';
 import 'package:findme/features/trail/domain/date_range.dart';
@@ -75,6 +76,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _adding = false;
   Spot? _spot; // where a new pin will go, while adding
   String? _openPinId;
+
+  /// The trail sheet's height (fraction of the screen): the round buttons ride just above it.
+  double _sheetExtent = TrailSheet.initialExtent;
 
   void _closeSheets() => setState(() {
     _adding = false;
@@ -155,113 +159,144 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         if (!didPop) _closeSheets();
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: MapView(
-                pins: pins,
-                onPin: (p) => setState(() {
-                  _adding = false;
-                  _spot = null;
-                  _openPinId = p.id;
-                }),
-                pickAt: _adding ? _spot : null,
-                myAvatar: ref.watch(
-                  friendsControllerProvider.select((s) => s.me?.avatar),
+        body: LayoutBuilder(
+          builder: (context, box) {
+            final height = box.maxHeight;
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: MapView(
+                    pins: pins,
+                    onPin: (p) => setState(() {
+                      _adding = false;
+                      _spot = null;
+                      _openPinId = p.id;
+                    }),
+                    pickAt: _adding ? _spot : null,
+                    myAvatar: ref.watch(
+                      friendsControllerProvider.select((s) => s.me?.avatar),
+                    ),
+                    onFriend: (f) => openFriendBag(
+                      context,
+                      ref,
+                      id: f.id,
+                      name: f.name,
+                      avatar: f.avatar,
+                    ),
+                    points: trail.track.points,
+                    stops: trail.track.stops,
+                    last: trail.track.last,
+                    friends: friends,
+                    flyTo: ref.watch(flyToProvider),
+                    showTiles: widget.showTiles,
+                    replay: replay == null
+                        ? null
+                        : ReplayView(
+                            track: replay.track,
+                            pos: replay.pos,
+                            clock: replay.clock ? replay.clockAt : null,
+                            own: replay.own,
+                          ),
+                  ),
                 ),
-                onFriend: (f) => openFriendBag(
-                  context,
-                  ref,
-                  id: f.id,
-                  name: f.name,
-                  avatar: f.avatar,
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: replay != null
+                        ? const ReplayBar()
+                        : TopBar(
+                            incomingCount: incoming,
+                            onShare: () => SharesSheet.open(context),
+                            onFriends: () => FriendsSheet.open(context),
+                            onAccount: () => AccountSheet.open(context),
+                          ),
+                  ),
                 ),
-                points: trail.track.points,
-                stops: trail.track.stops,
-                last: trail.track.last,
-                friends: friends,
-                flyTo: ref.watch(flyToProvider),
-                showTiles: widget.showTiles,
-                replay: replay == null
-                    ? null
-                    : ReplayView(
-                        track: replay.track,
-                        pos: replay.pos,
-                        clock: replay.clock ? replay.clockAt : null,
-                        own: replay.own,
-                      ),
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: replay != null
-                    ? const ReplayBar()
-                    : TopBar(
-                        incomingCount: incoming,
-                        onShare: () => SharesSheet.open(context),
-                        onFriends: () => FriendsSheet.open(context),
-                        onTrack: () => TrackerSheet.open(context),
-                        onAccount: () => AccountSheet.open(context),
-                      ),
-              ),
-            ),
-            if (replay == null && sheet == null)
-              Align(
-                alignment: const FractionalOffset(1, 0.76),
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Semantics(
-                    button: true,
-                    label: 'Chụp ảnh ở đây',
-                    child: GestureDetector(
-                      onTap: () => setState(() {
-                        _openPinId = null;
-                        _adding = true;
-                      }),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: Palette.pink,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x80EC4899),
-                              blurRadius: 14,
-                              offset: Offset(0, 4),
+                if (replay == null && sheet == null)
+                  Positioned(
+                    right: 12,
+                    left: 12,
+                    bottom: _sheetExtent * height + 12,
+                    // Hidden once the sheet is dragged high, so they never sit on the top bar.
+                    child: IgnorePointer(
+                      ignoring: _sheetExtent > 0.4,
+                      child: AnimatedOpacity(
+                        opacity: _sheetExtent > 0.4 ? 0 : 1,
+                        duration: const Duration(milliseconds: 150),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const TrackButton(),
+                            const SizedBox(height: 12),
+                            _CameraButton(
+                              onTap: () => setState(() {
+                                _openPinId = null;
+                                _adding = true;
+                              }),
                             ),
                           ],
                         ),
-                        child: const Text('📷', style: TextStyle(fontSize: 24)),
                       ),
                     ),
                   ),
+                NotificationListener<DraggableScrollableNotification>(
+                  onNotification: (n) {
+                    setState(() => _sheetExtent = n.extent);
+                    return false;
+                  },
+                  child: TrailSheet(
+                    track: trail.track,
+                    oneDay: isOneDay(trail.range),
+                    replaying: replay != null,
+                    onReplay: _replay,
+                    onSelect: (lon, lat) =>
+                        ref.read(flyToProvider.notifier).go(lon, lat),
+                  ),
                 ),
-              ),
-            TrailSheet(
-              track: trail.track,
-              oneDay: isOneDay(trail.range),
-              replaying: replay != null,
-              onReplay: _replay,
-              onSelect: (lon, lat) =>
-                  ref.read(flyToProvider.notifier).go(lon, lat),
-            ),
-            if (sheet != null)
-              Positioned(
-                left: 10,
-                right: 10,
-                bottom: 0,
-                child: SafeArea(
-                  top: false,
-                  minimum: const EdgeInsets.only(bottom: 14),
-                  child: sheet,
-                ),
-              ),
-          ],
+                if (sheet != null)
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 0,
+                    child: SafeArea(
+                      top: false,
+                      minimum: const EdgeInsets.only(bottom: 14),
+                      child: sheet,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
+}
+
+/// 📷 Chụp ảnh ở đây: opens the add-a-photo sheet.
+class _CameraButton extends StatelessWidget {
+  const _CameraButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Chụp ảnh ở đây',
+    excludeSemantics: true,
+    child: Material(
+      color: Palette.pink,
+      shape: const CircleBorder(),
+      elevation: 4,
+      shadowColor: Palette.pink,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const SizedBox.square(
+          dimension: 56,
+          child: Center(child: Text('📷', style: TextStyle(fontSize: 24))),
+        ),
+      ),
+    ),
+  );
 }

@@ -120,7 +120,6 @@ void main() {
 
   group('top bar', () {
     late MockTrack track;
-    var tracked = 0;
     var account = 0;
     Future<ProviderContainer> pump(
       WidgetTester t, {
@@ -154,7 +153,6 @@ void main() {
               body: TopBar(
                 onShare: () {},
                 onFriends: () {},
-                onTrack: () => tracked++,
                 onAccount: () => account++,
                 incomingCount: incoming,
               ),
@@ -186,8 +184,7 @@ void main() {
         c.read(trailControllerProvider).range,
         presetRange(Preset.d7, now),
       );
-      await t.tap(find.text('🧭'));
-      expect(tracked, 1);
+      expect(find.text('🧭'), findsNothing); // moved to the map's track button
       await t.tap(find.bySemanticsLabel('Tài khoản'));
       expect(account, 1);
     });

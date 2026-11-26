@@ -159,7 +159,7 @@ has to be a real view in the layout rather than pixels in the image.
 copy of `config/dev.json` whose `API_URL` and `WEB_ORIGIN` point at `https://blocked.invalid`, and afterwards turn
 the tracker off and delete `app_flutter/tracker/queue.jsonl`, or the fake points go up with the next real upload.
 
-Add the widget: long-press the home screen → **Widgets** → **Find Me Dev** → drag it out. Then turn on 🧭 **Ghi hành
+Add the widget: long-press the home screen → **Widgets** → **Find Me Dev** → drag it out. Then turn on ▶ **Ghi hành
 trình** and send moves, a different spot each time, at least 10 m apart:
 
 ```powershell

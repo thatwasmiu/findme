@@ -27,9 +27,11 @@ class TrailSheet extends StatelessWidget {
   final VoidCallback onReplay;
   final void Function(double lon, double lat) onSelect;
 
+  static const initialExtent = 0.22;
+
   @override
   Widget build(BuildContext context) => DraggableScrollableSheet(
-    initialChildSize: 0.22,
+    initialChildSize: initialExtent,
     minChildSize: 0.1,
     maxChildSize: 0.6,
     builder: (context, scroll) => CardBox(

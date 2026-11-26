@@ -6,7 +6,7 @@ change; check the current pages in Play Console before submitting.
 
 ## 1. In-app prominent disclosure (done in the app)
 
-Shown once, before any location prompt, from the 🧭 sheet (`lib/features/tracker/presentation/tracker_sheet.dart`):
+Shown once, before any location prompt, from the map's ▶ button or the tracker sheet (`trackerDisclosed` in `lib/features/tracker/presentation/tracker_sheet.dart`):
 
 > Find Me sẽ ghi lại vị trí của bạn ở chế độ nền, kể cả khi bạn đóng ứng dụng. Vị trí được gửi về máy chủ Find Me
 > để vẽ hành trình của bạn, và chỉ hiện cho bạn bè cùng những link chia sẻ mà bạn chọn. Bạn có thể tắt bất cứ lúc nào.
@@ -29,7 +29,7 @@ in a pocket and the app closed.
 
 Record on a phone or the emulator, in this order:
 
-1. Open Find Me, tap **🧭**.
+1. Open Find Me, tap **▶** above 📷.
 2. Turn **Ghi hành trình** on: the disclosure dialog appears; tap **Đồng ý**.
 3. The system location prompt; then Settings → **Allow all the time**.
 4. Back in the app: status **Đang ghi**; leave the app; the notification **Find Me đang ghi hành trình** is visible.

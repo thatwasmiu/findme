@@ -1,7 +1,7 @@
 # 15. Background tracking (Find Me replaces Overland)
 
 Until now every account needed a second app, **Overland**, to record GPS and send it to `/ingest`. Find Me now does
-that itself, on Android and iPhone: open **🧭** on the map, switch **Ghi hành trình** on, allow location "always".
+that itself, on Android and iPhone: tap the round **▶** above 📷 on the map, allow location "always".
 
 Design: `docs/superpowers/specs/2026-11-04-findme-tracker-design.md`. Server side (unchanged): `travel-heatmap`
 `docs/guide/04-overland.md` and `lambdas/src/ingest.ts`.
@@ -32,7 +32,7 @@ Phones free memory by terminating background apps. Two survival tricks:
 
 ### The blue indicator (iPhone)
 
-The 🧭 sheet on an iPhone has **Hiện chỉ báo vị trí** (Overland calls it "App using location"). On, iOS shows a
+The tracker sheet (tap the status chip next to ▶, or long-press ▶) on an iPhone has **Hiện chỉ báo vị trí** (Overland calls it "App using location"). On, iOS shows a
 blue pill by the clock while Find Me records in the background; tapping it opens the app. It changes nothing about
 accuracy, battery or how often fixes come: it is a visible "still recording" sign, handy while testing (no blue
 pill = not recording). Off by default. Android has no such switch: its notification already plays that role.
@@ -99,7 +99,8 @@ tracking is ended first, so nobody's points are ever sent with someone else's to
 | `lib/features/tracker/data/tracker_store.dart` | The token (secure storage) and the on/off flag (`shared_preferences`, read by Android's boot receiver). |
 | `lib/features/tracker/data/geolocator_source.dart` | The real GPS through the `geolocator` package. Tests use a fake (`test/helpers/tracker_fakes.dart`). |
 | `lib/features/tracker/presentation/tracker_controller.dart` | The brain: start/stop, each fix into the queue, one upload at a time. |
-| `lib/features/tracker/presentation/tracker_sheet.dart` | The 🧭 sheet, including the disclosure dialog shown before the first location prompt. |
+| `lib/features/tracker/presentation/tracker_sheet.dart` | The tracker sheet, plus `trackerDisclosed` (the dialog shown before the first location prompt) and `trackerStatus`. |
+| `lib/features/tracker/presentation/track_button.dart` | The map's ▶/■ button above 📷 and its status chip; rides above the trail sheet. |
 | `lib/features/tracker/data/wake_channel.dart` + `ios/Runner/AppDelegate.swift` | iPhone: significant-location monitoring and the background relaunch. |
 | `android/.../BootReceiver.kt` + `trackerBoot` in `lib/main.dart` + `lib/features/tracker/boot.dart` | Android: restart after a reboot. |
 
@@ -153,7 +154,7 @@ dies with the screen when you swipe the app out of Recents, and recording stops 
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
-1. Sign in, tap **🧭**.
+1. Sign in, tap **▶** above 📷.
 2. Turn **Ghi hành trình** on. Read the explanation, **Đồng ý**. Allow location; on Android 11+ the app shows
    **Thiếu quyền vị trí "Luôn luôn"**: tap **Mở cài đặt** → Permissions → Location → **Allow all the time**, come
    back, switch on again.
@@ -164,11 +165,11 @@ The emulator has no GPS, but it can replay a route:
 
 1. In the emulator window: **⋯ (Extended controls) → Location → Routes**.
 2. Search two places a few hundred metres apart (or load a `.gpx` file), **Save route**, set speed, **Play route**.
-3. Watch the 🧭 sheet: **Điểm cuối** says "vừa xong", **Điểm chờ gửi** grows.
+3. Watch the tracker sheet (tap the chip "Đang ghi"): **Điểm cuối** says "vừa xong", **Điểm chờ gửi** grows.
 
 ## 4. Look
 
-- 🧭 is pink while recording.
+- The button turns pink ■ while recording; the chip says "Đang ghi" with a pink dot.
 - The sheet: status, waiting count, last upload, last fix, **Gửi ngay**.
 - The 🐞 console (dev builds): `POST /api/ingest 200`; tap it: the body shows `coordinates: •••` (never the real
   numbers).
@@ -221,7 +222,7 @@ Play reviews apps that read location in the background. What it needs, and where
 | **Token sai hoặc đã đổi** | `/ingest` refused even a fresh token: the account is probably switched off. Check it on the admin page. |
 | **Tài khoản này không ghi được hành trình** | `/me/ingest-token` said 403: an admin login or a switched-off account. |
 | Notification missing on Android 13+ | Notifications for Find Me are off; tracking still runs. Allow notifications to see it. |
-| Stops after a while (Android) | Battery optimisation: Settings → Apps → Find Me → Battery → Unrestricted. The 🧭 sheet has a shortcut. |
+| Stops after a while (Android) | Battery optimisation: Settings → Apps → Find Me → Battery → Unrestricted. The tracker sheet has a shortcut. |
 | **Chưa có token** on the iPhone after a while in the pocket (fixed 2026-11-06) | The Keychain was only readable while unlocked, so a locked phone "lost" the token. Now it is readable after the first unlock since power-on, and the app keeps the token in memory once read. Only right after a reboot, before the first unlock, nothing can be read: fixes wait and go after you unlock. |
 | Stops after a while (iPhone) | You force-quit it, or Low Power Mode is on, or the sideload expired (reinstall). |
 | **Điểm bị từ chối** above 0 | A bug in the app's batch format. Keep `rejected.jsonl` (in the app's files) for debugging; report it. |
