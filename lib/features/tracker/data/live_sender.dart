@@ -163,12 +163,20 @@ class LiveSender {
   /// From the last good connect, for the clear in [stop] (the store may be wiped by then).
   ({String clientId, String token, String id})? _who;
 
+  /// A [stop] still clearing: [start] waits for it, else its disconnect would close the new run's connection.
+  Future<void>? _stopping;
+
   void start() {
     if (_running) return;
     _running = true;
-    _gen++;
+    final gen = ++_gen;
     _wait = _first;
-    unawaited(_connect(_gen));
+    final stopping = _stopping;
+    if (stopping == null) {
+      unawaited(_connect(gen));
+    } else {
+      unawaited(stopping.then((_) => gen == _gen ? _connect(gen) : null));
+    }
   }
 
   void onFix(Fix f) {
@@ -280,8 +288,16 @@ class LiveSender {
 
   /// Clears `live/<id>` (always allowed by the broker, even after the trip ended), then disconnects. Not connected:
   /// one connect just for that, best effort.
-  Future<void> stop() async {
-    if (!_running) return;
+  Future<void> stop() {
+    if (!_running) return Future.value();
+    late final Future<void> done;
+    done = _stop().whenComplete(() {
+      if (identical(_stopping, done)) _stopping = null;
+    });
+    return _stopping = done;
+  }
+
+  Future<void> _stop() async {
     _running = false;
     _gen++;
     _retry?.cancel();

@@ -292,6 +292,30 @@ void main() {
     });
   });
 
+  test('start right after a stop: the clear finishes first, the new run stays live', () {
+    fakeAsync((a) {
+      make(a);
+      live.start();
+      a.flushMicrotasks();
+      link.drop(); // the clear needs its own connect
+      link.hold = Completer();
+      unawaited(live.stop());
+      a.flushMicrotasks();
+      live.start(); // a new trip while the clear is still connecting
+      live.onFix(north(0));
+      link.hold!.complete(true);
+      link.hold = null;
+      a.elapse(const Duration(seconds: 5));
+      expect(link.sent.first.payload, '');
+      expect(
+        link.up,
+        isTrue,
+        reason: "the clear's disconnect must not close the new run",
+      );
+      expect(lats(), hasLength(1));
+    });
+  });
+
   test('start again after a stop works', () {
     fakeAsync((a) {
       make(a);
