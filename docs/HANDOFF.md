@@ -20,7 +20,7 @@ Written 2026-11-03, tracker added 2026-11-04. Read `CLAUDE.md` first; this file 
   api). **Not yet seen** (after Look Back is deployed): a pin picture, a pin video (Android and iPhone) and a
   friend's shared picture loading through the host.
 
-- **MQTT pass** (2026-11-28, merged to `main`, not pushed; follows travel-heatmap launch caps part 3, same
+- **MQTT pass** (2026-11-28, merged to `main`, pushed; follows travel-heatmap launch caps part 3, same
   branch name there). The live password is no longer the ingest token: `LiveSender` asks `POST /mqtt-pass`
   (`IngestClient.mqttPass`, Bearer ingest token) for a 15-minute pass on every connect and for the clear on stop; the
   broker closes the connection at the pass's end and the reconnect brings a new one; a start right after a stop waits for the clear. Needs the travel-heatmap AWS
