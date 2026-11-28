@@ -32,11 +32,11 @@ config error screen. The CI secret `FINDME_DEV_CONFIG` needs the key too if CI b
 |---|---|---|
 | client id | `<account id>/phone-<8 hex>` | the broker refuses an id that does not start with your account id |
 | username | `findme` | ignored, but MQTT 3.1.1 refuses a password without a username |
-| password | the **ingest token** | the same token `/ingest` takes; no Cognito token goes to the VPS |
+| password | a **15-minute pass** | `POST /mqtt-pass` with the ingest token (`IngestClient.mqttPass`), a fresh one on every connect; the broker checks it itself and closes the connection when it ends, and the reconnect brings a new one (travel-heatmap chapter 23 §3). Neither the ingest token nor a Cognito token goes to the VPS |
 | topic | `live/<account id>` | the only topic you may write |
 
 The account id is the Cognito `sub`. The tracker already stores it next to the ingest token
-(`TrackerStore.token()` → `{token, sub}`), so no extra request is needed.
+(`TrackerStore.token()` → `{token, sub}`); the only extra request is the pass.
 
 The connection is open only while the tracker records. If it drops or is refused, the phone tries again after 2 s,
 4, 8 … up to 60 s. A connection that lasted a minute resets the wait to 2 s; one the broker closes at once (a
