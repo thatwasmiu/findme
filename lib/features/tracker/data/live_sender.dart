@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:findme/core/config/app_config.dart';
 import 'package:findme/core/debug/debug_log.dart';
+import 'package:findme/features/tracker/data/ingest_client.dart';
 import 'package:findme/features/tracker/data/tracker_store.dart';
 import 'package:findme/features/tracker/domain/fix.dart';
 import 'package:findme/features/tracker/domain/live_policy.dart';
@@ -109,10 +110,14 @@ class MqttLiveLink implements LiveLink {
 /// Live positions while the tracker records: each fix that says something new goes to `live/<account id>` at once
 /// (at most one a second), the newest again after every reconnect. [stop] clears the retained position. A side
 /// channel: nothing here throws into the tracker, and `/ingest` never waits on it.
+///
+/// The password is the broker's 15-minute pass from `/mqtt-pass` ([_pass], asked with the ingest token), a fresh one
+/// on every connect: the broker closes the connection when it expires, and the reconnect brings a new one.
 class LiveSender {
   LiveSender(
     this._link,
-    this._token, {
+    this._token,
+    this._pass, {
     DateTime Function()? now,
     Random? random,
     this._log,
@@ -129,6 +134,9 @@ class LiveSender {
 
   final LiveLink _link;
   final Future<IngestToken?> Function() _token;
+
+  /// null: no pass now (offline, token refused); try again later.
+  final Future<String?> Function(String ingestToken) _pass;
   final DateTime Function() _now;
 
   /// The 🐞 console in dev builds: what happened, never the token, the id, the topic or a position.
@@ -153,7 +161,7 @@ class LiveSender {
   DateTime? _sentAt;
 
   /// From the last good connect, for the clear in [stop] (the store may be wiped by then).
-  ({String clientId, String password, String id})? _who;
+  ({String clientId, String token, String id})? _who;
 
   void start() {
     if (_running) return;
@@ -211,14 +219,17 @@ class LiveSender {
     }
     final who = (
       clientId: '${t.sub}/phone-$_suffix',
-      password: t.token,
+      token: t.token,
       id: t.sub,
     );
+    final pass = await _passOrNull(t.token);
+    if (gen != _gen) return;
+    if (pass == null) {
+      _log?.call('no pass');
+      return _later();
+    }
     _log?.call('connecting');
-    final ok = await _link.connect(
-      clientId: who.clientId,
-      password: who.password,
-    );
+    final ok = await _link.connect(clientId: who.clientId, password: pass);
     if (gen != _gen) {
       if (ok) _link.disconnect(); // stopped meanwhile
       return;
@@ -234,6 +245,14 @@ class LiveSender {
     _pending ??=
         _published; // the newest fix again: friends who missed it get it now
     _send();
+  }
+
+  Future<String?> _passOrNull(String token) async {
+    try {
+      return await _pass(token);
+    } on Object {
+      return null;
+    }
   }
 
   void _later() {
@@ -274,10 +293,15 @@ class LiveSender {
     _up = false;
     if (who == null) return; // never connected: nothing of ours is retained
     try {
+      final pass = wasUp ? null : await _passOrNull(who.token);
       if (!wasUp &&
-          !await _link
-              .connect(clientId: who.clientId, password: who.password)
-              .timeout(const Duration(seconds: 10), onTimeout: () => false)) {
+          (pass == null ||
+              !await _link
+                  .connect(clientId: who.clientId, password: pass)
+                  .timeout(
+                    const Duration(seconds: 10),
+                    onTimeout: () => false,
+                  ))) {
         _log?.call('clear: refused or unreachable');
         return;
       }
@@ -303,11 +327,13 @@ final liveSenderProvider = Provider<LiveSender?>((ref) {
   return LiveSender(
     MqttLiveLink(url),
     store.token,
+    ref.watch(ingestClientProvider).mqttPass,
     log: debugConsoleEnabled
         ? (e) => DebugLog.instance.mqtt(
             e,
             failed: const [
               'refused',
+              'no pass',
               'dropped',
               'publish failed',
               'clear',

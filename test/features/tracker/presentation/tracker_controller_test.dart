@@ -587,7 +587,12 @@ void main() {
         overrides: [
           ...base,
           liveSenderProvider.overrideWithValue(
-            LiveSender(link, store.token, now: () => now),
+            LiveSender(
+              link,
+              store.token,
+              (t) async => 'pass-for-$t',
+              now: () => now,
+            ),
           ),
         ],
       );

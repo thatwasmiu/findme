@@ -99,4 +99,30 @@ void main() {
     final (r, _) = await answer((req) => throw offline(req));
     expect(r, IngestResult.retry);
   });
+
+  Future<(String?, FakeAdapter)> pass(Reply Function(RequestOptions) h) async {
+    final a = FakeAdapter(h);
+    final api = ApiClient(testConfig, () async => 'access');
+    final p = await IngestClient(
+      testConfig,
+      api,
+      dio: fakeDio(a),
+    ).mqttPass('tok');
+    return (p, a);
+  }
+
+  test('mqttPass posts the ingest token to <api>/mqtt-pass', () async {
+    final (p, a) = await pass(
+      (_) => (status: 200, body: {'pass': 'p.s', 'exp': 1}),
+    );
+    expect(p, 'p.s');
+    expect(a.calls, ['POST https://api.test/mqtt-pass']);
+    expect(a.requests.single.headers['Authorization'], 'Bearer tok');
+  });
+
+  test('mqttPass: 401, odd body or offline -> null', () async {
+    expect((await pass((_) => (status: 401, body: null))).$1, isNull);
+    expect((await pass((_) => (status: 200, body: {'x': 1}))).$1, isNull);
+    expect((await pass((req) => throw offline(req))).$1, isNull);
+  });
 }

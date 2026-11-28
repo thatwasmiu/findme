@@ -28,6 +28,28 @@ class IngestClient {
               as Map<String, dynamic>)['token']
           as String;
 
+  /// `POST /mqtt-pass` with the ingest token: the live broker's 15-minute pass (travel-heatmap chapter 23), or null
+  /// (refused, offline, anything else). Never logged.
+  Future<String?> mqttPass(String token) async {
+    try {
+      final res = await _dio.post<dynamic>(
+        '${_cfg.api}/mqtt-pass',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+          sendTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          validateStatus: (_) => true,
+        ),
+      );
+      final data = res.data;
+      return res.statusCode == 200 && data is Map && data['pass'] is String
+          ? data['pass'] as String
+          : null;
+    } on DioException {
+      return null;
+    }
+  }
+
   Future<IngestResult> send(
     String token,
     List<Fix> fixes,

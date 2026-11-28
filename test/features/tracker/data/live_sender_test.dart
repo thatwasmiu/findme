@@ -20,10 +20,24 @@ void main() {
   late FakeLink link;
   late IngestToken? token;
   late LiveSender live;
+  late bool passOk;
+  late List<String> asked;
+
+  /// The broker's 15-minute pass from `/mqtt-pass`: a new one each time, null while [passOk] is false.
+  Future<String?> pass(String ingestToken) async {
+    if (!passOk) return null;
+    asked.add(ingestToken);
+    return 'pass-${asked.length}';
+  }
 
   void make(FakeAsync a) {
     final start = DateTime.utc(2026, 11, 24, 8);
-    live = LiveSender(link, () async => token, now: () => start.add(a.elapsed));
+    live = LiveSender(
+      link,
+      () async => token,
+      pass,
+      now: () => start.add(a.elapsed),
+    );
   }
 
   List<double> lats() => [
@@ -35,16 +49,67 @@ void main() {
   setUp(() {
     link = FakeLink();
     token = (token: 'tok', sub: 'acct-1');
+    passOk = true;
+    asked = [];
   });
 
-  test('connects as <id>/phone-..., password = the ingest token', () {
+  test('connects with the pass, not the ingest token', () {
     fakeAsync((a) {
       make(a);
       live.start();
       a.flushMicrotasks();
       expect(link.connects, hasLength(1));
       expect(link.connects.single.clientId, startsWith('acct-1/phone-'));
-      expect(link.connects.single.password, 'tok');
+      expect(asked, ['tok']);
+      expect(link.connects.single.password, 'pass-1');
+    });
+  });
+
+  test('no pass: retries later', () {
+    fakeAsync((a) {
+      passOk = false;
+      make(a);
+      live.start();
+      a.flushMicrotasks();
+      expect(link.connects, isEmpty);
+      passOk = true;
+      a.elapse(const Duration(seconds: 2));
+      expect(link.connects.single.password, 'pass-1');
+    });
+  });
+
+  test('kicked at exp reconnects with a new pass', () {
+    fakeAsync((a) {
+      make(a);
+      live.start();
+      a.flushMicrotasks();
+      a.elapse(const Duration(minutes: 15));
+      link.drop(); // the broker closes the connection when the pass expires
+      a.elapse(const Duration(seconds: 2));
+      expect(link.connects.map((c) => c.password), ['pass-1', 'pass-2']);
+    });
+  });
+
+  test('clear after a long gap gets a fresh pass', () {
+    fakeAsync((a) {
+      make(a);
+      live.start();
+      a.flushMicrotasks();
+      link
+        ..drop()
+        ..accept = false; // unreachable for half an hour: pass-1 long expired
+      a.elapse(const Duration(minutes: 30));
+      link.accept = true;
+      final before = link.connects.length;
+      final passes = asked.length;
+      unawaited(live.stop());
+      a.elapse(const Duration(seconds: 2));
+      expect(link.connects.length, before + 1);
+      expect(
+        link.connects.last.password,
+        'pass-${passes + 1}',
+      ); // asked again for the clear
+      expect(link.sent.last.payload, '');
     });
   });
 
@@ -260,6 +325,7 @@ void main() {
       live = LiveSender(
         link,
         () async => token,
+        pass,
         now: () => start.add(a.elapsed),
         log: events.add,
       )..start();
@@ -287,7 +353,14 @@ void main() {
         'cleared, disconnected',
       ]);
       final all = events.join(' ');
-      for (final secret in ['tok', 'acct-1', 'live/', '10.77', '106.7']) {
+      for (final secret in [
+        'tok',
+        'pass-',
+        'acct-1',
+        'live/',
+        '10.77',
+        '106.7',
+      ]) {
         expect(all, isNot(contains(secret)));
       }
     });
@@ -297,7 +370,8 @@ void main() {
     fakeAsync((a) {
       final events = <String>[];
       token = null;
-      live = LiveSender(link, () async => token, log: events.add)..start();
+      live = LiveSender(link, () async => token, pass, log: events.add)
+        ..start();
       a.flushMicrotasks();
       expect(events, ['no ingest token yet', 'retry in 2 s']);
     });
